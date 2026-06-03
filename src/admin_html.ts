@@ -138,9 +138,9 @@ async function renderTenants(main){
   var tenants=resp.data||[];
   main.innerHTML='<h2 style="margin-bottom:24px;">租户管理</h2>'+
     '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showCreateTenantModal()">+ 新建租户</button></div>'+
-    '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>Provider</th><th>账号</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>Provider</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
     tenants.map(function(t){
-      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.account_count+'</td><td>'+t.mail_count+'</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button> <button class="btn btn-sm" style="background:var(--primary);color:#fff;padding:6px 12px;font-size:0.8rem;border:none;border-radius:var(--radius);cursor:pointer;" data-tid="'+esc(t.id)+'" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button></td></tr>';
+      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.mail_count+'</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button> <button class="btn btn-sm" style="background:var(--primary);color:#fff;padding:6px 12px;font-size:0.8rem;border:none;border-radius:var(--radius);cursor:pointer;" data-tid="'+esc(t.id)+'" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button></td></tr>';
     }).join('')+'</tbody></table></div></div>';
 }
 
@@ -151,17 +151,15 @@ async function toggleTenant(id,status){
 }
 
 async function renderAllAccounts(main){
-  var tenantsResp=await api('/admin/tenants');
-  var tenants=tenantsResp.data||[];
   var accountsResp=await api('/admin/accounts');
   var accounts=accountsResp.data||[];
 
-  main.innerHTML='<h2 style="margin-bottom:24px;">发件账号管理</h2>'+
+    main.innerHTML='<h2 style="margin-bottom:24px;">发件账号管理</h2>'+
     '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAddAccountModal()">+ 添加发件账号</button></div>'+
-    '<div class="card"><div class="table-wrap"><table><thead><tr><th>租户</th><th>账号名</th><th>邮箱</th><th>Provider</th><th>类型</th><th>今日/限额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>账号名</th><th>邮箱</th><th>Provider</th><th>类型</th><th>今日/限额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
     accounts.map(function(a){
-      return'<tr><td><strong>'+esc(a.tenant_name||'')+'</strong></td><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.provider_name||'-')+'</td><td><span class="badge badge-info">'+esc(a.provider_type||'-')+'</span></td><td>'+(a.sent_today||0)+' / '+(a.daily_limit||1000)+'</td><td><span class="badge '+(a.enabled?'badge-success':'badge-muted')+'">'+(a.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" data-acctid="'+esc(a.id)+'" data-acctenabled="'+(!a.enabled?1:0)+'" onclick="toggleAccount(this.dataset.acctid,+this.dataset.acctenabled)">'+(a.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-acctid="'+esc(a.id)+'" onclick="deleteAdminAccount(this.dataset.acctid)">删除</button></td></tr>';
-    }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">暂无账号</td></tr>'+
+      return'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.provider_id||'-')+'</td><td><span class="badge badge-info">'+esc(a.provider_name||'-')+'</span></td><td>'+(a.sent_today||0)+' / '+(a.daily_limit||1000)+'</td><td><span class="badge '+(a.enabled?'badge-success':'badge-muted')+'">'+(a.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" data-acctid="'+esc(a.id)+'" data-acctenabled="'+(!a.enabled?1:0)+'" onclick="toggleAccount(this.dataset.acctid,+this.dataset.acctenabled)">'+(a.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-acctid="'+esc(a.id)+'" onclick="deleteAdminAccount(this.dataset.acctid)">删除</button></td></tr>';
+    }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">暂无非发件账号</td></tr>'+
     '</tbody></table></div></div>';
 }
 
@@ -169,11 +167,9 @@ function showAddAccountModal(){
   var overlay=document.createElement('div');
   overlay.className='modal-overlay';
 
-  Promise.all([api('/admin/tenants'),api('/admin/providers')]).then(function(results){
-    var tenants=results[0].data||[];
-    var providers=results[1].data||[];
-    overlay.innerHTML='<div class="modal"><div class="modal-title">添加发件账号</div>'+
-      '<div class="form-group"><label class="form-label">租户</label><select class="form-select" id="ac-tenant">'+tenants.map(function(t){return'<option value="'+esc(t.id)+'">'+esc(t.name)+' ('+esc(t.email)+')</option>'}).join('')+'</select></div>'+
+  api('/admin/providers').then(function(resp){
+    var providers=resp.data||[];
+    overlay.innerHTML='<div class="modal"><div class="modal-title">添加全局发件账号</div>'+
       '<div class="form-group"><label class="form-label">Provider</label><select class="form-select" id="ac-provider">'+providers.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+esc(p.type)+') - '+esc(p.tenant_name)+'</option>'}).join('')+'</select></div>'+
       '<div class="form-group"><label class="form-label">账号名称</label><input class="form-input" id="ac-name" placeholder="如：通知邮箱"></div>'+
       '<div class="form-group"><label class="form-label">邮箱地址</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
@@ -184,7 +180,6 @@ function showAddAccountModal(){
 
     overlay.querySelector('#ac-save-btn').addEventListener('click',async function(){
       var body={
-        user_id:overlay.querySelector('#ac-tenant').value,
         provider_id:overlay.querySelector('#ac-provider').value,
         name:overlay.querySelector('#ac-name').value.trim(),
         email:overlay.querySelector('#ac-email').value.trim(),

@@ -442,14 +442,12 @@ export function getDashboardHTML(): string {
     async function renderProviders(main){
       if(!API_KEY){main.innerHTML=setupPage();return}
       var pResp=await api('/providers');
-      var aResp=await api('/providers/accounts');
       var rResp=await api('/providers/routes');
       var providers=pResp.data||[];
-      var accounts=aResp.data||[];
       var routes=rResp.data||[];
 
       main.innerHTML='<h2 style="margin-bottom:24px;">Provider 配置</h2>'+
-        '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\\'providers\\')">Provider 列表</button><button class="tab" onclick="switchProviderTab(\\'accounts\\')">发件账号</button><button class="tab" onclick="switchProviderTab(\\'routes\\')">分类路由</button></div>'+
+        '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\\'providers\\')">Provider 列表</button><button class="tab" onclick="switchProviderTab(\\'routes\\')">分类路由</button></div>'+
         '<div id="provider-tab-providers">'+
           '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showProviderModal()">+ 添加 Provider</button></div>'+
           '<div class="card">'+
@@ -461,19 +459,6 @@ export function getDashboardHTML(): string {
               var configInfo=p.type==='smtp'?'SMTP: '+config.host+':'+config.port:(p.type==='api'?'API: '+(config.provider_name||'Generic'):'Cloudflare: '+(config.domain||''));
               return'<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><strong>'+esc(p.name)+'</strong><span class="badge badge-info" style="margin-left:8px;">'+esc(p.type)+'</span><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span><div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">'+esc(configInfo)+'</div></div><button class="btn btn-sm btn-danger" data-pid="'+esc(p.id)+'" onclick="deleteProvider(this.dataset.pid)">删除</button></div></div>';
             }).join('')
-          )+
-          '</div></div>'+
-
-        '<div id="provider-tab-accounts" style="display:none;">'+
-          '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAccountModal()">+ 添加发件账号</button></div>'+
-          '<div class="card">'+
-          (accounts.length===0?
-            '<div class="empty-state"><div class="empty-icon">📧</div><div class="empty-title">暂无发件账号</div></div>'
-          :
-            '<div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>显示名</th><th>Provider</th><th>今日/限额</th><th>操作</th></tr></thead><tbody>'+
-            accounts.map(function(a){
-              return'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.display_name||'-')+'</td><td><span class="badge badge-muted">'+esc(a.provider_id)+'</span></td><td>'+a.sent_today+' / '+a.daily_limit+'</td><td><button class="btn btn-sm btn-danger" data-acctid="'+esc(a.id)+'" onclick="deleteAccount(this.dataset.acctid)">删除</button></td></tr>';
-            }).join('')+'</tbody></table></div>'
           )+
           '</div></div>'+
 
@@ -492,11 +477,11 @@ export function getDashboardHTML(): string {
     }
 
     function switchProviderTab(tab){
-      ['providers','accounts','routes'].forEach(function(t){
+      ['providers','routes'].forEach(function(t){
         document.getElementById('provider-tab-'+t).style.display=t===tab?'block':'none';
       });
       document.querySelectorAll('.tab').forEach(function(b,i){
-        b.classList.toggle('active',['providers','accounts','routes'][i]===tab);
+        b.classList.toggle('active',['providers','routes'][i]===tab);
       });
     }
 
@@ -571,38 +556,6 @@ export function getDashboardHTML(): string {
       await api('/providers/'+id,{method:'DELETE'});
       renderPage('providers');
       toast('Provider 已删除');
-    }
-
-    function showAccountModal(){
-      var overlay=document.createElement('div');
-      overlay.className='modal-overlay';
-      overlay.innerHTML='<div class="modal"><div class="modal-title">添加发件账号</div>'+
-        '<div class="form-group"><label class="form-label">Provider ID *</label><input class="form-input" id="ac-provider" placeholder="Provider ID"></div>'+
-        '<div class="form-group"><label class="form-label">账号名称 *</label><input class="form-input" id="ac-name" placeholder="如：通知邮箱"></div>'+
-        '<div class="form-group"><label class="form-label">邮箱地址 *</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
-        '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="如：Teaven 通知"></div>'+
-        '<div class="form-group"><label class="form-label">每日限额</label><input class="form-input" id="ac-limit" type="number" value="1000"></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
-      document.body.appendChild(overlay);
-      overlay.querySelector('#ac-save-btn').addEventListener('click',async function(){
-        var provider_id=overlay.querySelector('#ac-provider').value.trim();
-        var name=overlay.querySelector('#ac-name').value.trim();
-        var email=overlay.querySelector('#ac-email').value.trim();
-        var display_name=overlay.querySelector('#ac-display').value.trim();
-        var daily_limit=parseInt(overlay.querySelector('#ac-limit').value||'1000');
-        if(!provider_id||!name||!email){toast('请填写所有必填字段','error');return}
-        var resp=await api('/providers/accounts',{method:'POST',body:JSON.stringify({provider_id:provider_id,name:name,email:email,display_name:display_name||null,daily_limit:daily_limit})});
-        if(resp.success){overlay.remove();renderPage('providers');toast('账号创建成功')}
-        else toast(resp.error,'error');
-      });
-      overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
-    }
-
-    async function deleteAccount(id){
-      if(!confirm('确定删除此发件账号？'))return;
-      await api('/providers/accounts/'+id,{method:'DELETE'});
-      renderPage('providers');
-      toast('账号已删除');
     }
 
     function showRouteModal(){
