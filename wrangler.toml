@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "teaven-email-db"
-database_id = "teaven-email-db-id"
+database_id = "44a10405-2cc9-4465-9442-6411bd4290a6"
 
 [[kv_namespaces]]
 binding = "KV"
@@ -14,11 +14,11 @@ id = "7f1ba6c1269d4f6ab0183443e6177555"
 
 [[r2_buckets]]
 binding = "R2"
-bucket_name = "teaven-email-assets"
+bucket_name = "teaven-email"
 
 [vars]
 ENVIRONMENT = "production"
-JWT_SECRET = ""
+JWT_SECRET = "d83fa2e1c4b97f6a82d5e3c1f9470b2a6e8d4c5f1a3b7e9d2c6f8a4b0e1d3c5f"
 
 [observability]
 enabled = true
