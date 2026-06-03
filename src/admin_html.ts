@@ -139,7 +139,7 @@ async function renderTenants(main){
   main.innerHTML='<h2 style="margin-bottom:24px;">租户管理</h2>'+
     '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>Provider</th><th>账号</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
     tenants.map(function(t){
-      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.account_count+'</td><td>'+t.mail_count+'</td><td><button class="btn btn-sm btn-ghost" onclick="toggleTenant(\''+esc(t.id)+'\',\''+(t.status==='active'?'disabled':'active')+'\')">'+(t.status==='active'?'禁用':'启用')+'</button></td></tr>';
+      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.account_count+'</td><td>'+t.mail_count+'</td><td><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button></td></tr>';
     }).join('')+'</tbody></table></div></div>';
 }
 
@@ -159,7 +159,7 @@ async function renderAllAccounts(main){
     '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAddAccountModal()">+ 添加发件账号</button></div>'+
     '<div class="card"><div class="table-wrap"><table><thead><tr><th>租户</th><th>账号名</th><th>邮箱</th><th>Provider</th><th>类型</th><th>今日/限额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
     accounts.map(function(a){
-      return'<tr><td><strong>'+esc(a.tenant_name||'')+'</strong></td><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.provider_name||'-')+'</td><td><span class="badge badge-info">'+esc(a.provider_type||'-')+'</span></td><td>'+(a.sent_today||0)+' / '+(a.daily_limit||1000)+'</td><td><span class="badge '+(a.enabled?'badge-success':'badge-muted')+'">'+(a.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" onclick="toggleAccount(\''+esc(a.id)+'\','+(!a.enabled)+')">'+(a.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" onclick="deleteAdminAccount(\''+esc(a.id)+'\')">删除</button></td></tr>';
+      return'<tr><td><strong>'+esc(a.tenant_name||'')+'</strong></td><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.provider_name||'-')+'</td><td><span class="badge badge-info">'+esc(a.provider_type||'-')+'</span></td><td>'+(a.sent_today||0)+' / '+(a.daily_limit||1000)+'</td><td><span class="badge '+(a.enabled?'badge-success':'badge-muted')+'">'+(a.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" data-acctid="'+esc(a.id)+'" data-acctenabled="'+(!a.enabled?1:0)+'" onclick="toggleAccount(this.dataset.acctid,+this.dataset.acctenabled)">'+(a.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-acctid="'+esc(a.id)+'" onclick="deleteAdminAccount(this.dataset.acctid)">删除</button></td></tr>';
     }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">暂无账号</td></tr>'+
     '</tbody></table></div></div>';
 }
@@ -178,7 +178,7 @@ function showAddAccountModal(){
       '<div class="form-group"><label class="form-label">邮箱地址</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
       '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="Teaven 通知"></div>'+
       '<div class="form-group"><label class="form-label">每日限额</label><input class="form-input" id="ac-limit" type="number" value="1000"></div>'+
-      '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
+      '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
     document.body.appendChild(overlay);
 
     overlay.querySelector('#ac-save-btn').addEventListener('click',async function(){

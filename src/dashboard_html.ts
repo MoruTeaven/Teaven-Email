@@ -293,7 +293,7 @@ export function getDashboardHTML(): string {
       main.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;"><h2>API Keys</h2><button class="btn btn-primary" onclick="showCreateApiKeyModal()">+ 创建 API Key</button></div>'+
         '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>前缀</th><th>权限</th><th>状态</th><th>最后使用</th><th>操作</th></tr></thead><tbody>'+
         keys.map(function(k){
-          return'<tr><td><strong>'+esc(k.name)+'</strong></td><td><code>'+esc(k.prefix)+'***</code></td><td>'+(k.permissions||[]).map(function(p){return'<span class="badge badge-info">'+esc(p)+'</span>'}).join(' ')+'</td><td><span class="badge '+(k.enabled?'badge-success':'badge-muted')+'">'+(k.enabled?'启用':'禁用')+'</span></td><td>'+(k.last_used_at?new Date(k.last_used_at).toLocaleString('zh-CN'):'从未使用')+'</td><td><button class="btn btn-sm btn-ghost" onclick="toggleApiKey(\''+esc(k.id)+'\','+(!k.enabled)+')">'+(k.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" onclick="deleteApiKey(\''+esc(k.id)+'\')">删除</button></td></tr>';
+          return'<tr><td><strong>'+esc(k.name)+'</strong></td><td><code>'+esc(k.prefix)+'***</code></td><td>'+(k.permissions||[]).map(function(p){return'<span class="badge badge-info">'+esc(p)+'</span>'}).join(' ')+'</td><td><span class="badge '+(k.enabled?'badge-success':'badge-muted')+'">'+(k.enabled?'启用':'禁用')+'</span></td><td>'+(k.last_used_at?new Date(k.last_used_at).toLocaleString('zh-CN'):'从未使用')+'</td><td><button class="btn btn-sm btn-ghost" data-keyid="'+esc(k.id)+'" data-keyenabled="'+(!k.enabled?1:0)+'" onclick="toggleApiKey(this.dataset.keyid,+this.dataset.keyenabled)">'+(k.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-keyid="'+esc(k.id)+'" onclick="deleteApiKey(this.dataset.keyid)">删除</button></td></tr>';
         }).join('')+
         '</tbody></table></div></div>';
     }
@@ -306,7 +306,7 @@ export function getDashboardHTML(): string {
         '<div class="form-group"><label class="form-label">权限</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+
         ['SEND_MAIL','MANAGE_TEMPLATE','READ_LOG','MANAGE_PROVIDER'].map(function(p){return'<label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" value="'+p+'" '+(p==='SEND_MAIL'?'checked':'')+' class="ak-perm"> '+p+'</label>'}).join('')+
         '</div></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="ak-create-btn">创建</button></div></div>';
+        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\\'.modal-overlay\\\').remove()">取消</button><button class="btn btn-primary" id="ak-create-btn">创建</button></div></div>';
       document.body.appendChild(overlay);
       overlay.querySelector('#ak-create-btn').addEventListener('click',async function(){
         var name=overlay.querySelector('#ak-name').value.trim();
@@ -316,7 +316,7 @@ export function getDashboardHTML(): string {
         if(resp.success){
           overlay.remove();
           var main=document.getElementById('main-content');
-          main.insertAdjacentHTML('afterbegin','<div class="card" style="border-color:var(--success);margin-bottom:20px;" id="key-reveal"><div class="card-header"><div class="card-title">API Key 创建成功</div><button class="btn btn-sm btn-ghost" onclick="document.getElementById(\'key-reveal\').remove()">关闭</button></div><p style="color:var(--text-muted);margin-bottom:12px;">请立即复制并安全保存此 Key，关闭后将无法再次查看。</p><div class="code-block"><span class="key-highlight">'+esc(resp.data.api_key)+'</span></div><p class="form-hint" style="margin-top:8px;">使用方式：<code>Authorization: Bearer &lt;your-api-key&gt;</code></p></div>');
+          main.insertAdjacentHTML('afterbegin','<div class="card" style="border-color:var(--success);margin-bottom:20px;" id="key-reveal"><div class="card-header"><div class="card-title">API Key 创建成功</div><button class="btn btn-sm btn-ghost" onclick="document.getElementById(\\\'key-reveal\\\').remove()">关闭</button></div><p style="color:var(--text-muted);margin-bottom:12px;">请立即复制并安全保存此 Key，关闭后将无法再次查看。</p><div class="code-block"><span class="key-highlight">'+esc(resp.data.api_key)+'</span></div><p class="form-hint" style="margin-top:8px;">使用方式：<code>Authorization: Bearer &lt;your-api-key&gt;</code></p></div>');
           renderApiKeys(main);
           toast('API Key 创建成功');
         }else{toast(resp.error,'error')}
@@ -348,7 +348,7 @@ export function getDashboardHTML(): string {
           '<div class="table-wrap"><table><thead><tr><th>模板编号</th><th>名称</th><th>分类</th><th>版本</th><th>变量</th><th>操作</th></tr></thead><tbody>'+
           templates.map(function(t){
             var vars=typeof t.variables==='string'?JSON.parse(t.variables):(t.variables||[]);
-            return'<tr><td><code>'+esc(t.template_code)+'</code></td><td>'+esc(t.name)+'</td><td><span class="badge badge-info">'+esc(t.category)+'</span></td><td>v'+t.version+'</td><td>'+vars.map(function(v){return'<span class="badge badge-muted">{{'+esc(v)+'}}</span>'}).join(' ')+'</td><td><button class="btn btn-sm btn-ghost" onclick="previewTemplate(\''+esc(t.template_code)+'\')">预览</button> <button class="btn btn-sm btn-ghost" onclick="editTemplate(\''+esc(t.template_code)+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteTemplate(\''+esc(t.template_code)+'\')">删除</button></td></tr>';
+            return'<tr><td><code>'+esc(t.template_code)+'</code></td><td>'+esc(t.name)+'</td><td><span class="badge badge-info">'+esc(t.category)+'</span></td><td>v'+t.version+'</td><td>'+vars.map(function(v){return'<span class="badge badge-muted">{{'+esc(v)+'}}</span>'}).join(' ')+'</td><td><button class="btn btn-sm btn-ghost" data-tcode="'+esc(t.template_code)+'" onclick="previewTemplate(this.dataset.tcode)">预览</button> <button class="btn btn-sm btn-ghost" data-tcode="'+esc(t.template_code)+'" onclick="editTemplate(this.dataset.tcode)">编辑</button> <button class="btn btn-sm btn-danger" data-tcode="'+esc(t.template_code)+'" onclick="deleteTemplate(this.dataset.tcode)">删除</button></td></tr>';
           }).join('')+'</tbody></table></div>'
         )+
         '</div>';
@@ -366,7 +366,7 @@ export function getDashboardHTML(): string {
         '<div class="form-group"><label class="form-label">HTML 内容 *</label><textarea class="form-textarea" id="tmpl-html" placeholder="<h1>您的验证码：{{code}}</h1>"></textarea><div class="form-hint">支持 Handlebars 模板语法，变量使用 {{变量名}}</div></div>'+
         '<div class="form-group"><label class="form-label">纯文本内容（可选）</label><textarea class="form-textarea" id="tmpl-text" style="min-height:80px;" placeholder="自动从 HTML 生成，也可手动输入"></textarea></div>'+
         (isEdit?'<div class="form-group"><label class="form-label">更新说明</label><input class="form-input" id="tmpl-changelog" placeholder="如：修改了按钮颜色"></div>':'')+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="tmpl-save-btn">'+(isEdit?'更新':'创建')+'</button></div></div>';
+        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="tmpl-save-btn">'+(isEdit?'更新':'创建')+'</button></div></div>';
       document.body.appendChild(overlay);
 
       if(isEdit){
@@ -419,9 +419,9 @@ export function getDashboardHTML(): string {
       var overlay=document.createElement('div');
       overlay.className='modal-overlay';
       overlay.innerHTML='<div class="modal" style="max-width:800px;"><div class="modal-title">预览模板: '+esc(code)+'</div>'+
-        '<div class="form-group"><label class="form-label">测试变量 (JSON)</label><input class="form-input" id="pv-vars" placeholder=\'{"code":"123456"}\' value="{}"></div>'+
+        '<div class="form-group"><label class="form-label">测试变量 (JSON)</label><input class="form-input" id="pv-vars" placeholder=\\'{"code":"123456"}\\' value="{}"></div>'+
         '<div id="pv-result" style="margin:16px 0;"></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">关闭</button><button class="btn btn-primary" id="pv-refresh">刷新预览</button></div></div>';
+        '<div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">关闭</button><button class="btn btn-primary" id="pv-refresh">刷新预览</button></div></div>';
       document.body.appendChild(overlay);
 
       async function refresh(){
@@ -449,7 +449,7 @@ export function getDashboardHTML(): string {
       var routes=rResp.data||[];
 
       main.innerHTML='<h2 style="margin-bottom:24px;">Provider 配置</h2>'+
-        '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\'providers\')">Provider 列表</button><button class="tab" onclick="switchProviderTab(\'accounts\')">发件账号</button><button class="tab" onclick="switchProviderTab(\'routes\')">分类路由</button></div>'+
+        '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\\'providers\\')">Provider 列表</button><button class="tab" onclick="switchProviderTab(\\'accounts\\')">发件账号</button><button class="tab" onclick="switchProviderTab(\\'routes\\')">分类路由</button></div>'+
         '<div id="provider-tab-providers">'+
           '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showProviderModal()">+ 添加 Provider</button></div>'+
           '<div class="card">'+
@@ -459,7 +459,7 @@ export function getDashboardHTML(): string {
             providers.map(function(p){
               var config=typeof p.config==='string'?JSON.parse(p.config):p.config;
               var configInfo=p.type==='smtp'?'SMTP: '+config.host+':'+config.port:(p.type==='api'?'API: '+(config.provider_name||'Generic'):'Cloudflare: '+(config.domain||''));
-              return'<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><strong>'+esc(p.name)+'</strong><span class="badge badge-info" style="margin-left:8px;">'+esc(p.type)+'</span><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span><div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">'+esc(configInfo)+'</div></div><button class="btn btn-sm btn-danger" onclick="deleteProvider(\''+esc(p.id)+'\')">删除</button></div></div>';
+              return'<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><strong>'+esc(p.name)+'</strong><span class="badge badge-info" style="margin-left:8px;">'+esc(p.type)+'</span><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span><div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">'+esc(configInfo)+'</div></div><button class="btn btn-sm btn-danger" data-pid="'+esc(p.id)+'" onclick="deleteProvider(this.dataset.pid)">删除</button></div></div>';
             }).join('')
           )+
           '</div></div>'+
@@ -472,7 +472,7 @@ export function getDashboardHTML(): string {
           :
             '<div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>显示名</th><th>Provider</th><th>今日/限额</th><th>操作</th></tr></thead><tbody>'+
             accounts.map(function(a){
-              return'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.display_name||'-')+'</td><td><span class="badge badge-muted">'+esc(a.provider_id)+'</span></td><td>'+a.sent_today+' / '+a.daily_limit+'</td><td><button class="btn btn-sm btn-danger" onclick="deleteAccount(\''+esc(a.id)+'\')">删除</button></td></tr>';
+              return'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.display_name||'-')+'</td><td><span class="badge badge-muted">'+esc(a.provider_id)+'</span></td><td>'+a.sent_today+' / '+a.daily_limit+'</td><td><button class="btn btn-sm btn-danger" data-acctid="'+esc(a.id)+'" onclick="deleteAccount(this.dataset.acctid)">删除</button></td></tr>';
             }).join('')+'</tbody></table></div>'
           )+
           '</div></div>'+
@@ -485,7 +485,7 @@ export function getDashboardHTML(): string {
           :
             '<div class="table-wrap"><table><thead><tr><th>分类</th><th>Provider</th><th>账号</th><th>优先级</th><th>操作</th></tr></thead><tbody>'+
             routes.map(function(r){
-              return'<tr><td><span class="badge badge-info">'+esc(r.category)+'</span></td><td>'+esc(r.provider_id)+'</td><td>'+(r.account_id?esc(r.account_id):'自动选择')+'</td><td>'+r.priority+'</td><td><button class="btn btn-sm btn-danger" onclick="deleteRoute(\''+esc(r.id)+'\')">删除</button></td></tr>';
+              return'<tr><td><span class="badge badge-info">'+esc(r.category)+'</span></td><td>'+esc(r.provider_id)+'</td><td>'+(r.account_id?esc(r.account_id):'自动选择')+'</td><td>'+r.priority+'</td><td><button class="btn btn-sm btn-danger" data-rid="'+esc(r.id)+'" onclick="deleteRoute(this.dataset.rid)">删除</button></td></tr>';
             }).join('')+'</tbody></table></div>'
           )+
           '</div></div>';
@@ -505,9 +505,9 @@ export function getDashboardHTML(): string {
       overlay.className='modal-overlay';
       overlay.innerHTML='<div class="modal"><div class="modal-title">添加 Provider</div>'+
         '<div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="p-name" placeholder="如：SendGrid 生产"></div>'+
-        '<div class="form-group"><label class="form-label">类型 *</label><select class="form-select" id="p-type" onchange="toggleProviderConfigInModal(this.closest(\'.modal-overlay\'))"><option value="smtp">SMTP</option><option value="api">第三方 API</option><option value="cloudflare_email">Cloudflare Email</option></select></div>'+
+        '<div class="form-group"><label class="form-label">类型 *</label><select class="form-select" id="p-type" onchange="toggleProviderConfigInModal(this.closest(\\'.modal-overlay\\'))"><option value="smtp">SMTP</option><option value="api">第三方 API</option><option value="cloudflare_email">Cloudflare Email</option></select></div>'+
         '<div id="p-config-area"></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="p-save-btn">创建</button></div></div>';
+        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="p-save-btn">创建</button></div></div>';
       document.body.appendChild(overlay);
       toggleProviderConfigInModal(overlay);
 
@@ -582,7 +582,7 @@ export function getDashboardHTML(): string {
         '<div class="form-group"><label class="form-label">邮箱地址 *</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
         '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="如：Teaven 通知"></div>'+
         '<div class="form-group"><label class="form-label">每日限额</label><input class="form-input" id="ac-limit" type="number" value="1000"></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
+        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
       document.body.appendChild(overlay);
       overlay.querySelector('#ac-save-btn').addEventListener('click',async function(){
         var provider_id=overlay.querySelector('#ac-provider').value.trim();
@@ -613,7 +613,7 @@ export function getDashboardHTML(): string {
         '<div class="form-group"><label class="form-label">Provider ID *</label><input class="form-input" id="rt-provider" placeholder="Provider ID"></div>'+
         '<div class="form-group"><label class="form-label">账号 ID（可选）</label><input class="form-input" id="rt-account" placeholder="留空则自动选择"></div>'+
         '<div class="form-group"><label class="form-label">优先级</label><input class="form-input" id="rt-priority" type="number" value="0"></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="rt-save-btn">创建</button></div></div>';
+        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="rt-save-btn">创建</button></div></div>';
       document.body.appendChild(overlay);
       overlay.querySelector('#rt-save-btn').addEventListener('click',async function(){
         var category=overlay.querySelector('#rt-category').value;
@@ -665,11 +665,11 @@ export function getDashboardHTML(): string {
     }
 
     function loginPage(){
-      return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🔐</div><div class="card-title">登录 Teaven Email</div><p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px;">使用你的管理员账号登录</p></div><div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="login-email" type="email" placeholder="admin@example.com" value="'+esc(localStorage.getItem('teaven_email')||'')+'"></div><div class="form-group"><label class="form-label">密码</label><input class="form-input" id="login-password" type="password" placeholder="输入密码"></div><button class="btn btn-primary" onclick="doLogin()" style="width:100%;">登 录</button><p class="form-hint" style="margin-top:16px;text-align:center;">或 <a href="#" onclick="document.getElementById(\'main-content\').innerHTML=apiKeyFallbackPage()" style="color:var(--primary);text-decoration:none;">使用 API Key 登录</a></p></div>';
+      return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🔐</div><div class="card-title">登录 Teaven Email</div><p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px;">使用你的管理员账号登录</p></div><div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="login-email" type="email" placeholder="admin@example.com" value="'+esc(localStorage.getItem('teaven_email')||'')+'"></div><div class="form-group"><label class="form-label">密码</label><input class="form-input" id="login-password" type="password" placeholder="输入密码"></div><button class="btn btn-primary" onclick="doLogin()" style="width:100%;">登 录</button><p class="form-hint" style="margin-top:16px;text-align:center;">或 <a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=apiKeyFallbackPage()" style="color:var(--primary);text-decoration:none;">使用 API Key 登录</a></p></div>';
     }
 
     function apiKeyFallbackPage(){
-      return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🔑</div><div class="card-title">API Key 登录</div></div><div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..."></div><button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;">进 入</button><p class="form-hint" style="margin-top:16px;text-align:center;"><a href="#" onclick="document.getElementById(\'main-content\').innerHTML=loginPage()" style="color:var(--primary);text-decoration:none;">返回账号登录</a></p></div>';
+      return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🔑</div><div class="card-title">API Key 登录</div></div><div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..."></div><button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;">进 入</button><p class="form-hint" style="margin-top:16px;text-align:center;"><a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=loginPage()" style="color:var(--primary);text-decoration:none;">返回账号登录</a></p></div>';
     }
 
     function doLogin(){
