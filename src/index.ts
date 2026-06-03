@@ -7,6 +7,7 @@ import providerRouter from './routes/providers';
 import apiKeyRouter from './routes/api_keys';
 import webhookRouter from './routes/webhooks';
 import dashboardRouter from './routes/dashboard';
+import setupRouter from './routes/setup';
 import { processQueue } from './queue_processor';
 import { getDashboardHTML } from './dashboard_html';
 
@@ -54,6 +55,7 @@ v1.route('/providers', providerRouter);
 v1.route('/api-keys', apiKeyRouter);
 v1.route('/webhooks', webhookRouter);
 v1.route('/dashboard', dashboardRouter);
+v1.route('/setup', setupRouter);
 
 // 注册 v1 路由组
 app.route('/v1', v1);

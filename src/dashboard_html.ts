@@ -649,7 +649,49 @@ export function getDashboardHTML(): string {
     }
 
     function setupPage(){
-      return'<div class="card" style="max-width:500px;margin:80px auto;"><div class="card-title" style="margin-bottom:16px;">🔑 配置 API Key</div><p style="color:var(--text-muted);margin-bottom:20px;font-size:0.9rem;">请输入你的 Teaven Email API Key 以访问管理后台。</p><div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..." value="'+esc(API_KEY)+'"></div><button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;">保存并进入</button><p class="form-hint" style="margin-top:12px;">API Key 仅存储在浏览器本地，不会上传到任何服务器。</p></div>';
+      // 先检查是否需要初始化
+      fetch(API_BASE+'/setup/status').then(function(r){return r.json()}).then(function(resp){
+        var needsSetup=resp.data&&resp.data.needs_setup;
+        var main=document.getElementById('main-content');
+        if(needsSetup){
+          main.innerHTML=initPage();
+        }else{
+          main.innerHTML='<div class="card" style="max-width:500px;margin:80px auto;"><div class="card-title" style="margin-bottom:16px;">🔑 配置 API Key</div><p style="color:var(--text-muted);margin-bottom:20px;font-size:0.9rem;">请输入你的 Teaven Email API Key 以访问管理后台。</p><div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..." value="'+esc(API_KEY)+'"></div><button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;">保存并进入</button><p class="form-hint" style="margin-top:12px;">API Key 仅存储在浏览器本地，不会上传到任何服务器。</p></div>';
+        }
+      }).catch(function(){
+        document.getElementById('main-content').innerHTML='<div class="card" style="max-width:500px;margin:80px auto;"><div class="card-title" style="margin-bottom:16px;">🔑 配置 API Key</div><p style="color:var(--text-muted);margin-bottom:20px;font-size:0.9rem;">请输入你的 Teaven Email API Key 以访问管理后台。</p><div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..." value="'+esc(API_KEY)+'"></div><button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;">保存并进入</button></div>';
+      });
+      return'<div style="text-align:center;padding:80px;color:var(--text-muted);">加载中...</div>';
+    }
+
+    function initPage(){
+      return'<div class="card" style="max-width:500px;margin:60px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:3rem;margin-bottom:8px;">🚀</div><div class="card-title">欢迎使用 Teaven Email</div><p style="color:var(--text-muted);font-size:0.85rem;margin-top:8px;">首次使用，请创建管理员账户</p></div><div class="form-group"><label class="form-label">姓名</label><input class="form-input" id="init-name" placeholder="如：张三"></div><div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="init-email" placeholder="admin@example.com"></div><div class="form-group"><label class="form-label">密码（至少6位）</label><input class="form-input" id="init-password" type="password" placeholder="至少6位密码"></div><button class="btn btn-primary" onclick="doInit()" style="width:100%;">创建账户并获取 API Key</button><p class="form-hint" style="margin-top:12px;">创建后请立即复制保存 API Key，它只会显示一次。</p></div>';
+    }
+
+    function doInit(){
+      var name=document.getElementById('init-name').value.trim();
+      var email=document.getElementById('init-email').value.trim();
+      var password=document.getElementById('init-password').value;
+      if(!name||!email||!password){toast('请填写所有字段','error');return}
+      if(password.length<6){toast('密码至少需要6位','error');return}
+
+      fetch(API_BASE+'/setup/init',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:name,email:email,password:password})
+      }).then(function(r){return r.json()}).then(function(resp){
+        if(resp.success){
+          var main=document.getElementById('main-content');
+          main.innerHTML='<div class="card" style="max-width:600px;margin:60px auto;border-color:var(--success);"><div class="card-title" style="margin-bottom:16px;">🎉 初始化成功！</div><p style="color:var(--text-muted);margin-bottom:8px;">管理员账户: <strong>'+esc(resp.data.user.email)+'</strong></p><p style="color:var(--text-muted);margin-bottom:16px;">以下是你的 API Key，<strong style="color:var(--danger);">请立即复制保存，关闭后将无法再次查看！</strong></p><div class="code-block" style="margin-bottom:16px;"><span class="key-highlight">'+esc(resp.data.api_key.key)+'</span></div><p class="form-hint" style="margin-bottom:20px;">使用方式：<code>Authorization: Bearer '+esc(resp.data.api_key.key)+'</code></p><button class="btn btn-primary" onclick="saveInitKey(\\''+esc(resp.data.api_key.key)+'\\')" style="width:100%;">我已保存，进入后台</button></div>';
+        }else{
+          toast(resp.error,'error');
+        }
+      }).catch(function(){toast('网络错误，请重试','error')});
+    }
+
+    function saveInitKey(key){
+      localStorage.setItem('teaven_api_key',key);
+      location.reload();
     }
 
     function saveApiKey(){
