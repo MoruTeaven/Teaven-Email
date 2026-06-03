@@ -110,6 +110,129 @@ setupRouter.post('/init', async (c) => {
   }, 201);
 });
 
+// POST /v1/setup/login - 账号密码登录，返回 API Key
+setupRouter.post('/login', async (c) => {
+  const db = getDB(c.env.DB);
+
+  let body: { email: string; password: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!body.email || !body.password) {
+    return c.json({ success: false, error: 'email and password are required' }, 400);
+  }
+
+  // 查找用户
+  const user = await db.getUserByEmail(body.email);
+  if (!user) {
+    return c.json({ success: false, error: 'Invalid email or password' }, 401);
+  }
+
+  if (user.status !== 'active') {
+    return c.json({ success: false, error: 'Account is disabled' }, 403);
+  }
+
+  // 验证密码
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(body.password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', passwordData);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  if (passwordHash !== user.password_hash) {
+    return c.json({ success: false, error: 'Invalid email or password' }, 401);
+  }
+
+  // 获取用户的 API Keys
+  const apiKeys = await db.getApiKeysByUser(user.id);
+  if (apiKeys.length === 0) {
+    return c.json({ success: false, error: 'No API keys found. Contact administrator.' }, 404);
+  }
+
+  // 返回第一个启用的 key
+  const activeKey = apiKeys.find(k => k.enabled === 1);
+  if (!activeKey) {
+    return c.json({ success: false, error: 'No active API keys. Contact administrator.' }, 404);
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      user: { id: user.id, name: user.name, email: user.email },
+      api_keys: apiKeys.map(k => ({
+        id: k.id,
+        name: k.name,
+        prefix: k.api_key_prefix,
+        permissions: typeof k.permissions === 'string' ? JSON.parse(k.permissions) : k.permissions,
+        enabled: k.enabled,
+      })),
+    },
+  });
+});
+
+// POST /v1/setup/key-from-password - 登录后获取新的 API Key
+setupRouter.post('/key-from-password', async (c) => {
+  let body: { email: string; password: string; name?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!body.email || !body.password) {
+    return c.json({ success: false, error: 'email and password are required' }, 400);
+  }
+
+  const db = getDB(c.env.DB);
+  const user = await db.getUserByEmail(body.email);
+  if (!user || user.status !== 'active') {
+    return c.json({ success: false, error: 'Invalid email or password' }, 401);
+  }
+
+  // 验证密码
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(body.password));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  if (passwordHash !== user.password_hash) {
+    return c.json({ success: false, error: 'Invalid email or password' }, 401);
+  }
+
+  // 生成新的 API Key
+  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const { raw, hash, prefix } = await generateApiKey();
+  const apiKeyId = crypto.randomUUID();
+
+  await db.createApiKey({
+    id: apiKeyId,
+    user_id: user.id,
+    name: body.name || 'Login Key',
+    api_key_hash: hash,
+    api_key_prefix: prefix,
+    permissions: allPermissions,
+    enabled: 1,
+    last_used_at: null,
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      api_key: {
+        id: apiKeyId,
+        name: body.name || 'Login Key',
+        key: raw,
+        prefix,
+        permissions: allPermissions,
+        message: '⚠️ Store this key securely!',
+      },
+    },
+  }, 201);
+});
+
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

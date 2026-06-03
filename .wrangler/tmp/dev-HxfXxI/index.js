@@ -9835,6 +9835,103 @@ setupRouter.post("/init", async (c) => {
     }
   }, 201);
 });
+setupRouter.post("/login", async (c) => {
+  const db = getDB(c.env.DB);
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: "Invalid JSON body" }, 400);
+  }
+  if (!body.email || !body.password) {
+    return c.json({ success: false, error: "email and password are required" }, 400);
+  }
+  const user = await db.getUserByEmail(body.email);
+  if (!user) {
+    return c.json({ success: false, error: "Invalid email or password" }, 401);
+  }
+  if (user.status !== "active") {
+    return c.json({ success: false, error: "Account is disabled" }, 403);
+  }
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(body.password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", passwordData);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (passwordHash !== user.password_hash) {
+    return c.json({ success: false, error: "Invalid email or password" }, 401);
+  }
+  const apiKeys = await db.getApiKeysByUser(user.id);
+  if (apiKeys.length === 0) {
+    return c.json({ success: false, error: "No API keys found. Contact administrator." }, 404);
+  }
+  const activeKey = apiKeys.find((k) => k.enabled === 1);
+  if (!activeKey) {
+    return c.json({ success: false, error: "No active API keys. Contact administrator." }, 404);
+  }
+  return c.json({
+    success: true,
+    data: {
+      user: { id: user.id, name: user.name, email: user.email },
+      api_keys: apiKeys.map((k) => ({
+        id: k.id,
+        name: k.name,
+        prefix: k.api_key_prefix,
+        permissions: typeof k.permissions === "string" ? JSON.parse(k.permissions) : k.permissions,
+        enabled: k.enabled
+      }))
+    }
+  });
+});
+setupRouter.post("/key-from-password", async (c) => {
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: "Invalid JSON body" }, 400);
+  }
+  if (!body.email || !body.password) {
+    return c.json({ success: false, error: "email and password are required" }, 400);
+  }
+  const db = getDB(c.env.DB);
+  const user = await db.getUserByEmail(body.email);
+  if (!user || user.status !== "active") {
+    return c.json({ success: false, error: "Invalid email or password" }, 401);
+  }
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(body.password));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (passwordHash !== user.password_hash) {
+    return c.json({ success: false, error: "Invalid email or password" }, 401);
+  }
+  const allPermissions = ["SEND_MAIL", "MANAGE_TEMPLATE", "READ_LOG", "MANAGE_PROVIDER"];
+  const { raw: raw2, hash, prefix } = await generateApiKey();
+  const apiKeyId = crypto.randomUUID();
+  await db.createApiKey({
+    id: apiKeyId,
+    user_id: user.id,
+    name: body.name || "Login Key",
+    api_key_hash: hash,
+    api_key_prefix: prefix,
+    permissions: allPermissions,
+    enabled: 1,
+    last_used_at: null
+  });
+  return c.json({
+    success: true,
+    data: {
+      api_key: {
+        id: apiKeyId,
+        name: body.name || "Login Key",
+        key: raw2,
+        prefix,
+        permissions: allPermissions,
+        message: "\u26A0\uFE0F Store this key securely!"
+      }
+    }
+  }, 201);
+});
 function isValidEmail2(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
