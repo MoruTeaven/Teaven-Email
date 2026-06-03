@@ -13,3 +13,5 @@
 
 - 优先使用 `wrangler` CLI 进行所有 Workers 相关的开发、调试和部署操作。
 - 涉及数据库变更时，通过 D1 migrations 进行，不要直接操作生产数据库。
+
+** 一些重大的更改记得更新agents.md **

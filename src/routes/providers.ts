@@ -2,7 +2,7 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
-import type { EmailProvider, Account, ProviderType } from '../types';
+import type { EmailProvider, ProviderType } from '../types';
 
 const providerRouter = new Hono<{ Bindings: Env }>();
 
@@ -100,74 +100,6 @@ providerRouter.delete('/:id', authMiddleware(['MANAGE_PROVIDER']), async (c) => 
   await db.deleteProvider(id, auth.userId);
 
   return c.json({ success: true, message: 'Provider deleted' });
-});
-
-// ============ Accounts ============
-
-// GET /v1/providers/accounts - 获取所有发件账号
-providerRouter.get('/accounts', authMiddleware(['MANAGE_PROVIDER']), async (c) => {
-  const auth = getAuth(c);
-  const db = getDB(c.env.DB);
-  const accounts = await db.getAccountsByUser(auth.userId);
-  return c.json({ success: true, data: accounts });
-});
-
-// POST /v1/providers/accounts - 创建发件账号
-providerRouter.post('/accounts', authMiddleware(['MANAGE_PROVIDER']), async (c) => {
-  const auth = getAuth(c);
-  const db = getDB(c.env.DB);
-
-  let body: {
-    provider_id: string;
-    name: string;
-    email: string;
-    display_name?: string;
-    config?: string;
-    daily_limit?: number;
-  };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
-  }
-
-  if (!body.provider_id || !body.name || !body.email) {
-    return c.json({ success: false, error: 'provider_id, name, and email are required' }, 400);
-  }
-
-  // 验证 provider 存在
-  const provider = await db.getProviderById(body.provider_id, auth.userId);
-  if (!provider) {
-    return c.json({ success: false, error: 'Provider not found' }, 404);
-  }
-
-  const account: Omit<Account, 'created_at' | 'updated_at'> = {
-    id: crypto.randomUUID(),
-    user_id: auth.userId,
-    provider_id: body.provider_id,
-    name: body.name,
-    email: body.email,
-    display_name: body.display_name || null,
-    config: body.config || null,
-    daily_limit: body.daily_limit || 1000,
-    sent_today: 0,
-    enabled: 1,
-  };
-
-  await db.createAccount(account);
-
-  return c.json({ success: true, data: account }, 201);
-});
-
-// DELETE /v1/providers/accounts/:id - 删除发件账号
-providerRouter.delete('/accounts/:id', authMiddleware(['MANAGE_PROVIDER']), async (c) => {
-  const auth = getAuth(c);
-  const db = getDB(c.env.DB);
-
-  const id = c.req.param('id');
-  await db.deleteAccount(id, auth.userId);
-
-  return c.json({ success: true, message: 'Account deleted' });
 });
 
 // ============ Category Routes ============

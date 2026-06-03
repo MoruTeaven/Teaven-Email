@@ -15,7 +15,6 @@ adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
      (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id) as api_key_count,
      (SELECT COUNT(*) FROM templates WHERE user_id = u.id) as template_count,
      (SELECT COUNT(*) FROM providers WHERE user_id = u.id) as provider_count,
-     (SELECT COUNT(*) FROM accounts WHERE user_id = u.id) as account_count,
      (SELECT COUNT(*) FROM mail_logs WHERE user_id = u.id) as mail_count
      FROM users u WHERE u.status != 'deleted' ORDER BY u.created_at DESC`
   ).all();
@@ -162,36 +161,44 @@ adminRouter.get('/providers', superAdminMiddleware(), async (c) => {
 
 // ========== 跨租户发件账号管理 ==========
 
-// GET /v1/admin/accounts - 所有租户的所有发件账号
+// GET /v1/admin/accounts - 所有全局发件账号
 adminRouter.get('/accounts', superAdminMiddleware(), async (c) => {
-  const tenantId = c.req.query('tenant_id');
-  let sql = `SELECT a.*, u.name as tenant_name, u.email as tenant_email, p.name as provider_name, p.type as provider_type
-     FROM accounts a JOIN users u ON a.user_id = u.id JOIN providers p ON a.provider_id = p.id`;
-  const params: unknown[] = [];
-  if (tenantId) { sql += ' WHERE a.user_id = ?'; params.push(tenantId); }
-  sql += ' ORDER BY a.created_at DESC';
-
-  const rows = await params.length > 0
-    ? c.env.DB.prepare(sql).bind(...params).all()
-    : c.env.DB.prepare(sql).all();
-  return c.json({ success: true, data: rows.results });
+  const db = getDB(c.env.DB);
+  const accounts = await db.getAllAccounts();
+  return c.json({ success: true, data: accounts });
 });
 
-// POST /v1/admin/accounts - 管理员为任意租户创建发件账号
+// POST /v1/admin/accounts - 管理员创建全局发件账号
 adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
-  let body: { user_id: string; provider_id: string; name: string; email: string; display_name?: string; daily_limit?: number };
+  const db = getDB(c.env.DB);
+
+  let body: { provider_id: string; name: string; email: string; display_name?: string; daily_limit?: number };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
-  if (!body.user_id || !body.provider_id || !body.name || !body.email) {
-    return c.json({ success: false, error: 'user_id, provider_id, name, email are required' }, 400);
+  if (!body.provider_id || !body.name || !body.email) {
+    return c.json({ success: false, error: 'provider_id, name, email are required' }, 400);
   }
 
-  const id = crypto.randomUUID();
-  await c.env.DB.prepare(
-    `INSERT INTO accounts (id, user_id, provider_id, name, email, display_name, daily_limit, sent_today, enabled)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1)`
-  ).bind(id, body.user_id, body.provider_id, body.name, body.email, body.display_name || null, body.daily_limit || 1000).run();
+  // 验证 provider 存在
+  const provider = await db.getProviderByIdGlobal(body.provider_id);
+  if (!provider) {
+    return c.json({ success: false, error: 'Provider not found' }, 404);
+  }
 
-  return c.json({ success: true, data: { id, ...body } }, 201);
+  const account = {
+    id: crypto.randomUUID(),
+    provider_id: body.provider_id,
+    name: body.name,
+    email: body.email,
+    display_name: body.display_name || null,
+    config: null,
+    daily_limit: body.daily_limit || 1000,
+    sent_today: 0,
+    enabled: 1,
+  };
+
+  await db.createAccount(account);
+
+  return c.json({ success: true, data: account }, 201);
 });
 
 // DELETE /v1/admin/accounts/:id - 管理员删除任意账号

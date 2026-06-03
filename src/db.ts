@@ -125,43 +125,54 @@ export function getDB(db: D1Database) {
       ).bind(id, userId).run();
     },
 
-    // ============ Accounts ============
-    async getAccountsByUser(userId: string): Promise<Account[]> {
+    // ============ Accounts (全局，不绑定用户) ============
+    async getAllAccounts(): Promise<Account[]> {
       const result = await db.prepare(
-        'SELECT * FROM accounts WHERE user_id = ? ORDER BY created_at DESC'
-      ).bind(userId).all<Account>();
+        'SELECT * FROM accounts ORDER BY created_at DESC'
+      ).all<Account>();
       return result.results;
     },
 
-    async getEnabledAccountsByProvider(userId: string, providerId: string): Promise<Account[]> {
+    async getEnabledAccountsByProvider(providerId: string): Promise<Account[]> {
       const result = await db.prepare(
-        'SELECT * FROM accounts WHERE user_id = ? AND provider_id = ? AND enabled = 1 ORDER BY daily_limit ASC'
-      ).bind(userId, providerId).all<Account>();
+        'SELECT * FROM accounts WHERE provider_id = ? AND enabled = 1 ORDER BY daily_limit ASC'
+      ).bind(providerId).all<Account>();
       return result.results;
+    },
+
+    async getAccountById(id: string): Promise<Account | null> {
+      return db.prepare('SELECT * FROM accounts WHERE id = ?').bind(id).first<Account>();
     },
 
     async createAccount(account: Omit<Account, 'created_at' | 'updated_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO accounts (id, user_id, provider_id, name, email, display_name, config, daily_limit, sent_today, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO accounts (id, provider_id, name, email, display_name, config, daily_limit, sent_today, enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
-        account.id, account.user_id, account.provider_id, account.name,
+        account.id, account.provider_id, account.name,
         account.email, account.display_name, account.config,
         account.daily_limit, account.sent_today, account.enabled
       ).run();
     },
 
-    async incrementAccountSent(id: string, userId: string): Promise<void> {
+    async incrementAccountSent(id: string): Promise<void> {
       await db.prepare(
         `UPDATE accounts SET sent_today = sent_today + 1, updated_at = datetime('now')
-         WHERE id = ? AND user_id = ?`
-      ).bind(id, userId).run();
+         WHERE id = ?`
+      ).bind(id).run();
     },
 
-    async deleteAccount(id: string, userId: string): Promise<void> {
+    async deleteAccount(id: string): Promise<void> {
       await db.prepare(
-        'DELETE FROM accounts WHERE id = ? AND user_id = ?'
-      ).bind(id, userId).run();
+        'DELETE FROM accounts WHERE id = ?'
+      ).bind(id).run();
+    },
+
+    // 全局 Provider 查询（不限用户，用于队列处理等场景）
+    async getProviderByIdGlobal(id: string): Promise<EmailProvider | null> {
+      return db.prepare(
+        'SELECT * FROM providers WHERE id = ?'
+      ).bind(id).first<EmailProvider>();
     },
 
     // ============ Templates ============

@@ -63,7 +63,6 @@ export type ProviderConfig = SmtpConfig | ApiProviderConfig | CloudflareEmailCon
 
 export interface Account {
   id: string;
-  user_id: string;
   provider_id: string;
   name: string;
   email: string;

@@ -19,8 +19,8 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
     // 标记为处理中
     await db.updateQueueItemStatus(item.id, 'processing');
 
-    // 获取 Provider
-    const provider = await db.getProviderById(item.provider_id, item.user_id);
+    // 获取 Provider（全局查询）
+    const provider = await db.getProviderByIdGlobal(item.provider_id);
     if (!provider) {
       await db.updateQueueItemStatus(item.id, 'failed', 'Provider not found');
       await db.updateMailLogStatus(item.mail_log_id, 'failed', undefined, 'Provider not found');
@@ -34,13 +34,12 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
       config: typeof provider.config === 'string' ? JSON.parse(provider.config) : provider.config,
     };
 
-    // 获取发件人信息
+    // 获取发件人信息（全局账号）
     let fromEmail = 'noreply@teaven.email';
     let fromName: string | undefined;
 
     if (item.account_id) {
-      const accounts = await db.getEnabledAccountsByProvider(item.user_id, item.provider_id);
-      const account = accounts.find(a => a.id === item.account_id);
+      const account = await db.getAccountById(item.account_id);
       if (account) {
         fromEmail = account.email;
         fromName = account.display_name || undefined;
@@ -63,7 +62,7 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
 
       // 更新账号发送计数
       if (item.account_id) {
-        await db.incrementAccountSent(item.account_id, item.user_id);
+        await db.incrementAccountSent(item.account_id);
       }
 
       // 更新每日统计

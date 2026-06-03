@@ -13,7 +13,7 @@ dashboardRouter.get('/overview', authMiddleware(), async (c) => {
   const [templates, providers, accounts, apiKeys, stats] = await Promise.all([
     db.getTemplatesByUser(auth.userId),
     db.getProvidersByUser(auth.userId),
-    db.getAccountsByUser(auth.userId),
+    db.getAllAccounts(),
     db.getApiKeysByUser(auth.userId),
     db.getDailyStats(auth.userId, 7),
   ]);

@@ -46,10 +46,9 @@ CREATE TABLE IF NOT EXISTS providers (
 
 CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
 
--- 发件账号表
+-- 发件账号表（全局，不绑定用户）
 CREATE TABLE IF NOT EXISTS accounts (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id),
     provider_id TEXT NOT NULL REFERENCES providers(id),
     name TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -62,7 +61,6 @@ CREATE TABLE IF NOT EXISTS accounts (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_provider_id ON accounts(provider_id);
 
 -- 模板表

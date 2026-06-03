@@ -83,20 +83,19 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
     providerId = providers[0].id;
   }
 
-  // 查找发件账号
+  // 查找发件账号（全局账号，所有用户共用）
   let fromEmail = 'noreply@teaven.email';
   let fromName: string | null = null;
 
   if (accountId) {
-    const accounts = await db.getEnabledAccountsByProvider(auth.userId, providerId);
-    const account = accounts.find(a => a.id === accountId);
+    const account = await db.getAccountById(accountId);
     if (account) {
       fromEmail = account.email;
       fromName = account.display_name;
     }
   } else {
     // 自动选择账号（负载均衡）
-    const accounts = await db.getEnabledAccountsByProvider(auth.userId, providerId);
+    const accounts = await db.getEnabledAccountsByProvider(providerId);
     const selected = selectAccount(accounts);
     if (selected) {
       accountId = selected.id;
@@ -202,7 +201,8 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   let fromName: string | null = null;
 
   if (!accountId) {
-    const accounts = await db.getEnabledAccountsByProvider(auth.userId, providerId);
+    // 自动选择账号（负载均衡，全局账号）
+    const accounts = await db.getEnabledAccountsByProvider(providerId);
     const selected = selectAccount(accounts);
     if (selected) {
       accountId = selected.id;
@@ -210,8 +210,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
       fromName = selected.display_name;
     }
   } else {
-    const accounts = await db.getEnabledAccountsByProvider(auth.userId, providerId);
-    const account = accounts.find(a => a.id === accountId);
+    const account = await db.getAccountById(accountId);
     if (account) {
       fromEmail = account.email;
       fromName = account.display_name;
