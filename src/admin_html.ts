@@ -178,7 +178,7 @@ function showAddAccountModal(){
       '<div class="form-group"><label class="form-label">邮箱地址</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
       '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="Teaven 通知"></div>'+
       '<div class="form-group"><label class="form-label">每日限额</label><input class="form-input" id="ac-limit" type="number" value="1000"></div>'+
-      '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
+      '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
     document.body.appendChild(overlay);
 
     overlay.querySelector('#ac-save-btn').addEventListener('click',async function(){
