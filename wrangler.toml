@@ -1,0 +1,23 @@
+name = "teaven-email"
+main = "src/index.ts"
+compatibility_date = "2025-06-03"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "teaven-email-db"
+database_id = "teaven-email-db-id"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "teaven-email-kv-id"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "teaven-email-assets"
+
+[vars]
+ENVIRONMENT = "production"
+JWT_SECRET = ""
+
+[observability]
+enabled = true

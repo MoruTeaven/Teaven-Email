@@ -1,0 +1,26 @@
+{
+  "name": "teaven-email",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create teaven-email-db",
+    "db:migrate:local": "wrangler d1 execute teaven-email-db --local --file=./migrations/001_init.sql",
+    "db:migrate": "wrangler d1 execute teaven-email-db --file=./migrations/001_init.sql",
+    "kv:create": "wrangler kv:namespace create \"teaven-email-kv\"",
+    "r2:create": "wrangler r2 bucket create teaven-email-assets"
+  },
+  "dependencies": {
+    "handlebars": "^4.7.8",
+    "hono": "^4.4.0",
+    "bcryptjs": "^2.4.3",
+    "nanoid": "^5.0.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250530.0",
+    "@types/bcryptjs": "^2.4.6",
+    "wrangler": "^3.60.0",
+    "typescript": "^5.5.0"
+  }
+}
