@@ -221,7 +221,7 @@ function showCreateTenantModal(){
     '<div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="ct-email" type="email" placeholder="user@example.com"></div>'+
     '<div class="form-group"><label class="form-label">密码（至少6位）</label><input class="form-input" id="ct-password" type="password" placeholder="至少6位密码"></div>'+
     '<div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="ct-super" style="accent-color:var(--primary);"> 设为超级管理员</label></div>'+
-    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="ct-save-btn">创建</button></div></div>';
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="ct-save-btn">创建</button></div></div>';
   document.body.appendChild(overlay);
 
   overlay.querySelector('#ct-save-btn').addEventListener('click',async function(){
@@ -238,7 +238,7 @@ function showCreateTenantModal(){
         '<p style="color:var(--text-muted);margin-bottom:8px;">租户: <strong>'+esc(resp.data.user.name)+'</strong> ('+esc(resp.data.user.email)+')</p>'+
         '<p style="color:var(--text-muted);margin-bottom:12px;">API Key（仅显示一次）：</p>'+
         '<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:16px;word-break:break-all;font-family:monospace;font-size:0.85rem;color:var(--warning);">'+esc(resp.data.api_key.key)+'</div>'+
-        '<button class="btn btn-primary" onclick="this.closest(\'.modal-overlay\').remove();renderPage(\'tenants\')" style="width:100%;">关闭</button></div>';
+        '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove();renderPage(\\'tenants\\')" style="width:100%;">关闭</button></div>';
       toast('租户创建成功');
     }else{
       toast(resp.error,'error');
@@ -260,7 +260,7 @@ async function impersonateTenant(tid){
     '<p style="color:var(--text-muted);margin-bottom:12px;">生成的 API Key（仅显示一次）：</p>'+
     '<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:16px;word-break:break-all;font-family:monospace;font-size:0.85rem;color:var(--warning);">'+esc(resp.data.api_key.key)+'</div>'+
     '<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;">切换后将进入该租户的管理后台，原始超管 Key 已暂存</p>'+
-    '<div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button></div></div>';
+    '<div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button></div></div>';
   document.body.appendChild(overlay);
 
   overlay.querySelector('#impersonate-switch-btn').addEventListener('click',function(){
