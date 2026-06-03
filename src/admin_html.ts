@@ -75,6 +75,7 @@ export function getAdminHTML(): string {
     </div>
     <button class="nav-item active" data-page="overview">📊 总览</button>
     <button class="nav-item" data-page="tenants">🏢 租户管理</button>
+    <button class="nav-item" data-page="providers">📡 Provider 管理</button>
     <button class="nav-item" data-page="accounts">📧 发件账号</button>
   </nav>
   <main class="main" id="main-content"></main>
@@ -113,6 +114,7 @@ function renderPage(page){
   switch(page){
     case'overview':renderOverview(main);break;
     case'tenants':renderTenants(main);break;
+    case'providers':renderProviders(main);break;
     case'accounts':renderAllAccounts(main);break;
   }
 }
@@ -138,9 +140,9 @@ async function renderTenants(main){
   var tenants=resp.data||[];
   main.innerHTML='<h2 style="margin-bottom:24px;">租户管理</h2>'+
     '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showCreateTenantModal()">+ 新建租户</button></div>'+
-    '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>Provider</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
     tenants.map(function(t){
-      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.mail_count+'</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button> <button class="btn btn-sm" style="background:var(--primary);color:#fff;padding:6px 12px;font-size:0.8rem;border:none;border-radius:var(--radius);cursor:pointer;" data-tid="'+esc(t.id)+'" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button></td></tr>';
+      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.mail_count+'</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button> <button class="btn btn-sm" style="background:var(--primary);color:#fff;padding:6px 12px;font-size:0.8rem;border:none;border-radius:var(--radius);cursor:pointer;" data-tid="'+esc(t.id)+'" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button></td></tr>';
     }).join('')+'</tbody></table></div></div>';
 }
 
@@ -148,6 +150,100 @@ async function toggleTenant(id,status){
   await api('/admin/tenants/'+id,{method:'PUT',body:JSON.stringify({status:status})});
   renderPage('tenants');
   toast('租户状态已更新');
+}
+
+async function renderProviders(main){
+  var resp=await api('/admin/providers');
+  var providers=resp.data||[];
+
+  main.innerHTML='<h2 style="margin-bottom:24px;">Provider 管理</h2>'+
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAdminProviderModal()">+ 添加 Provider</button></div>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>类型</th><th>优先级</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+    providers.map(function(p){
+      var config=typeof p.config==='string'?JSON.parse(p.config):p.config;
+      var configInfo=p.type==='smtp'?'SMTP: '+config.host+':'+config.port:(p.type==='api'?'API: '+(config.provider_name||'Generic'):'Cloudflare: '+(config.domain||''));
+      return'<tr><td><strong>'+esc(p.name)+'</strong><div style="color:var(--text-muted);font-size:0.8rem;">'+esc(configInfo)+'</div></td><td><span class="badge badge-info">'+esc(p.type)+'</span></td><td>'+p.priority+'</td><td><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" data-pid="'+esc(p.id)+'" data-penabled="'+(!p.enabled?1:0)+'" onclick="toggleProvider(this.dataset.pid,+this.dataset.penabled)">'+(p.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-pid="'+esc(p.id)+'" onclick="deleteAdminProvider(this.dataset.pid)">删除</button></td></tr>';
+    }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">暂无 Provider</td></tr>'+
+    '</tbody></table></div></div>';
+}
+
+function showAdminProviderModal(){
+  var overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.innerHTML='<div class="modal"><div class="modal-title">添加 Provider</div>'+
+    '<div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="p-name" placeholder="如：SendGrid 生产"></div>'+
+    '<div class="form-group"><label class="form-label">类型 *</label><select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\\'.modal-overlay\\'))"><option value="smtp">SMTP</option><option value="api">第三方 API</option><option value="cloudflare_email">Cloudflare Email</option></select></div>'+
+    '<div id="p-config-area"></div>'+
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="p-save-btn">创建</button></div></div>';
+  document.body.appendChild(overlay);
+  toggleProviderConfig(overlay);
+
+  overlay.querySelector('#p-save-btn').addEventListener('click',async function(){
+    var name=overlay.querySelector('#p-name').value.trim();
+    var type=overlay.querySelector('#p-type').value;
+    if(!name){toast('请输入名称','error');return}
+    var config=getProviderConfig(overlay,type);
+    if(!config)return;
+    var resp=await api('/admin/providers',{method:'POST',body:JSON.stringify({name:name,type:type,config:config})});
+    if(resp.success){overlay.remove();renderPage('providers');toast('Provider 创建成功')}
+    else toast(resp.error,'error');
+  });
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+}
+
+function toggleProviderConfig(overlay){
+  var type=overlay.querySelector('#p-type').value;
+  var area=overlay.querySelector('#p-config-area');
+  if(type==='smtp'){
+    area.innerHTML='<div class="form-group"><label class="form-label">Host *</label><input class="form-input" id="pc-host" placeholder="smtp.example.com"></div>'+
+      '<div class="form-group"><label class="form-label">Port *</label><input class="form-input" id="pc-port" placeholder="587" type="number"></div>'+
+      '<div class="form-group"><label class="form-label">Username *</label><input class="form-input" id="pc-user" placeholder="user@example.com"></div>'+
+      '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="pc-pass" type="password" placeholder="••••"></div>'+
+      '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>';
+  }else if(type==='api'){
+    area.innerHTML='<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="generic">通用</option></select></div>'+
+      '<div class="form-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>'+
+      '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
+  }else{
+    area.innerHTML='<div class="form-group"><label class="form-label">域名 *</label><input class="form-input" id="pc-domain" placeholder="example.com"></div>'+
+      '<div class="form-group"><label class="form-label">DKIM Selector</label><input class="form-input" id="pc-dkim" placeholder="mailchannels"></div>';
+  }
+}
+
+function getProviderConfig(overlay,type){
+  if(type==='smtp'){
+    var host=overlay.querySelector('#pc-host')?overlay.querySelector('#pc-host').value.trim():'';
+    var port=parseInt(overlay.querySelector('#pc-port')?overlay.querySelector('#pc-port').value:'0');
+    var username=overlay.querySelector('#pc-user')?overlay.querySelector('#pc-user').value.trim():'';
+    var password=overlay.querySelector('#pc-pass')?overlay.querySelector('#pc-pass').value.trim():'';
+    var encryption=overlay.querySelector('#pc-enc')?overlay.querySelector('#pc-enc').value:'tls';
+    if(!host||!port||!username||!password){toast('请填写所有 SMTP 配置','error');return null}
+    return{host:host,port:port,username:username,password:password,encryption:encryption};
+  }else if(type==='api'){
+    var api_key=overlay.querySelector('#pc-apikey')?overlay.querySelector('#pc-apikey').value.trim():'';
+    var provider_name=overlay.querySelector('#pc-pname')?overlay.querySelector('#pc-pname').value:'generic';
+    var api_url=overlay.querySelector('#pc-url')?overlay.querySelector('#pc-url').value.trim():'';
+    if(!api_key){toast('请填写 API Key','error');return null}
+    return{api_key:api_key,provider_name:provider_name,api_url:api_url};
+  }else{
+    var domain=overlay.querySelector('#pc-domain')?overlay.querySelector('#pc-domain').value.trim():'';
+    var dkim_selector=overlay.querySelector('#pc-dkim')?overlay.querySelector('#pc-dkim').value.trim():'mailchannels';
+    if(!domain){toast('请填写域名','error');return null}
+    return{domain:domain,dkim_selector:dkim_selector};
+  }
+}
+
+async function toggleProvider(id,enabled){
+  await api('/admin/providers/'+id,{method:'PUT',body:JSON.stringify({enabled:enabled?1:0})});
+  renderPage('providers');
+  toast('Provider 状态已更新');
+}
+
+async function deleteAdminProvider(id){
+  if(!confirm('确定删除此 Provider？此操作不可撤销。'))return;
+  await api('/admin/providers/'+id,{method:'DELETE'});
+  renderPage('providers');
+  toast('Provider 已删除');
 }
 
 async function renderAllAccounts(main){
@@ -170,7 +266,7 @@ function showAddAccountModal(){
   api('/admin/providers').then(function(resp){
     var providers=resp.data||[];
     overlay.innerHTML='<div class="modal"><div class="modal-title">添加全局发件账号</div>'+
-      '<div class="form-group"><label class="form-label">Provider</label><select class="form-select" id="ac-provider">'+providers.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+esc(p.type)+') - '+esc(p.tenant_name)+'</option>'}).join('')+'</select></div>'+
+      '<div class="form-group"><label class="form-label">Provider</label><select class="form-select" id="ac-provider">'+providers.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+esc(p.type)+')</option>'}).join('')+'</select></div>'+
       '<div class="form-group"><label class="form-label">账号名称</label><input class="form-input" id="ac-name" placeholder="如：通知邮箱"></div>'+
       '<div class="form-group"><label class="form-label">邮箱地址</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
       '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="Teaven 通知"></div>'+

@@ -20,7 +20,7 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
     await db.updateQueueItemStatus(item.id, 'processing');
 
     // 获取 Provider（全局查询）
-    const provider = await db.getProviderByIdGlobal(item.provider_id);
+    const provider = await db.getProviderById(item.provider_id);
     if (!provider) {
       await db.updateQueueItemStatus(item.id, 'failed', 'Provider not found');
       await db.updateMailLogStatus(item.mail_log_id, 'failed', undefined, 'Provider not found');

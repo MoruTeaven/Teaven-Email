@@ -449,15 +449,14 @@ export function getDashboardHTML(): string {
       main.innerHTML='<h2 style="margin-bottom:24px;">Provider 配置</h2>'+
         '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\\'providers\\')">Provider 列表</button><button class="tab" onclick="switchProviderTab(\\'routes\\')">分类路由</button></div>'+
         '<div id="provider-tab-providers">'+
-          '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showProviderModal()">+ 添加 Provider</button></div>'+
           '<div class="card">'+
           (providers.length===0?
-            '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-title">暂无 Provider</div><div class="empty-desc">添加 SMTP、第三方 API 或 Cloudflare Email Provider</div></div>'
+            '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-title">暂无 Provider</div><div class="empty-desc">请联系管理员在后台添加全局 Provider 配置</div></div>'
           :
             providers.map(function(p){
               var config=typeof p.config==='string'?JSON.parse(p.config):p.config;
               var configInfo=p.type==='smtp'?'SMTP: '+config.host+':'+config.port:(p.type==='api'?'API: '+(config.provider_name||'Generic'):'Cloudflare: '+(config.domain||''));
-              return'<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><strong>'+esc(p.name)+'</strong><span class="badge badge-info" style="margin-left:8px;">'+esc(p.type)+'</span><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span><div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">'+esc(configInfo)+'</div></div><button class="btn btn-sm btn-danger" data-pid="'+esc(p.id)+'" onclick="deleteProvider(this.dataset.pid)">删除</button></div></div>';
+              return'<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:start;"><div><strong>'+esc(p.name)+'</strong><span class="badge badge-info" style="margin-left:8px;">'+esc(p.type)+'</span><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span><div style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">'+esc(configInfo)+'</div></div></div></div>';
             }).join('')
           )+
           '</div></div>'+
@@ -483,79 +482,6 @@ export function getDashboardHTML(): string {
       document.querySelectorAll('.tab').forEach(function(b,i){
         b.classList.toggle('active',['providers','routes'][i]===tab);
       });
-    }
-
-    function showProviderModal(){
-      var overlay=document.createElement('div');
-      overlay.className='modal-overlay';
-      overlay.innerHTML='<div class="modal"><div class="modal-title">添加 Provider</div>'+
-        '<div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="p-name" placeholder="如：SendGrid 生产"></div>'+
-        '<div class="form-group"><label class="form-label">类型 *</label><select class="form-select" id="p-type" onchange="toggleProviderConfigInModal(this.closest(\\'.modal-overlay\\'))"><option value="smtp">SMTP</option><option value="api">第三方 API</option><option value="cloudflare_email">Cloudflare Email</option></select></div>'+
-        '<div id="p-config-area"></div>'+
-        '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="p-save-btn">创建</button></div></div>';
-      document.body.appendChild(overlay);
-      toggleProviderConfigInModal(overlay);
-
-      overlay.querySelector('#p-save-btn').addEventListener('click',async function(){
-        var name=overlay.querySelector('#p-name').value.trim();
-        var type=overlay.querySelector('#p-type').value;
-        if(!name){toast('请输入名称','error');return}
-        var config=getProviderConfigValues(overlay,type);
-        if(!config)return;
-        var resp=await api('/providers',{method:'POST',body:JSON.stringify({name:name,type:type,config:config})});
-        if(resp.success){overlay.remove();renderPage('providers');toast('Provider 创建成功')}
-        else toast(resp.error,'error');
-      });
-      overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
-    }
-
-    function toggleProviderConfigInModal(overlay){
-      var type=overlay.querySelector('#p-type').value;
-      var area=overlay.querySelector('#p-config-area');
-      if(type==='smtp'){
-        area.innerHTML='<div class="form-group"><label class="form-label">Host *</label><input class="form-input" id="pc-host" placeholder="smtp.example.com"></div>'+
-          '<div class="form-group"><label class="form-label">Port *</label><input class="form-input" id="pc-port" placeholder="587" type="number"></div>'+
-          '<div class="form-group"><label class="form-label">Username *</label><input class="form-input" id="pc-user" placeholder="user@example.com"></div>'+
-          '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="pc-pass" type="password" placeholder="••••"></div>'+
-          '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>';
-      }else if(type==='api'){
-        area.innerHTML='<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="generic">通用</option></select></div>'+
-          '<div class="form-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>'+
-          '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
-      }else{
-        area.innerHTML='<div class="form-group"><label class="form-label">域名 *</label><input class="form-input" id="pc-domain" placeholder="example.com"></div>'+
-          '<div class="form-group"><label class="form-label">DKIM Selector</label><input class="form-input" id="pc-dkim" placeholder="mailchannels"></div>';
-      }
-    }
-
-    function getProviderConfigValues(overlay,type){
-      if(type==='smtp'){
-        var host=overlay.querySelector('#pc-host')?overlay.querySelector('#pc-host').value.trim():'';
-        var port=parseInt(overlay.querySelector('#pc-port')?overlay.querySelector('#pc-port').value:'0');
-        var username=overlay.querySelector('#pc-user')?overlay.querySelector('#pc-user').value.trim():'';
-        var password=overlay.querySelector('#pc-pass')?overlay.querySelector('#pc-pass').value.trim():'';
-        var encryption=overlay.querySelector('#pc-enc')?overlay.querySelector('#pc-enc').value:'tls';
-        if(!host||!port||!username||!password){toast('请填写所有 SMTP 配置','error');return null}
-        return{host:host,port:port,username:username,password:password,encryption:encryption};
-      }else if(type==='api'){
-        var api_key=overlay.querySelector('#pc-apikey')?overlay.querySelector('#pc-apikey').value.trim():'';
-        var provider_name=overlay.querySelector('#pc-pname')?overlay.querySelector('#pc-pname').value:'generic';
-        var api_url=overlay.querySelector('#pc-url')?overlay.querySelector('#pc-url').value.trim():'';
-        if(!api_key){toast('请填写 API Key','error');return null}
-        return{api_key:api_key,provider_name:provider_name,api_url:api_url};
-      }else{
-        var domain=overlay.querySelector('#pc-domain')?overlay.querySelector('#pc-domain').value.trim():'';
-        var dkim_selector=overlay.querySelector('#pc-dkim')?overlay.querySelector('#pc-dkim').value.trim():'mailchannels';
-        if(!domain){toast('请填写域名','error');return null}
-        return{domain:domain,dkim_selector:dkim_selector};
-      }
-    }
-
-    async function deleteProvider(id){
-      if(!confirm('确定删除此 Provider？'))return;
-      await api('/providers/'+id,{method:'DELETE'});
-      renderPage('providers');
-      toast('Provider 已删除');
     }
 
     function showRouteModal(){

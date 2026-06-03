@@ -31,10 +31,9 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(api_key_hash);
 
--- Provider 配置表
+-- Provider 配置表（全局，不绑定用户）
 CREATE TABLE IF NOT EXISTS providers (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id),
     name TEXT NOT NULL,
     type TEXT NOT NULL CHECK(type IN ('smtp', 'api', 'cloudflare_email')),
     config TEXT NOT NULL,
@@ -43,8 +42,6 @@ CREATE TABLE IF NOT EXISTS providers (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
 
 -- 发件账号表（全局，不绑定用户）
 CREATE TABLE IF NOT EXISTS accounts (

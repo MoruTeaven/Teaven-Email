@@ -14,7 +14,6 @@ adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
     `SELECT u.id, u.name, u.email, u.status, u.is_super_admin, u.created_at,
      (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id) as api_key_count,
      (SELECT COUNT(*) FROM templates WHERE user_id = u.id) as template_count,
-     (SELECT COUNT(*) FROM providers WHERE user_id = u.id) as provider_count,
      (SELECT COUNT(*) FROM mail_logs WHERE user_id = u.id) as mail_count
      FROM users u WHERE u.status != 'deleted' ORDER BY u.created_at DESC`
   ).all();
@@ -147,16 +146,62 @@ adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) =
   }, 201);
 });
 
-// ========== 跨租户 Provider 管理 ==========
+// ========== 全局 Provider 管理 ==========
 
-// GET /v1/admin/providers - 所有租户的所有 Provider
+// GET /v1/admin/providers - 所有全局 Provider
 adminRouter.get('/providers', superAdminMiddleware(), async (c) => {
-  const rows = await c.env.DB.prepare(
-    `SELECT p.*, u.name as tenant_name, u.email as tenant_email,
-     (SELECT COUNT(*) FROM accounts WHERE provider_id = p.id) as account_count
-     FROM providers p JOIN users u ON p.user_id = u.id ORDER BY p.created_at DESC`
-  ).all();
-  return c.json({ success: true, data: rows.results });
+  const db = getDB(c.env.DB);
+  const rows = await db.getAllProviders();
+  return c.json({ success: true, data: rows });
+});
+
+// POST /v1/admin/providers - 管理员创建全局 Provider
+adminRouter.post('/providers', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+
+  let body: { name: string; type: string; config: Record<string, unknown>; priority?: number };
+  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+  if (!body.name || !body.type || !body.config) {
+    return c.json({ success: false, error: 'name, type, config are required' }, 400);
+  }
+  if (!['smtp', 'api', 'cloudflare_email'].includes(body.type)) {
+    return c.json({ success: false, error: 'type must be smtp, api, or cloudflare_email' }, 400);
+  }
+
+  const provider = {
+    id: crypto.randomUUID(),
+    name: body.name,
+    type: body.type as 'smtp' | 'api' | 'cloudflare_email',
+    config: body.config as Record<string, unknown>,
+    priority: body.priority || 0,
+    enabled: 1,
+  };
+
+  await db.createProvider(provider);
+  return c.json({ success: true, data: provider }, 201);
+});
+
+// PUT /v1/admin/providers/:id - 管理员更新 Provider
+adminRouter.put('/providers/:id', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+  const id = c.req.param('id');
+
+  const existing = await db.getProviderById(id);
+  if (!existing) return c.json({ success: false, error: 'Provider not found' }, 404);
+
+  let body: { name?: string; type?: string; config?: Record<string, unknown>; priority?: number; enabled?: number };
+  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  await db.updateProvider(id, body);
+  return c.json({ success: true, message: 'Provider updated' });
+});
+
+// DELETE /v1/admin/providers/:id - 管理员删除 Provider
+adminRouter.delete('/providers/:id', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+  const id = c.req.param('id');
+  await db.deleteProvider(id);
+  return c.json({ success: true, message: 'Provider deleted' });
 });
 
 // ========== 跨租户发件账号管理 ==========
@@ -179,7 +224,7 @@ adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
   }
 
   // 验证 provider 存在
-  const provider = await db.getProviderByIdGlobal(body.provider_id);
+  const provider = await db.getProviderById(body.provider_id);
   if (!provider) {
     return c.json({ success: false, error: 'Provider not found' }, 404);
   }

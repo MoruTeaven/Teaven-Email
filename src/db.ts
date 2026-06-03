@@ -71,58 +71,58 @@ export function getDB(db: D1Database) {
       ).bind(enabled, id, userId).run();
     },
 
-    // ============ Providers ============
-    async getProvidersByUser(userId: string): Promise<EmailProvider[]> {
+    // ============ Providers (全局，不绑定用户) ============
+    async getAllProviders(): Promise<EmailProvider[]> {
       const result = await db.prepare(
-        'SELECT * FROM providers WHERE user_id = ? ORDER BY priority DESC'
-      ).bind(userId).all<EmailProvider>();
+        'SELECT * FROM providers ORDER BY priority DESC'
+      ).all<EmailProvider>();
       return result.results;
     },
 
-    async getProviderById(id: string, userId: string): Promise<EmailProvider | null> {
+    async getProviderById(id: string): Promise<EmailProvider | null> {
       return db.prepare(
-        'SELECT * FROM providers WHERE id = ? AND user_id = ?'
-      ).bind(id, userId).first<EmailProvider>();
+        'SELECT * FROM providers WHERE id = ?'
+      ).bind(id).first<EmailProvider>();
     },
 
-    async getEnabledProviders(userId: string): Promise<EmailProvider[]> {
+    async getEnabledProviders(): Promise<EmailProvider[]> {
       const result = await db.prepare(
-        'SELECT * FROM providers WHERE user_id = ? AND enabled = 1 ORDER BY priority DESC'
-      ).bind(userId).all<EmailProvider>();
+        'SELECT * FROM providers WHERE enabled = 1 ORDER BY priority DESC'
+      ).all<EmailProvider>();
       return result.results;
     },
 
     async createProvider(provider: Omit<EmailProvider, 'created_at' | 'updated_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO providers (id, user_id, name, type, config, priority, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO providers (id, name, type, config, priority, enabled)
+         VALUES (?, ?, ?, ?, ?, ?)`
       ).bind(
-        provider.id, provider.user_id, provider.name, provider.type,
+        provider.id, provider.name, provider.type,
         JSON.stringify(provider.config), provider.priority, provider.enabled
       ).run();
     },
 
-    async updateProvider(id: string, userId: string, updates: Partial<EmailProvider>): Promise<void> {
+    async updateProvider(id: string, updates: Partial<EmailProvider>): Promise<void> {
       const fields: string[] = [];
       const values: unknown[] = [];
       for (const [key, value] of Object.entries(updates)) {
-        if (value !== undefined && key !== 'id' && key !== 'user_id' && key !== 'created_at') {
+        if (value !== undefined && key !== 'id' && key !== 'created_at') {
           fields.push(`${key} = ?`);
           values.push(key === 'config' ? JSON.stringify(value) : value);
         }
       }
       if (fields.length === 0) return;
       fields.push("updated_at = datetime('now')");
-      values.push(id, userId);
+      values.push(id);
       await db.prepare(
-        `UPDATE providers SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`
+        `UPDATE providers SET ${fields.join(', ')} WHERE id = ?`
       ).bind(...values).run();
     },
 
-    async deleteProvider(id: string, userId: string): Promise<void> {
+    async deleteProvider(id: string): Promise<void> {
       await db.prepare(
-        'DELETE FROM providers WHERE id = ? AND user_id = ?'
-      ).bind(id, userId).run();
+        'DELETE FROM providers WHERE id = ?'
+      ).bind(id).run();
     },
 
     // ============ Accounts (全局，不绑定用户) ============
@@ -168,12 +168,7 @@ export function getDB(db: D1Database) {
       ).bind(id).run();
     },
 
-    // 全局 Provider 查询（不限用户，用于队列处理等场景）
-    async getProviderByIdGlobal(id: string): Promise<EmailProvider | null> {
-      return db.prepare(
-        'SELECT * FROM providers WHERE id = ?'
-      ).bind(id).first<EmailProvider>();
-    },
+
 
     // ============ Templates ============
     async getTemplatesByUser(userId: string): Promise<Template[]> {

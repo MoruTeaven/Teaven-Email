@@ -30,7 +30,6 @@ export type ProviderType = 'smtp' | 'api' | 'cloudflare_email';
 
 export interface EmailProvider {
   id: string;
-  user_id: string;
   name: string;
   type: ProviderType;
   config: ProviderConfig;

@@ -75,8 +75,8 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   let accountId: string | null = route?.account_id || null;
 
   if (!providerId) {
-    // 没有路由规则，使用第一个启用的 provider
-    const providers = await db.getEnabledProviders(auth.userId);
+    // 没有路由规则，使用第一个启用的全局 provider
+    const providers = await db.getEnabledProviders();
     if (providers.length === 0) {
       return c.json({ success: false, error: 'No enabled email provider found' }, 500);
     }
@@ -190,7 +190,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   let accountId: string | null = route?.account_id || null;
 
   if (!providerId) {
-    const providers = await db.getEnabledProviders(auth.userId);
+    const providers = await db.getEnabledProviders();
     if (providers.length === 0) {
       return c.json({ success: false, error: 'No enabled email provider found' }, 500);
     }

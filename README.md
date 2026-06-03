@@ -9,12 +9,14 @@
 │                  Teaven Email                     │
 ├─────────────────────────────────────────────────┤
 │  API Layer (Hono)                                │
-│  ├─ /v1/mail/send         普通发送               │
-│  ├─ /v1/mail/send-template  模板发送             │
-│  ├─ /v1/templates         模板管理               │
-│  ├─ /v1/providers         Provider 管理           │
-│  ├─ /v1/api-keys          API Key 管理           │
-│  └─ /dashboard            后台管理界面           │
+│  ├─ /v1/mail/send          普通发送              │
+│  ├─ /v1/mail/send-template 模板发送              │
+│  ├─ /v1/templates          模板管理              │
+│  ├─ /v1/providers          Provider 查看（只读）  │
+│  ├─ /v1/api-keys           API Key 管理          │
+│  ├─ /v1/admin/*            超级管理员面板        │
+│  ├─ /dashboard             租户后台界面          │
+│  └─ /admin                 超级管理员界面        │
 ├─────────────────────────────────────────────────┤
 │  Core Services                                   │
 │  ├─ Auth (API Key)         认证中间件             │
@@ -32,6 +34,12 @@
 │  └─ R2 Bucket             静态资源               │
 └─────────────────────────────────────────────────┘
 ```
+
+## 权限模型
+
+- **超级管理员**（后台 `/admin`）：管理全局 Provider 和发件账号，管理所有租户
+- **普通用户**（后台 `/dashboard`）：管理自己的模板、API Key、分类路由，使用管理员配置的全局 Provider 和账号发送邮件
+- **Provider 和发件账号均为全局资源**，仅超级管理员可创建/修改/删除，所有用户共享使用
 
 ## 技术栈
 
@@ -116,19 +124,31 @@ POST   /v1/templates/:code/preview # 预览模板渲染
 GET    /v1/templates/:code/versions # 版本历史
 ```
 
-### Provider 管理
+### Provider 管理（用户只读）
 
 ```http
-GET    /v1/providers              # Provider 列表
-POST   /v1/providers              # 创建 Provider
-PUT    /v1/providers/:id          # 更新 Provider
-DELETE /v1/providers/:id          # 删除 Provider
-GET    /v1/providers/accounts     # 发件账号列表
-POST   /v1/providers/accounts     # 创建发件账号
-DELETE /v1/providers/accounts/:id # 删除发件账号
+GET    /v1/providers              # 查看全局 Provider 列表
 GET    /v1/providers/routes       # 分类路由列表
 POST   /v1/providers/routes       # 创建分类路由
 DELETE /v1/providers/routes/:id   # 删除分类路由
+```
+
+### 超级管理员（/v1/admin/*）
+
+```http
+GET    /v1/admin/tenants          # 所有租户
+POST   /v1/admin/tenants          # 新建租户
+PUT    /v1/admin/tenants/:id      # 更新租户状态
+POST   /v1/admin/tenants/:id/impersonate # 模拟登录
+GET    /v1/admin/providers        # 全局 Provider 列表
+POST   /v1/admin/providers        # 创建全局 Provider
+PUT    /v1/admin/providers/:id    # 更新 Provider
+DELETE /v1/admin/providers/:id    # 删除 Provider
+GET    /v1/admin/accounts         # 全局发件账号列表
+POST   /v1/admin/accounts         # 创建全局发件账号
+PUT    /v1/admin/accounts/:id     # 更新发件账号
+DELETE /v1/admin/accounts/:id     # 删除发件账号
+GET    /v1/admin/stats            # 全局统计
 ```
 
 ### API Key 管理
@@ -206,28 +226,35 @@ src/
 ├── template_engine.ts    # Handlebars 模板引擎
 ├── mailer.ts             # 邮件发送引擎
 ├── queue_processor.ts    # 队列处理器
-├── dashboard_html.ts     # 后台管理界面
+├── dashboard_html.ts     # 租户后台界面
+├── admin_html.ts         # 超级管理员界面
 ├── env.d.ts              # 环境类型声明
 └── routes/
+    ├── admin.ts          # 超级管理员路由
     ├── mail.ts           # 邮件发送路由
     ├── templates.ts      # 模板管理路由
-    ├── providers.ts      # Provider 管理路由
+    ├── providers.ts      # Provider 路由（用户只读 + 分类路由）
     ├── api_keys.ts       # API Key 管理路由
     ├── webhooks.ts       # Webhook 路由
-    └── dashboard.ts      # 仪表盘路由
+    ├── dashboard.ts      # 仪表盘路由
+    └── setup.ts          # 初始化路由
 ```
 
 ## 后台管理
 
-访问 `/dashboard` 进入后台管理界面，支持：
-
+### 租户后台 `/dashboard`
 - 仪表盘概览
 - API Key 管理
 - 模板创建/编辑/预览
-- Provider 配置（SMTP/API/Cloudflare Email）
-- 发件账号管理
-- 分类路由规则
+- Provider 列表查看（只读，由管理员配置）
+- 分类路由规则管理
 - 发送日志查看
+
+### 超级管理员后台 `/admin`
+- 全局统计概览
+- 租户管理（创建/禁用/模拟登录）
+- **Provider 管理**（SMTP/API/Cloudflare Email 的创建/删除/启停）
+- **发件账号管理**（全局账号的创建/删除/启停）
 
 ## 队列处理
 
