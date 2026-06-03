@@ -213,13 +213,105 @@ async function deleteAdminAccount(id){
 }
 
 function setupPage(){
-  return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🛡</div><div class="card-title">超级管理员登录</div></div><div class="form-group"><label class="form-label">API Key（超级管理员）</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..." value="'+esc(API_KEY)+'"></div><button class="btn btn-primary" onclick="saveKey()" style="width:100%;">进入</button></div>';
+  fetch(API_BASE+'/setup/status').then(function(r){return r.json()}).then(function(resp){
+    var needsSetup=resp.data&&resp.data.needs_setup;
+    var main=document.getElementById('main-content');
+    if(needsSetup){
+      main.innerHTML=initPage();
+    }else{
+      main.innerHTML=loginPage();
+    }
+  }).catch(function(){
+    document.getElementById('main-content').innerHTML=initPage();
+  });
+  return'<div style="text-align:center;padding:80px;color:var(--text-muted);">加载中...</div>';
 }
-function saveKey(){
-  var k=document.getElementById('setup-key').value.trim();
-  if(!k){toast('请输入 API Key','error');return}
-  localStorage.setItem('teaven_admin_key',k);
+
+function loginPage(){
+  return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🛡</div><div class="card-title">超级管理员登录</div><p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px;">使用超级管理员账号登录</p></div><div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="login-email" type="email" placeholder="admin@example.com" value="'+esc(localStorage.getItem('teaven_admin_email')||'')+'"></div><div class="form-group"><label class="form-label">密码</label><input class="form-input" id="login-password" type="password" placeholder="输入密码"></div><button class="btn btn-primary" onclick="doLogin()" style="width:100%;">登 录</button><p class="form-hint" style="margin-top:16px;text-align:center;">或 <a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=apiKeyFallbackPage()" style="color:var(--primary);text-decoration:none;">使用 API Key 登录</a></p></div>';
+}
+
+function apiKeyFallbackPage(){
+  return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🔑</div><div class="card-title">API Key 登录</div><p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px;">输入超级管理员的 API Key</p></div><div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..."></div><button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;">进 入</button><p class="form-hint" style="margin-top:16px;text-align:center;"><a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=loginPage()" style="color:var(--primary);text-decoration:none;">返回账号登录</a></p></div>';
+}
+
+function doLogin(){
+  var email=document.getElementById('login-email').value.trim();
+  var password=document.getElementById('login-password').value;
+  if(!email||!password){toast('请输入邮箱和密码','error');return}
+
+  var btn=document.querySelector('#login-email').closest('.card').querySelector('button');
+  btn.disabled=true; btn.textContent='登录中...';
+
+  localStorage.setItem('teaven_admin_email',email);
+
+  fetch(API_BASE+'/setup/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:email,password:password})
+  }).then(function(r){return r.json()}).then(function(resp){
+    if(resp.success){
+      var keys=resp.data.api_keys;
+      var activeKey=keys.filter(function(k){return k.enabled})[0];
+      if(activeKey){
+        fetch(API_BASE+'/setup/key-from-password',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({email:email,password:password,name:'Admin Login'})
+        }).then(function(r2){return r2.json()}).then(function(resp2){
+          if(resp2.success){
+            localStorage.setItem('teaven_admin_key',resp2.data.api_key.key);
+            location.reload();
+          }else{
+            toast('请使用 API Key 登录','error');
+            document.getElementById('main-content').innerHTML=apiKeyFallbackPage();
+          }
+        });
+      }else{
+        toast('没有可用的 API Key','error');
+      }
+    }else{
+      toast(resp.error,'error');
+      btn.disabled=false; btn.textContent='登 录';
+    }
+  }).catch(function(){
+    toast('网络错误','error');
+    btn.disabled=false; btn.textContent='登 录';
+  });
+}
+
+function saveApiKey(){
+  var key=document.getElementById('setup-key').value.trim();
+  if(!key){toast('请输入 API Key','error');return}
+  localStorage.setItem('teaven_admin_key',key);
   location.reload();
+}
+
+function initPage(){
+  return'<div class="card" style="max-width:440px;margin:60px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:3rem;margin-bottom:8px;">🚀</div><div class="card-title">初始化超级管理员</div><p style="color:var(--text-muted);font-size:0.85rem;margin-top:8px;">首次使用，请创建超级管理员账户</p></div><div class="form-group"><label class="form-label">姓名</label><input class="form-input" id="init-name" placeholder="如：张三"></div><div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="init-email" placeholder="admin@example.com"></div><div class="form-group"><label class="form-label">密码（至少6位）</label><input class="form-input" id="init-password" type="password" placeholder="至少6位密码"></div><button class="btn btn-primary" onclick="doInit()" style="width:100%;">创建账户</button></div>';
+}
+
+function doInit(){
+  var name=document.getElementById('init-name').value.trim();
+  var email=document.getElementById('init-email').value.trim();
+  var password=document.getElementById('init-password').value;
+  if(!name||!email||!password){toast('请填写所有字段','error');return}
+  if(password.length<6){toast('密码至少需要6位','error');return}
+
+  fetch(API_BASE+'/setup/init',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name,email:email,password:password})
+  }).then(function(r){return r.json()}).then(function(resp){
+    if(resp.success){
+      localStorage.setItem('teaven_admin_email',email);
+      localStorage.setItem('teaven_admin_key',resp.data.api_key.key);
+      var main=document.getElementById('main-content');
+      main.innerHTML='<div class="card" style="max-width:600px;margin:60px auto;border-color:var(--success);"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:3rem;">🎉</div><div class="card-title">初始化成功！</div></div><p style="color:var(--text-muted);margin-bottom:8px;">账户: <strong>'+esc(resp.data.user.email)+'</strong></p><p style="color:var(--text-muted);margin-bottom:12px;">你的 API Key（<strong style="color:var(--danger);">已自动保存</strong>）：</p><div class="code-block" style="margin-bottom:16px;"><span class="key-highlight">'+esc(resp.data.api_key.key)+'</span></div><button class="btn btn-primary" onclick="location.reload()" style="width:100%;">进入后台</button></div>';
+    }else{
+      toast(resp.error,'error');
+    }
+  }).catch(function(){toast('网络错误，请重试','error')});
 }
 
 if(API_KEY){renderPage('overview')}
