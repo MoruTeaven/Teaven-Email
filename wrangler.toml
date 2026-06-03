@@ -5,7 +5,7 @@ compatibility_date = "2025-06-03"
 [[d1_databases]]
 binding = "DB"
 database_name = "teaven-email-db"
-database_id = "44a10405-2cc9-4465-9442-6411bd4290a6"
+database_id = "f18ef7a4-ecec-4ef0-a47a-ed03640b4ffe"
 
 [[kv_namespaces]]
 binding = "KV"
