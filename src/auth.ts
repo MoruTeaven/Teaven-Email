@@ -1,20 +1,23 @@
 // Teaven Email - 认证中间件
 import { Context, Next } from 'hono';
-import { createHash } from 'node:crypto';
 import { getDB } from './db';
 import type { AuthContext, Permission } from './types';
 
-// 生成 API Key 哈希
-export function hashApiKey(apiKey: string): string {
-  return createHash('sha256').update(apiKey).digest('hex');
+// 生成 API Key 哈希 (Web Crypto)
+export async function hashApiKey(apiKey: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(apiKey);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // 生成 API Key (sk_ 前缀 + 随机字符串)
-export function generateApiKey(): { raw: string; hash: string; prefix: string } {
+export async function generateApiKey(): Promise<{ raw: string; hash: string; prefix: string }> {
   const randomBytes = crypto.getRandomValues(new Uint8Array(32));
   const hex = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
   const raw = `sk_${hex}`;
-  const hash = hashApiKey(raw);
+  const hash = await hashApiKey(raw);
   const prefix = raw.substring(0, 10);
   return { raw, hash, prefix };
 }
@@ -39,7 +42,7 @@ export function authMiddleware(requiredPermissions?: Permission[]) {
       return c.json({ success: false, error: 'Missing or invalid API key' }, 401);
     }
 
-    const hash = hashApiKey(apiKey);
+    const hash = await hashApiKey(apiKey);
     const db = getDB(c.env.DB);
     const apiKeyRecord = await db.getApiKeyByHash(hash);
 

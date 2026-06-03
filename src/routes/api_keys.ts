@@ -54,7 +54,7 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
     }
   }
 
-  const { raw, hash, prefix } = generateApiKey();
+  const { raw, hash, prefix } = await generateApiKey();
 
   const apiKey = {
     id: crypto.randomUUID(),

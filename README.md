@@ -54,13 +54,8 @@ npm install
 ### 2. 创建 Cloudflare 资源
 
 ```bash
-# 创建 D1 数据库
 npx wrangler d1 create teaven-email-db
-
-# 创建 KV 命名空间
 npx wrangler kv:namespace create "teaven-email-kv"
-
-# 创建 R2 存储桶
 npx wrangler r2 bucket create teaven-email-assets
 ```
 
@@ -71,24 +66,16 @@ npx wrangler r2 bucket create teaven-email-assets
 ### 4. 初始化数据库
 
 ```bash
-# 本地开发
-npx wrangler d1 execute teaven-email-db --local --file=./migrations/001_init.sql
-
-# 生产环境
-npx wrangler d1 execute teaven-email-db --file=./migrations/001_init.sql
+npm run db:migrate
 ```
 
-### 5. 本地开发
-
-```bash
-npm run dev
-```
-
-### 6. 部署
+### 5. 部署
 
 ```bash
 npm run deploy
 ```
+
+部署后访问 `https://your-worker.your-subdomain.workers.dev/dashboard` 进入后台管理。
 
 ## API 文档
 

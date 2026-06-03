@@ -74,7 +74,7 @@ setupRouter.post('/init', async (c) => {
   });
 
   // 生成 API Key
-  const { raw, hash, prefix } = generateApiKey();
+  const { raw, hash, prefix } = await generateApiKey();
   const apiKeyId = crypto.randomUUID();
 
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
