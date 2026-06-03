@@ -1,7 +1,8 @@
 // Teaven Email - 超级管理员路由（跨租户管理）
 import { Hono } from 'hono';
-import { superAdminMiddleware } from '../auth';
-import type { D1Database } from '@cloudflare/workers-types';
+import { superAdminMiddleware, generateApiKey } from '../auth';
+import { getDB } from '../db';
+import type { Permission } from '../types';
 
 const adminRouter = new Hono<{ Bindings: Env }>();
 
@@ -43,6 +44,108 @@ adminRouter.put('/tenants/:id', superAdminMiddleware(), async (c) => {
       .bind(body.is_super_admin, id).run();
   }
   return c.json({ success: true });
+});
+
+// POST /v1/admin/tenants - 超管直接新建租户
+adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+
+  let body: { name: string; email: string; password: string; is_super_admin?: number };
+  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  if (!body.name || !body.email || !body.password) {
+    return c.json({ success: false, error: 'name, email, and password are required' }, 400);
+  }
+  if (!isValidEmail(body.email)) {
+    return c.json({ success: false, error: 'Invalid email format' }, 400);
+  }
+  if (body.password.length < 6) {
+    return c.json({ success: false, error: 'Password must be at least 6 characters' }, 400);
+  }
+
+  // 检查邮箱是否已存在
+  const existing = await db.getUserByEmail(body.email);
+  if (existing) {
+    return c.json({ success: false, error: 'Email already in use' }, 409);
+  }
+
+  // 密码哈希
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(body.password));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // 创建用户
+  const userId = crypto.randomUUID();
+  await db.createUser({
+    id: userId,
+    name: body.name,
+    email: body.email,
+    password_hash: passwordHash,
+    status: 'active',
+    is_super_admin: body.is_super_admin || 0,
+  });
+
+  // 自动生成 API Key
+  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const { raw, hash, prefix } = await generateApiKey();
+  const apiKeyId = crypto.randomUUID();
+
+  await db.createApiKey({
+    id: apiKeyId,
+    user_id: userId,
+    name: 'Default Key',
+    api_key_hash: hash,
+    api_key_prefix: prefix,
+    permissions: allPermissions,
+    enabled: 1,
+    last_used_at: null,
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      user: { id: userId, name: body.name, email: body.email, is_super_admin: body.is_super_admin || 0 },
+      api_key: { id: apiKeyId, name: 'Default Key', key: raw, prefix, permissions: allPermissions },
+    },
+  }, 201);
+});
+
+// POST /v1/admin/tenants/:id/impersonate - 模拟登录任意租户（为其生成 API Key）
+adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+  const id = c.req.param('id');
+
+  const user = await db.getUserById(id);
+  if (!user) {
+    return c.json({ success: false, error: 'Tenant not found' }, 404);
+  }
+  if (user.status !== 'active') {
+    return c.json({ success: false, error: 'Tenant is not active' }, 400);
+  }
+
+  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const { raw, hash, prefix } = await generateApiKey();
+  const apiKeyId = crypto.randomUUID();
+
+  await db.createApiKey({
+    id: apiKeyId,
+    user_id: user.id,
+    name: 'Admin Impersonation',
+    api_key_hash: hash,
+    api_key_prefix: prefix,
+    permissions: allPermissions,
+    enabled: 1,
+    last_used_at: null,
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      user: { id: user.id, name: user.name, email: user.email },
+      api_key: { id: apiKeyId, name: 'Admin Impersonation', key: raw, prefix, permissions: allPermissions },
+    },
+  }, 201);
 });
 
 // ========== 跨租户 Provider 管理 ==========
@@ -150,5 +253,9 @@ adminRouter.get('/stats', superAdminMiddleware(), async (c) => {
     },
   });
 });
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export default adminRouter;

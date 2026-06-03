@@ -137,9 +137,10 @@ async function renderTenants(main){
   var resp=await api('/admin/tenants');
   var tenants=resp.data||[];
   main.innerHTML='<h2 style="margin-bottom:24px;">租户管理</h2>'+
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showCreateTenantModal()">+ 新建租户</button></div>'+
     '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>Provider</th><th>账号</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
     tenants.map(function(t){
-      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.account_count+'</td><td>'+t.mail_count+'</td><td><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button></td></tr>';
+      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.account_count+'</td><td>'+t.mail_count+'</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-ghost" data-tid="'+esc(t.id)+'" data-tstatus="'+(t.status==='active'?'disabled':'active')+'" onclick="toggleTenant(this.dataset.tid,this.dataset.tstatus)">'+(t.status==='active'?'禁用':'启用')+'</button> <button class="btn btn-sm" style="background:var(--primary);color:#fff;padding:6px 12px;font-size:0.8rem;border:none;border-radius:var(--radius);cursor:pointer;" data-tid="'+esc(t.id)+'" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button></td></tr>';
     }).join('')+'</tbody></table></div></div>';
 }
 
@@ -210,6 +211,65 @@ async function deleteAdminAccount(id){
   await api('/admin/accounts/'+id,{method:'DELETE'});
   renderPage('accounts');
   toast('账号已删除');
+}
+
+function showCreateTenantModal(){
+  var overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.innerHTML='<div class="modal"><div class="modal-title">新建租户</div>'+
+    '<div class="form-group"><label class="form-label">姓名</label><input class="form-input" id="ct-name" placeholder="如：张三"></div>'+
+    '<div class="form-group"><label class="form-label">邮箱</label><input class="form-input" id="ct-email" type="email" placeholder="user@example.com"></div>'+
+    '<div class="form-group"><label class="form-label">密码（至少6位）</label><input class="form-input" id="ct-password" type="password" placeholder="至少6位密码"></div>'+
+    '<div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="ct-super" style="accent-color:var(--primary);"> 设为超级管理员</label></div>'+
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="ct-save-btn">创建</button></div></div>';
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#ct-save-btn').addEventListener('click',async function(){
+    var name=overlay.querySelector('#ct-name').value.trim();
+    var email=overlay.querySelector('#ct-email').value.trim();
+    var password=overlay.querySelector('#ct-password').value;
+    var isSuper=overlay.querySelector('#ct-super').checked?1:0;
+    if(!name||!email||!password){toast('请填写所有字段','error');return}
+    if(password.length<6){toast('密码至少需要6位','error');return}
+
+    var resp=await api('/admin/tenants',{method:'POST',body:JSON.stringify({name:name,email:email,password:password,is_super_admin:isSuper})});
+    if(resp.success){
+      overlay.innerHTML='<div class="modal" style="border-color:var(--success);"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:2.5rem;">'+'\\u2705'+'</div><div class="modal-title">租户创建成功！</div></div>'+
+        '<p style="color:var(--text-muted);margin-bottom:8px;">租户: <strong>'+esc(resp.data.user.name)+'</strong> ('+esc(resp.data.user.email)+')</p>'+
+        '<p style="color:var(--text-muted);margin-bottom:12px;">API Key（仅显示一次）：</p>'+
+        '<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:16px;word-break:break-all;font-family:monospace;font-size:0.85rem;color:var(--warning);">'+esc(resp.data.api_key.key)+'</div>'+
+        '<button class="btn btn-primary" onclick="this.closest(\'.modal-overlay\').remove();renderPage(\'tenants\')" style="width:100%;">关闭</button></div>';
+      toast('租户创建成功');
+    }else{
+      toast(resp.error,'error');
+    }
+  });
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+}
+
+async function impersonateTenant(tid){
+  var resp=await api('/admin/tenants/'+tid+'/impersonate',{method:'POST'});
+  if(!resp.success){toast(resp.error,'error');return}
+
+  var origKey=localStorage.getItem('teaven_admin_key')||'';
+
+  var overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.innerHTML='<div class="modal" style="border-color:var(--primary);"><div style="text-align:center;margin-bottom:16px;"><div style="font-size:2.5rem;">'+'\\uD83D\\uDD10'+'</div><div class="modal-title">模拟登录</div></div>'+
+    '<p style="color:var(--text-muted);margin-bottom:8px;">租户: <strong>'+esc(resp.data.user.name)+'</strong> ('+esc(resp.data.user.email)+')</p>'+
+    '<p style="color:var(--text-muted);margin-bottom:12px;">生成的 API Key（仅显示一次）：</p>'+
+    '<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:16px;word-break:break-all;font-family:monospace;font-size:0.85rem;color:var(--warning);">'+esc(resp.data.api_key.key)+'</div>'+
+    '<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;">切换后将进入该租户的管理后台，原始超管 Key 已暂存</p>'+
+    '<div style="display:flex;gap:10px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button><button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button></div></div>';
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#impersonate-switch-btn').addEventListener('click',function(){
+    localStorage.setItem('teaven_super_admin_key_backup',origKey);
+    localStorage.setItem('teaven_api_key',resp.data.api_key.key);
+    localStorage.setItem('teaven_email',resp.data.user.email);
+    window.location.href='/dashboard';
+  });
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
 }
 
 function setupPage(){
