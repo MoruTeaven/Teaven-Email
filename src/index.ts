@@ -8,8 +8,10 @@ import apiKeyRouter from './routes/api_keys';
 import webhookRouter from './routes/webhooks';
 import dashboardRouter from './routes/dashboard';
 import setupRouter from './routes/setup';
+import adminRouter from './routes/admin';
 import { processQueue } from './queue_processor';
 import { getDashboardHTML } from './dashboard_html';
+import { getAdminHTML } from './admin_html';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -21,19 +23,11 @@ app.use('*', cors({
   maxAge: 86400,
 }));
 
-// 后台管理界面 - 从 R2 或 KV 读取
-app.get('/dashboard', async (c) => {
-  try {
-    // 尝试从 R2 读取静态文件
-    const object = await c.env.R2.get('dashboard/index.html');
-    if (object) {
-      const html = await object.text();
-      return c.html(html);
-    }
-  } catch {}
-  // 回退：返回内联的 dashboard
-  return c.html(getDashboardHTML());
-});
+// 租户后台
+app.get('/dashboard', async (c) => { return c.html(getDashboardHTML()); });
+
+// 超级管理员后台
+app.get('/admin', async (c) => { return c.html(getAdminHTML()); });
 
 // 健康检查
 app.get('/', (c) => {
@@ -56,6 +50,7 @@ v1.route('/api-keys', apiKeyRouter);
 v1.route('/webhooks', webhookRouter);
 v1.route('/dashboard', dashboardRouter);
 v1.route('/setup', setupRouter);
+v1.route('/admin', adminRouter);
 
 // 注册 v1 路由组
 app.route('/v1', v1);

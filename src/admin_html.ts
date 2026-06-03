@@ -1,0 +1,229 @@
+// Teaven Email - 超级管理员后台 HTML
+export function getAdminHTML(): string {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teaven Email - 超级管理员</title>
+  <style>
+    :root {
+      --bg: #0a0a0f; --bg-card: #14141f; --bg-card-hover: #1a1a2e; --bg-input: #1c1c2e;
+      --border: #2a2a3e; --text: #e0e0e8; --text-muted: #8888a0;
+      --primary: #6366f1; --primary-hover: #818cf8; --success: #22c55e;
+      --warning: #f59e0b; --danger: #ef4444; --info: #3b82f6;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
+    .app{display:flex;min-height:100vh}
+    .sidebar{width:260px;background:var(--bg-card);border-right:1px solid var(--border);padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:100}
+    .sidebar-logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+    .sidebar-logo h1{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,var(--primary),#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .sidebar-logo span{font-size:0.75rem;color:var(--text-muted)}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;margin:2px 8px;border-radius:var(--radius);color:var(--text-muted);font-size:0.9rem;cursor:pointer;transition:all 0.15s;border:none;background:none;width:calc(100% - 16px)}
+    .nav-item:hover{background:var(--bg-card-hover);color:var(--text)}
+    .nav-item.active{background:var(--primary);color:#fff}
+    .main{margin-left:260px;flex:1;padding:32px;max-width:1400px}
+    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .card-title{font-size:1.1rem;font-weight:600}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+    .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+    .stat-label{font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+    .stat-value{font-size:2rem;font-weight:700}
+    .form-group{margin-bottom:16px}
+    .form-label{display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:6px}
+    .form-input,.form-select{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:0.9rem;outline:none}
+    .form-input:focus,.form-select:focus{border-color:var(--primary)}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--radius);font-size:0.9rem;font-weight:500;cursor:pointer;border:none;transition:all 0.15s}
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-hover)}
+    .btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}.btn-danger:hover{background:var(--danger);color:#fff}
+    .btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+    .btn-sm{padding:6px 12px;font-size:0.8rem}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--border)}
+    th{font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+    td{font-size:0.9rem}tr:hover td{background:var(--bg-card-hover)}
+    .badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:0.75rem;font-weight:500}
+    .badge-success{background:rgba(34,197,94,0.15);color:var(--success)}
+    .badge-danger{background:rgba(239,68,68,0.15);color:var(--danger)}
+    .badge-info{background:rgba(99,102,241,0.15);color:var(--primary)}
+    .badge-warning{background:rgba(245,158,11,0.15);color:var(--warning)}
+    .badge-muted{background:rgba(136,136,160,0.15);color:var(--text-muted)}
+    .tab{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+    .tab button{padding:10px 20px;border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;border-bottom:2px solid transparent;transition:all 0.15s}
+    .tab button:hover{color:var(--text)}
+    .tab button.active{color:var(--primary);border-bottom-color:var(--primary)}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200}
+    .modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;width:90%;max-width:560px;max-height:80vh;overflow-y:auto}
+    .modal-title{font-size:1.2rem;font-weight:600;margin-bottom:20px}
+    .toast{position:fixed;top:20px;right:20px;padding:14px 24px;border-radius:var(--radius);color:#fff;font-size:0.9rem;z-index:1000;animation:slideIn 0.3s ease}
+    .toast-success{background:var(--success)}.toast-error{background:var(--danger)}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    .tag-super{background:rgba(245,158,11,0.2);color:#f59e0b;font-size:0.7rem;padding:2px 6px;border-radius:4px;margin-left:6px}
+    @media(max-width:768px){.sidebar{display:none}.main{margin-left:0;padding:16px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Teaven Admin</h1>
+      <span>超级管理员面板</span>
+    </div>
+    <button class="nav-item active" data-page="overview">📊 总览</button>
+    <button class="nav-item" data-page="tenants">🏢 租户管理</button>
+    <button class="nav-item" data-page="accounts">📧 发件账号</button>
+  </nav>
+  <main class="main" id="main-content"></main>
+</div>
+<div id="toast-container"></div>
+<script>
+var API_BASE='/v1';
+var API_KEY=localStorage.getItem('teaven_admin_key')||'';
+function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+async function api(path,opts){
+  opts=opts||{};
+  var res=await fetch(API_BASE+path,{headers:{'Authorization':'Bearer '+API_KEY,'Content-Type':'application/json',...opts.headers},...opts});
+  return res.json();
+}
+function toast(msg,type){
+  type=type||'success';
+  var c=document.getElementById('toast-container');
+  var el=document.createElement('div');
+  el.className='toast toast-'+type;
+  el.textContent=msg;
+  c.appendChild(el);
+  setTimeout(function(){el.remove()},3000);
+}
+
+document.querySelectorAll('.nav-item').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
+    btn.classList.add('active');
+    renderPage(btn.dataset.page);
+  });
+});
+
+function renderPage(page){
+  var main=document.getElementById('main-content');
+  switch(page){
+    case'overview':renderOverview(main);break;
+    case'tenants':renderTenants(main);break;
+    case'accounts':renderAllAccounts(main);break;
+  }
+}
+
+async function renderOverview(main){
+  var resp=await api('/admin/stats');
+  if(!resp.success){main.innerHTML=setupPage();return}
+  var d=resp.data;
+  main.innerHTML='<h2 style="margin-bottom:24px;">全局总览</h2>'+
+    '<div class="stats-grid">'+
+      '<div class="stat-card"><div class="stat-label">租户数</div><div class="stat-value" style="color:var(--primary)">'+d.tenants+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">Provider</div><div class="stat-value" style="color:var(--info)">'+d.providers+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">发件账号</div><div class="stat-value" style="color:#a855f7">'+d.accounts+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">模板数</div><div class="stat-value" style="color:var(--warning)">'+d.templates+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">总邮件数</div><div class="stat-value" style="color:var(--success)">'+d.total_mails+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">今日发送</div><div class="stat-value" style="color:var(--info)">'+d.today_sent+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">今日失败</div><div class="stat-value" style="color:var(--danger)">'+d.today_failed+'</div></div>'+
+    '</div>';
+}
+
+async function renderTenants(main){
+  var resp=await api('/admin/tenants');
+  var tenants=resp.data||[];
+  main.innerHTML='<h2 style="margin-bottom:24px;">租户管理</h2>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>邮箱</th><th>状态</th><th>角色</th><th>API Keys</th><th>模板</th><th>Provider</th><th>账号</th><th>邮件</th><th>操作</th></tr></thead><tbody>'+
+    tenants.map(function(t){
+      return'<tr><td><strong>'+esc(t.name)+'</strong>'+((t.is_super_admin)?'<span class="tag-super">超管</span>':'')+'</td><td>'+esc(t.email)+'</td><td><span class="badge '+(t.status==='active'?'badge-success':'badge-danger')+'">'+esc(t.status)+'</span></td><td>'+((t.is_super_admin)?'超级管理员':'用户')+'</td><td>'+t.api_key_count+'</td><td>'+t.template_count+'</td><td>'+t.provider_count+'</td><td>'+t.account_count+'</td><td>'+t.mail_count+'</td><td><button class="btn btn-sm btn-ghost" onclick="toggleTenant(\''+esc(t.id)+'\',\''+(t.status==='active'?'disabled':'active')+'\')">'+(t.status==='active'?'禁用':'启用')+'</button></td></tr>';
+    }).join('')+'</tbody></table></div></div>';
+}
+
+async function toggleTenant(id,status){
+  await api('/admin/tenants/'+id,{method:'PUT',body:JSON.stringify({status:status})});
+  renderPage('tenants');
+  toast('租户状态已更新');
+}
+
+async function renderAllAccounts(main){
+  var tenantsResp=await api('/admin/tenants');
+  var tenants=tenantsResp.data||[];
+  var accountsResp=await api('/admin/accounts');
+  var accounts=accountsResp.data||[];
+
+  main.innerHTML='<h2 style="margin-bottom:24px;">发件账号管理</h2>'+
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAddAccountModal()">+ 添加发件账号</button></div>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>租户</th><th>账号名</th><th>邮箱</th><th>Provider</th><th>类型</th><th>今日/限额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+    accounts.map(function(a){
+      return'<tr><td><strong>'+esc(a.tenant_name||'')+'</strong></td><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.provider_name||'-')+'</td><td><span class="badge badge-info">'+esc(a.provider_type||'-')+'</span></td><td>'+(a.sent_today||0)+' / '+(a.daily_limit||1000)+'</td><td><span class="badge '+(a.enabled?'badge-success':'badge-muted')+'">'+(a.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" onclick="toggleAccount(\''+esc(a.id)+'\','+(!a.enabled)+')">'+(a.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" onclick="deleteAdminAccount(\''+esc(a.id)+'\')">删除</button></td></tr>';
+    }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">暂无账号</td></tr>'+
+    '</tbody></table></div></div>';
+}
+
+function showAddAccountModal(){
+  var overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+
+  Promise.all([api('/admin/tenants'),api('/admin/providers')]).then(function(results){
+    var tenants=results[0].data||[];
+    var providers=results[1].data||[];
+    overlay.innerHTML='<div class="modal"><div class="modal-title">添加发件账号</div>'+
+      '<div class="form-group"><label class="form-label">租户</label><select class="form-select" id="ac-tenant">'+tenants.map(function(t){return'<option value="'+esc(t.id)+'">'+esc(t.name)+' ('+esc(t.email)+')</option>'}).join('')+'</select></div>'+
+      '<div class="form-group"><label class="form-label">Provider</label><select class="form-select" id="ac-provider">'+providers.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+esc(p.type)+') - '+esc(p.tenant_name)+'</option>'}).join('')+'</select></div>'+
+      '<div class="form-group"><label class="form-label">账号名称</label><input class="form-input" id="ac-name" placeholder="如：通知邮箱"></div>'+
+      '<div class="form-group"><label class="form-label">邮箱地址</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
+      '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="Teaven 通知"></div>'+
+      '<div class="form-group"><label class="form-label">每日限额</label><input class="form-input" id="ac-limit" type="number" value="1000"></div>'+
+      '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="ac-save-btn">创建</button></div></div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#ac-save-btn').addEventListener('click',async function(){
+      var body={
+        user_id:overlay.querySelector('#ac-tenant').value,
+        provider_id:overlay.querySelector('#ac-provider').value,
+        name:overlay.querySelector('#ac-name').value.trim(),
+        email:overlay.querySelector('#ac-email').value.trim(),
+        display_name:overlay.querySelector('#ac-display').value.trim(),
+        daily_limit:parseInt(overlay.querySelector('#ac-limit').value||'1000')
+      };
+      if(!body.name||!body.email){toast('请填写账号名称和邮箱','error');return}
+      var resp=await api('/admin/accounts',{method:'POST',body:JSON.stringify(body)});
+      if(resp.success){overlay.remove();renderPage('accounts');toast('账号创建成功')}
+      else toast(resp.error,'error');
+    });
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
+  });
+}
+
+async function toggleAccount(id,enabled){
+  await api('/admin/accounts/'+id,{method:'PUT',body:JSON.stringify({enabled:enabled?1:0})});
+  renderPage('accounts');
+  toast('账号状态已更新');
+}
+
+async function deleteAdminAccount(id){
+  if(!confirm('确定删除此发件账号？'))return;
+  await api('/admin/accounts/'+id,{method:'DELETE'});
+  renderPage('accounts');
+  toast('账号已删除');
+}
+
+function setupPage(){
+  return'<div class="card" style="max-width:440px;margin:80px auto;"><div style="text-align:center;margin-bottom:24px;"><div style="font-size:2.5rem;margin-bottom:8px;">🛡</div><div class="card-title">超级管理员登录</div></div><div class="form-group"><label class="form-label">API Key（超级管理员）</label><input class="form-input" id="setup-key" type="password" placeholder="sk_..." value="'+esc(API_KEY)+'"></div><button class="btn btn-primary" onclick="saveKey()" style="width:100%;">进入</button></div>';
+}
+function saveKey(){
+  var k=document.getElementById('setup-key').value.trim();
+  if(!k){toast('请输入 API Key','error');return}
+  localStorage.setItem('teaven_admin_key',k);
+  location.reload();
+}
+
+if(API_KEY){renderPage('overview')}
+else{document.getElementById('main-content').innerHTML=setupPage()}
+</script>
+</body></html>`;
+}

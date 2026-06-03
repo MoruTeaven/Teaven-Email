@@ -18,9 +18,16 @@ export function getDB(db: D1Database) {
 
     async createUser(user: Omit<User, 'created_at' | 'updated_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO users (id, name, email, password_hash, status)
-         VALUES (?, ?, ?, ?, ?)`
-      ).bind(user.id, user.name, user.email, user.password_hash, user.status).run();
+        `INSERT INTO users (id, name, email, password_hash, status, is_super_admin)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(user.id, user.name, user.email, user.password_hash, user.status, user.is_super_admin || 0).run();
+    },
+
+    async getUsersBySuperAdmin(): Promise<User[]> {
+      const result = await db.prepare(
+        'SELECT * FROM users WHERE status != ? ORDER BY created_at DESC'
+      ).bind('deleted').all<User>();
+      return result.results;
     },
 
     // ============ API Keys ============

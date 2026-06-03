@@ -6,6 +6,7 @@ export interface User {
   email: string;
   password_hash: string;
   status: 'active' | 'disabled' | 'deleted';
+  is_super_admin: number;
   created_at: string;
   updated_at: string;
 }

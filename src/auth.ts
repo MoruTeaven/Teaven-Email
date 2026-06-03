@@ -80,6 +80,41 @@ export function authMiddleware(requiredPermissions?: Permission[]) {
   };
 }
 
+// 超级管理员中间件
+export function superAdminMiddleware() {
+  return async (c: Context, next: Next) => {
+    const authHeader = c.req.header('Authorization');
+    const apiKey = extractApiKey(authHeader);
+
+    if (!apiKey) {
+      return c.json({ success: false, error: 'Missing or invalid API key' }, 401);
+    }
+
+    const hash = await hashApiKey(apiKey);
+    const db = getDB(c.env.DB);
+    const apiKeyRecord = await db.getApiKeyByHash(hash);
+
+    if (!apiKeyRecord) {
+      return c.json({ success: false, error: 'Invalid API key' }, 401);
+    }
+
+    const user = await db.getUserById(apiKeyRecord.user_id);
+    if (!user || user.status !== 'active' || !user.is_super_admin) {
+      return c.json({ success: false, error: 'Super admin access required' }, 403);
+    }
+
+    await db.updateApiKeyLastUsed(apiKeyRecord.id);
+
+    c.set('auth', {
+      userId: apiKeyRecord.user_id,
+      apiKeyId: apiKeyRecord.id,
+      permissions: JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[],
+    } as AuthContext);
+
+    await next();
+  };
+}
+
 // 获取当前认证上下文
 export function getAuth(c: Context): AuthContext {
   return c.get('auth');
