@@ -1,6 +1,7 @@
 name = "teaven-email"
 main = "src/index.ts"
 compatibility_date = "2025-06-03"
+compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
