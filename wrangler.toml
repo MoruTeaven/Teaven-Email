@@ -10,7 +10,7 @@ database_id = "teaven-email-db-id"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "teaven-email-kv-id"
+id = "7f1ba6c1269d4f6ab0183443e6177555"
 
 [[r2_buckets]]
 binding = "R2"
