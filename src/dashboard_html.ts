@@ -658,7 +658,8 @@ export function getDashboardHTML(): string {
           main.innerHTML=loginPage();
         }
       }).catch(function(){
-        document.getElementById('main-content').innerHTML=loginPage();
+        // 网络错误 = 大概率还没部署/建表 → 显示注册页
+        document.getElementById('main-content').innerHTML=initPage();
       });
       return'<div style="text-align:center;padding:80px;color:var(--text-muted);">加载中...</div>';
     }

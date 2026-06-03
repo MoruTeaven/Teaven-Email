@@ -9,23 +9,22 @@ const setupRouter = new Hono<{ Bindings: Env }>();
 
 // GET /v1/setup/status - 检查是否需要初始化
 setupRouter.get('/status', async (c) => {
-  const db = getDB(c.env.DB);
-  const result = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first<{ count: number }>();
-  const needsSetup = !result || result.count === 0;
-
-  return c.json({
-    success: true,
-    data: {
-      needs_setup: needsSetup,
-      message: needsSetup ? 'System needs initialization. Create your first admin account.' : 'System already initialized.',
-    },
-  });
+  try {
+    const result = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first<{ count: number }>();
+    const needsSetup = !result || result.count === 0;
+    return c.json({ success: true, data: { needs_setup: needsSetup } });
+  } catch {
+    // 表不存在 = 需要初始化
+    return c.json({ success: true, data: { needs_setup: true } });
+  }
 });
 
 // POST /v1/setup/init - 初始化第一个管理员账户
-// 仅在没有任何用户时可用
 setupRouter.post('/init', async (c) => {
   const db = getDB(c.env.DB);
+
+  // 先确保表存在
+  await ensureTables(c.env.DB);
 
   // 检查是否已初始化
   const existing = await c.env.DB.prepare('SELECT COUNT(*) as count FROM users').first<{ count: number }>();
@@ -232,6 +231,31 @@ setupRouter.post('/key-from-password', async (c) => {
     },
   }, 201);
 });
+
+// 确保数据库表存在（首次部署时自动建表）
+async function ensureTables(db: D1Database): Promise<void> {
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','deleted')), created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS api_keys (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, api_key_hash TEXT NOT NULL, api_key_prefix TEXT NOT NULL, permissions TEXT NOT NULL DEFAULT '["SEND_MAIL"]', enabled INTEGER NOT NULL DEFAULT 1, last_used_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS providers (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, type TEXT NOT NULL CHECK(type IN ('smtp','api','cloudflare_email')), config TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), provider_id TEXT NOT NULL REFERENCES providers(id), name TEXT NOT NULL, email TEXT NOT NULL, display_name TEXT, config TEXT, daily_limit INTEGER DEFAULT 1000, sent_today INTEGER DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS templates (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), template_code TEXT NOT NULL, name TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'SYSTEM' CHECK(category IN ('VERIFY','NOTIFY','MARKETING','SYSTEM')), version INTEGER NOT NULL DEFAULT 1, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, variables TEXT DEFAULT '[]', enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS template_versions (id TEXT PRIMARY KEY, template_id TEXT NOT NULL REFERENCES templates(id), version INTEGER NOT NULL, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, variables TEXT DEFAULT '[]', changelog TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS category_routes (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), category TEXT NOT NULL, provider_id TEXT NOT NULL REFERENCES providers(id), account_id TEXT, priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS mail_logs (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), api_key_id TEXT, template_id TEXT, provider_id TEXT, account_id TEXT, category TEXT, to_email TEXT NOT NULL, subject TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','sent','delivered','failed','bounced','spam')), provider_response TEXT, error_message TEXT, retry_count INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS mail_queue (id TEXT PRIMARY KEY, mail_log_id TEXT NOT NULL REFERENCES mail_logs(id), user_id TEXT NOT NULL REFERENCES users(id), provider_id TEXT NOT NULL, account_id TEXT, to_email TEXT NOT NULL, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, category TEXT, priority INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','processing','completed','failed')), scheduled_at TEXT, next_retry_at TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS daily_stats (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), date TEXT NOT NULL, total_sent INTEGER DEFAULT 0, total_delivered INTEGER DEFAULT 0, total_failed INTEGER DEFAULT 0, total_bounced INTEGER DEFAULT 0, total_spam INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, url TEXT NOT NULL, events TEXT NOT NULL DEFAULT '["sent","failed","bounced"]', secret TEXT, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_code_version ON templates(user_id, template_code, version)`,
+    `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(api_key_hash)`,
+    `CREATE INDEX IF NOT EXISTS idx_mail_queue_status ON mail_queue(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_daily_stats_user_date ON daily_stats(user_id, date)`,
+  ];
+
+  for (const sql of tables) {
+    try { await db.prepare(sql).run(); } catch {}
+  }
+}
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

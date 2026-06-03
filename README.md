@@ -43,39 +43,25 @@
 - **模板引擎**: Handlebars
 - **语言**: TypeScript
 
-## 快速开始
-
-### 1. 安装依赖
+## 部署
 
 ```bash
 npm install
-```
-
-### 2. 创建 Cloudflare 资源
-
-```bash
 npx wrangler d1 create teaven-email-db
 npx wrangler kv:namespace create "teaven-email-kv"
-npx wrangler r2 bucket create teaven-email-assets
+npx wrangler r2 bucket create teaven-email
 ```
 
-### 3. 更新 wrangler.toml
-
-将创建的 D1 database_id 和 KV namespace id 填入 `wrangler.toml`。
-
-### 4. 初始化数据库
+将创建的 database_id、namespace id 填入 `wrangler.toml`，然后：
 
 ```bash
-npm run db:migrate
-```
-
-### 5. 部署
-
-```bash
+npx wrangler d1 execute teaven-email-db --remote --file=./migrations/001_init.sql
 npm run deploy
 ```
 
-部署后访问 `https://your-worker.your-subdomain.workers.dev/dashboard` 进入后台管理。
+部署后访问 `/dashboard`，页面会自动引导创建管理员账户。
+
+> **注意**：如果未提前运行迁移脚本，首次注册时系统会自动建表。
 
 ## API 文档
 
