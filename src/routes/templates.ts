@@ -2,8 +2,9 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
-import { extractVariables, renderTemplate, renderSubject } from '../template_engine';
-import type { Template, TemplateVersion } from '../types';
+import { extractVariables, renderTemplate, renderSubject, htmlToText, validateVariables } from '../template_engine';
+import { sendEmail, selectAccount } from '../mailer';
+import type { Template, TemplateVersion, MailLog } from '../types';
 
 const templateRouter = new Hono<{ Bindings: Env }>();
 
@@ -227,6 +228,136 @@ templateRouter.post('/:code/preview', authMiddleware(['MANAGE_TEMPLATE']), async
       render_errors: [renderError, subjectError].filter(Boolean),
       variables: template.variables,
     },
+  });
+});
+
+// POST /v1/templates/:code/test-send - 测试发送模板邮件
+templateRouter.post('/:code/test-send', authMiddleware(['MANAGE_TEMPLATE', 'SEND_MAIL']), async (c) => {
+  const auth = getAuth(c);
+  const db = getDB(c.env.DB);
+
+  const code = c.req.param('code');
+  let body: { to: string; variables?: Record<string, string> };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!body.to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.to)) {
+    return c.json({ success: false, error: 'Valid recipient email (to) is required' }, 400);
+  }
+
+  const template = await db.getTemplateByCode(auth.userId, code);
+  if (!template) {
+    return c.json({ success: false, error: 'Template not found' }, 404);
+  }
+
+  // 渲染模板
+  const templateVars = typeof template.variables === 'string'
+    ? JSON.parse(template.variables) as string[]
+    : template.variables;
+
+  const variables = body.variables || {};
+
+  // 变量完整性检查（宽松模式：缺失变量用空字符串填充）
+  const { missing } = validateVariables(templateVars, variables);
+  for (const m of missing) {
+    variables[m] = '';
+  }
+
+  const { html, error: renderError } = renderTemplate(template.html, variables);
+  if (renderError) {
+    return c.json({ success: false, error: `Template render error: ${renderError}` }, 500);
+  }
+
+  const { subject, error: subjectError } = renderSubject(template.subject, variables);
+  if (subjectError) {
+    return c.json({ success: false, error: `Subject render error: ${subjectError}` }, 500);
+  }
+
+  const textContent = htmlToText(html);
+  const category = template.category;
+
+  // 匹配发送通道和账号
+  const matchingAccounts = await db.getAccountsByCategory(category);
+  let selected = matchingAccounts.length > 0 ? selectAccount(matchingAccounts) : null;
+
+  let providerId: string | null = selected?.provider_id || null;
+  let accountId: string | null = selected?.id || null;
+
+  if (!providerId) {
+    const providers = await db.getEnabledProviders();
+    if (providers.length === 0) {
+      return c.json({ success: false, error: 'No enabled email provider found' }, 500);
+    }
+    providerId = providers[0].id;
+    const fallbackAccounts = await db.getEnabledAccountsByProvider(providerId);
+    selected = selectAccount(fallbackAccounts);
+    if (selected) {
+      accountId = selected.id;
+    }
+  }
+
+  if (!providerId) {
+    return c.json({ success: false, error: 'No available email provider' }, 500);
+  }
+
+  const provider = await db.getProviderById(providerId);
+  if (!provider) {
+    return c.json({ success: false, error: 'Provider not found' }, 500);
+  }
+
+  const fromEmail = selected?.email || 'noreply@teaven.email';
+  const fromName = selected?.display_name || null;
+
+  // 直接发送（不走队列，实时反馈）
+  const result = await sendEmail(provider, {
+    from: fromEmail,
+    fromName: fromName || undefined,
+    to: body.to,
+    subject,
+    html,
+    text: textContent,
+  });
+
+  // 记录到 mail_logs
+  const mailLogId = crypto.randomUUID();
+  const mailLog: Omit<MailLog, 'created_at'> = {
+    id: mailLogId,
+    user_id: auth.userId,
+    api_key_id: auth.apiKeyId,
+    template_id: template.id,
+    provider_id: providerId,
+    account_id: accountId,
+    category,
+    to_email: body.to,
+    subject,
+    status: result.success ? 'sent' : 'failed',
+    provider_response: result.providerResponse || null,
+    error_message: result.error || null,
+    retry_count: 0,
+  };
+  await db.createMailLog(mailLog);
+
+  if (result.success) {
+    return c.json({
+      success: true,
+      data: {
+        message: '测试邮件发送成功',
+        mail_id: mailLogId,
+        message_id: result.messageId,
+        to: body.to,
+        subject,
+      },
+    });
+  }
+
+  return c.json({
+    success: false,
+    error: result.error || '发送失败',
+    detail: result.providerResponse,
+    mail_id: mailLogId,
   });
 });
 

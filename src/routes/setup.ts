@@ -2,7 +2,7 @@
 // 用于创建第一个管理员用户和 API Key
 import { Hono } from 'hono';
 import { getDB } from '../db';
-import { generateApiKey } from '../auth';
+import { generateApiKey, encryptApiKey } from '../auth';
 import type { Permission } from '../types';
 
 const setupRouter = new Hono<{ Bindings: Env }>();
@@ -78,6 +78,7 @@ setupRouter.post('/init', async (c) => {
   const apiKeyId = crypto.randomUUID();
 
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const secret = c.env.JWT_SECRET || '';
 
   await db.createApiKey({
     id: apiKeyId,
@@ -85,6 +86,7 @@ setupRouter.post('/init', async (c) => {
     name: 'Admin Key',
     api_key_hash: hash,
     api_key_prefix: prefix,
+    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
     permissions: allPermissions,
     enabled: 1,
     auto_created: 0,
@@ -106,7 +108,7 @@ setupRouter.post('/init', async (c) => {
         key: raw,
         prefix,
         permissions: allPermissions,
-        message: '⚠️  Store this API key securely. It will not be shown again!',
+        message: 'Store this API key securely. You can also copy it later from the API Keys page.',
       },
     },
   }, 201);
@@ -199,6 +201,7 @@ setupRouter.post('/key-from-password', async (c) => {
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
   const { raw, hash, prefix } = await generateApiKey();
   const apiKeyId = crypto.randomUUID();
+  const secret = c.env.JWT_SECRET || '';
 
   await db.createApiKey({
     id: apiKeyId,
@@ -206,6 +209,7 @@ setupRouter.post('/key-from-password', async (c) => {
     name: body.name || 'Login Key',
     api_key_hash: hash,
     api_key_prefix: prefix,
+    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
     permissions: allPermissions,
     enabled: 1,
     auto_created: 1,
@@ -256,6 +260,7 @@ async function ensureTables(db: D1Database): Promise<void> {
   const alterStatements = [
     `ALTER TABLE api_keys ADD COLUMN auto_created INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE api_keys ADD COLUMN expires_at TEXT`,
+    `ALTER TABLE api_keys ADD COLUMN api_key_encrypted TEXT`,
   ];
   for (const sql of alterStatements) {
     try { await db.prepare(sql).run(); } catch {}

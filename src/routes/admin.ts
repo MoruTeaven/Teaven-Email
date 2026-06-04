@@ -1,6 +1,6 @@
 // Teaven Email - 超级管理员路由（用户管理）
 import { Hono } from 'hono';
-import { superAdminMiddleware, generateApiKey, generateImpersonationToken } from '../auth';
+import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey } from '../auth';
 import { getDB } from '../db';
 import { sendEmail } from '../mailer';
 import type { Permission } from '../types';
@@ -105,6 +105,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
   const { raw, hash, prefix } = await generateApiKey();
   const apiKeyId = crypto.randomUUID();
+  const secret = c.env.JWT_SECRET || '';
 
   await db.createApiKey({
     id: apiKeyId,
@@ -112,6 +113,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
     name: 'Default Key',
     api_key_hash: hash,
     api_key_prefix: prefix,
+    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
     permissions: allPermissions,
     enabled: 1,
     auto_created: 0,

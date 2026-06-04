@@ -1,6 +1,6 @@
 // Teaven Email - API Key 管理路由
 import { Hono } from 'hono';
-import { authMiddleware, getAuth, generateApiKey } from '../auth';
+import { authMiddleware, getAuth, generateApiKey, encryptApiKey, decryptApiKey, hashApiKey } from '../auth';
 import { getDB } from '../db';
 import type { Permission } from '../types';
 
@@ -59,6 +59,7 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
   }
 
   const { raw, hash, prefix } = await generateApiKey();
+  const secret = c.env.JWT_SECRET || '';
 
   const apiKey = {
     id: crypto.randomUUID(),
@@ -66,6 +67,7 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
     name: body.name,
     api_key_hash: hash,
     api_key_prefix: prefix,
+    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
     permissions,
     enabled: 1,
     auto_created: 0,
@@ -116,6 +118,66 @@ apiKeyRouter.put('/:id/toggle', authMiddleware(), async (c) => {
   await db.toggleApiKey(id, auth.userId, body.enabled ? 1 : 0);
 
   return c.json({ success: true, message: `API key ${body.enabled ? 'enabled' : 'disabled'}` });
+});
+
+// POST /v1/api-keys/:id/reveal - 验证密码后获取原始 API Key
+apiKeyRouter.post('/:id/reveal', authMiddleware(), async (c) => {
+  const auth = getAuth(c);
+  const db = getDB(c.env.DB);
+  const id = c.req.param('id') || '';
+
+  let body: { password: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!body.password) {
+    return c.json({ success: false, error: 'password is required' }, 400);
+  }
+
+  if (!id) {
+    return c.json({ success: false, error: 'Invalid API key ID' }, 400);
+  }
+
+  // 获取 API Key 记录
+  const apiKeyRecord = await db.getApiKeyById(id);
+  if (!apiKeyRecord || apiKeyRecord.user_id !== (auth.userId || '')) {
+    return c.json({ success: false, error: 'API key not found' }, 404);
+  }
+
+  if (!apiKeyRecord.api_key_encrypted) {
+    return c.json({ success: false, error: 'This key was created before encryption support. Please create a new key.' }, 400);
+  }
+
+  // 获取用户并验证密码
+  const user = await db.getUserById(auth.userId);
+  if (!user) {
+    return c.json({ success: false, error: 'User not found' }, 404);
+  }
+
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(body.password));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  if (passwordHash !== user.password_hash) {
+    return c.json({ success: false, error: 'Invalid password' }, 401);
+  }
+
+  // 解密并返回
+  const secret = c.env.JWT_SECRET || '';
+  if (!secret) {
+    return c.json({ success: false, error: 'Encryption not configured' }, 500);
+  }
+
+  try {
+    const rawKey = await decryptApiKey(apiKeyRecord.api_key_encrypted, secret);
+    return c.json({ success: true, data: { api_key: rawKey } });
+  } catch {
+    return c.json({ success: false, error: 'Failed to decrypt API key' }, 500);
+  }
 });
 
 export default apiKeyRouter;

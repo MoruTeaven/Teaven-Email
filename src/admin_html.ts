@@ -465,6 +465,21 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     var _accountsById = {};
     var _providersData = [];
 
+    // 更新侧栏用户头像和昵称
+    function updateSidebarUser() {
+      var name = localStorage.getItem('teaven_admin_name');
+      var email = localStorage.getItem('teaven_admin_email');
+      var avatarEl = document.querySelector('.sidebar-footer .user-avatar');
+      var nameEl = document.querySelector('.sidebar-footer .user-name');
+      var headerAvatar = document.querySelector('.header-actions .user-avatar');
+      if (name) {
+        var initial = name.charAt(0).toUpperCase();
+        if (avatarEl) avatarEl.textContent = initial;
+        if (nameEl) nameEl.textContent = name;
+        if (headerAvatar) headerAvatar.textContent = initial;
+      }
+    }
+
     function esc(s) {
       if (!s) return '';
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1335,6 +1350,9 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
       overlay.querySelector('#impersonate-switch-btn').addEventListener('click', function() {
         localStorage.setItem('teaven_super_admin_key_backup', origKey);
+        // 将被模拟用户的名称保存到 dashboard 的 localStorage，供侧栏显示
+        localStorage.setItem('teaven_user_name', resp.data.user.name || '');
+        localStorage.setItem('teaven_user_email', resp.data.user.email || '');
         window.open('/dashboard?imp_token=' + encodeURIComponent(resp.data.impersonation_token), '_blank');
         overlay.remove();
       });
@@ -1418,6 +1436,11 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         body: JSON.stringify({ email: email, password: password })
       }).then(function(r) { return r.json(); }).then(function(resp) {
         if (resp.success) {
+          // 保存用户信息到 localStorage，用于侧栏展示
+          if (resp.data && resp.data.user) {
+            localStorage.setItem('teaven_admin_name', resp.data.user.name || '');
+            localStorage.setItem('teaven_admin_email', resp.data.user.email || '');
+          }
           // 登录成功后，始终调用 key-from-password 获取/创建 API Key
           fetch(API_BASE + '/setup/key-from-password', {
             method: 'POST',
@@ -1491,6 +1514,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       }).then(function(r) { return r.json(); }).then(function(resp) {
         if (resp.success) {
           localStorage.setItem('teaven_admin_email', email);
+          localStorage.setItem('teaven_admin_name', resp.data.user.name);
           localStorage.setItem('teaven_admin_key', resp.data.api_key.key);
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
@@ -1510,7 +1534,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     }
 
     // 初始化
-    if (API_KEY) { renderPage('dashboard'); }
+    if (API_KEY) { updateSidebarUser(); renderPage('dashboard'); }
     else { document.getElementById('main-content').innerHTML = setupPage(); }
   </script>
 </body>

@@ -61,15 +61,16 @@ export function getDB(db: D1Database) {
     async createApiKey(apiKey: Omit<ApiKey, 'created_at' | 'updated_at'>): Promise<void> {
       try {
         await db.prepare(
-          `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, permissions, enabled, auto_created, expires_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, api_key_encrypted, permissions, enabled, auto_created, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           apiKey.id, apiKey.user_id, apiKey.name, apiKey.api_key_hash,
-          apiKey.api_key_prefix, JSON.stringify(apiKey.permissions), apiKey.enabled,
+          apiKey.api_key_prefix, apiKey.api_key_encrypted ?? null,
+          JSON.stringify(apiKey.permissions), apiKey.enabled,
           apiKey.auto_created ?? 0, apiKey.expires_at ?? null
         ).run();
       } catch (err) {
-        // 兼容 migration 005 未应用到生产库的情况（auto_created / expires_at 列不存在）
+        // 兼容旧 migration 未应用的情况
         if (err instanceof Error && (err.message.includes('auto_created') || err.message.includes('no such column'))) {
           console.warn('[db] auto_created column missing, creating api key without auto_created/expires_at. Run migration 005.');
           await db.prepare(
@@ -89,6 +90,10 @@ export function getDB(db: D1Database) {
       await db.prepare(
         `UPDATE api_keys SET last_used_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`
       ).bind(id).run();
+    },
+
+    async getApiKeyById(id: string): Promise<ApiKey | null> {
+      return db.prepare('SELECT * FROM api_keys WHERE id = ?').bind(id).first<ApiKey>();
     },
 
     async deleteApiKey(id: string, userId: string): Promise<void> {

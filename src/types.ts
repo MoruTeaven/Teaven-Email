@@ -17,6 +17,7 @@ export interface ApiKey {
   name: string;
   api_key_hash: string;
   api_key_prefix: string;
+  api_key_encrypted: string | null;  // AES-256-GCM 加密的原始 Key（base64），NULL = 旧 Key 无加密值
   permissions: Permission[];
   enabled: number;
   auto_created: number;       // 1 = 登录自动创建, 0 = 手动创建

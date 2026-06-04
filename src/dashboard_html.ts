@@ -423,6 +423,23 @@ export function getDashboardHTML(): string {
       window.location.href = '/admin';
     }
 
+    // 更新侧栏用户头像和昵称
+    function updateSidebarUser() {
+      var name = localStorage.getItem('teaven_user_name');
+      var email = localStorage.getItem('teaven_user_email');
+      var avatarEl = document.querySelector('.sidebar-footer .user-avatar');
+      var nameEl = document.querySelector('.sidebar-footer .user-name');
+      var emailEl = document.querySelector('.sidebar-footer .user-email');
+      var headerAvatar = document.querySelector('.header-actions .user-avatar');
+      if (name) {
+        var initial = name.charAt(0).toUpperCase();
+        if (avatarEl) avatarEl.textContent = initial;
+        if (nameEl) nameEl.textContent = name;
+        if (headerAvatar) headerAvatar.textContent = initial;
+      }
+      if (email && emailEl) emailEl.textContent = email;
+    }
+
     function esc(s) {
       if (!s) return '';
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -610,6 +627,7 @@ export function getDashboardHTML(): string {
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (k.enabled ? 'badge-success' : 'badge-muted') + '">' + (k.enabled ? '启用' : '禁用') + '</span>' +
+                    '<button class="btn btn-sm btn-ghost" data-keyid="' + esc(k.id) + '" onclick="showRevealApiKeyModal(this.dataset.keyid)">复制</button>' +
                     '<button class="btn btn-sm btn-ghost" data-keyid="' + esc(k.id) + '" data-keyenabled="' + (!k.enabled ? 1 : 0) + '" onclick="toggleApiKey(this.dataset.keyid, +this.dataset.keyenabled)">' + (k.enabled ? '禁用' : '启用') + '</button>' +
                     '<button class="btn btn-sm btn-danger" data-keyid="' + esc(k.id) + '" onclick="deleteApiKey(this.dataset.keyid)">删除</button>' +
                   '</div>' +
@@ -661,7 +679,7 @@ export function getDashboardHTML(): string {
               '<div class="card-title">API Key 创建成功</div>' +
               '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(\\'key-reveal\\').remove()">关闭</button>' +
             '</div>' +
-            '<p style="color: var(--text-muted); margin-bottom: 12px;">请立即复制并安全保存此 Key，关闭后将无法再次查看。</p>' +
+            '<p style="color: var(--text-muted); margin-bottom: 12px;">请保存此 Key。后续可在 API Keys 列表中验证密码后重新查看。</p>' +
             '<div class="code-block"><span class="key-highlight">' + esc(resp.data.api_key) + '</span></div>' +
           '</div>');
           renderApiKeys(main);
@@ -683,6 +701,63 @@ export function getDashboardHTML(): string {
       await api('/api-keys/' + id, { method: 'DELETE' });
       renderPage('api-keys');
       toast('API Key 已删除');
+    }
+
+    function showRevealApiKeyModal(id) {
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal" style="max-width: 480px;">' +
+        '<div class="modal-title">验证身份</div>' +
+        '<p style="color: var(--text-muted); margin-bottom: 16px; font-size: 0.85rem;">请输入你的账号密码以查看 API Key</p>' +
+        '<div class="form-group">' +
+          '<label class="form-label">密码</label>' +
+          '<input class="form-input" id="reveal-pwd" type="password" placeholder="输入登录密码">' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-primary" id="reveal-submit">查看</button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#reveal-submit').addEventListener('click', async function() {
+        var pwd = overlay.querySelector('#reveal-pwd').value.trim();
+        if (!pwd) { toast('请输入密码', 'error'); return; }
+        var resp = await api('/api-keys/' + id + '/reveal', { method: 'POST', body: JSON.stringify({ password: pwd }) });
+        if (resp.success && resp.data && resp.data.api_key) {
+          overlay.remove();
+          // 显示 key 并支持一键复制
+          var revealOverlay = document.createElement('div');
+          revealOverlay.className = 'modal-overlay';
+          revealOverlay.innerHTML = '<div class="modal" style="max-width: 560px;">' +
+            '<div class="modal-title">API Key</div>' +
+            '<p style="color: var(--text-muted); margin-bottom: 12px; font-size: 0.85rem;">请安全保存，不要分享给他人。</p>' +
+            '<div class="code-block" style="font-size: 0.78rem; word-break: break-all; margin-bottom: 16px;">' + esc(resp.data.api_key) + '</div>' +
+            '<div class="modal-footer">' +
+              '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">关闭</button>' +
+              '<button class="btn btn-primary" id="copy-key-btn" data-key="' + esc(resp.data.api_key) + '">复制到剪贴板</button>' +
+            '</div>' +
+          '</div>';
+          document.body.appendChild(revealOverlay);
+          revealOverlay.querySelector('#copy-key-btn').addEventListener('click', function() {
+            var key = this.dataset.key;
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(key).then(function() { toast('已复制到剪贴板'); });
+            } else {
+              // fallback
+              var ta = document.createElement('textarea');
+              ta.value = key; ta.style.position = 'fixed'; ta.style.opacity = '0';
+              document.body.appendChild(ta); ta.select();
+              document.execCommand('copy'); document.body.removeChild(ta);
+              toast('已复制到剪贴板');
+            }
+          });
+          revealOverlay.addEventListener('click', function(e) { if (e.target === revealOverlay) revealOverlay.remove(); });
+        } else {
+          toast(resp.error || '验证失败', 'error');
+        }
+      });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
     // 模板管理
@@ -721,9 +796,10 @@ export function getDashboardHTML(): string {
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title"><code style="background: var(--bg-base); padding: 4px 8px; border-radius: 4px; margin-right: 8px;">' + esc(t.template_code) + '</code>' + esc(t.name) + '</div>' +
-                    '<div class="list-item-subtitle">分类: <span class="badge badge-info">' + esc(t.category) + '</span> · 版本: v' + t.version + ' · 变量: ' + vars.length + '个</div>' +
+                    '<div class="list-item-subtitle">分类: <span class="badge badge-info">' + esc((function() { var m = {VERIFY:'验证邮件',NOTIFY:'通知邮件',MARKETING:'营销邮件',SYSTEM:'系统邮件'}; return m[t.category]||t.category; })()) + '</span> · 版本: v' + t.version + ' · 变量: ' + vars.length + '个</div>' +
                   '</div>' +
                   '<div class="list-item-actions">' +
+                    '<button class="btn btn-sm btn-ghost" data-tcode="' + esc(t.template_code) + '" onclick="testSendTemplate(this.dataset.tcode)">测试发送</button>' +
                     '<button class="btn btn-sm btn-ghost" data-tcode="' + esc(t.template_code) + '" onclick="previewTemplate(this.dataset.tcode)">预览</button>' +
                     '<button class="btn btn-sm btn-ghost" data-tcode="' + esc(t.template_code) + '" onclick="editTemplate(this.dataset.tcode)">编辑</button>' +
                     '<button class="btn btn-sm btn-danger" data-tcode="' + esc(t.template_code) + '" onclick="deleteTemplate(this.dataset.tcode)">删除</button>' +
@@ -859,6 +935,94 @@ export function getDashboardHTML(): string {
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
+    async function testSendTemplate(code) {
+      // 获取模板信息（用于变量列表）
+      var tResp = await api('/templates/' + code);
+      if (!tResp.data) { toast('模板不存在', 'error'); return; }
+      var template = tResp.data;
+      var vars = typeof template.variables === 'string' ? JSON.parse(template.variables) : (template.variables || []);
+
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal" style="max-width: 600px;">' +
+        '<div class="modal-title">测试发送: ' + esc(code) + '</div>' +
+        '<div style="margin-bottom: 16px; color: var(--text-secondary); font-size: 13px;">发送一封真实邮件以验证模板渲染效果</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">收件邮箱 *</label>' +
+          '<input class="form-input" id="ts-to" type="email" placeholder="如：your@email.com">' +
+        '</div>' +
+        (vars.length > 0 ? '<div class="form-group">' +
+          '<label class="form-label">模板变量</label>' +
+          vars.map(function(v, i) {
+            return '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">' +
+              '<code style="min-width: 80px; background: var(--bg-base); padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + esc(v) + '</code>' +
+              '<input class="form-input" id="ts-var-' + i + '" placeholder="变量值" style="flex: 1;">' +
+            '</div>';
+          }).join('') +
+        '</div>' : '<div class="form-group"><div class="form-hint">此模板没有变量，可直接发送</div></div>') +
+        '<div id="ts-result" style="display: none; margin: 16px 0; padding: 12px 16px; border-radius: 8px; font-size: 13px;"></div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-primary" id="ts-send-btn"><span id="ts-send-text">发送测试邮件</span></button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#ts-send-btn').addEventListener('click', async function() {
+        var to = overlay.querySelector('#ts-to').value.trim();
+        if (!to) { toast('请输入收件邮箱', 'error'); return; }
+
+        var variables = {};
+        vars.forEach(function(v, i) {
+          var el = overlay.querySelector('#ts-var-' + i);
+          variables[v] = el ? el.value.trim() : '';
+        });
+
+        var btn = overlay.querySelector('#ts-send-btn');
+        var btnText = overlay.querySelector('#ts-send-text');
+        btn.disabled = true;
+        btnText.textContent = '发送中...';
+        var resultDiv = overlay.querySelector('#ts-result');
+
+        try {
+          var resp = await api('/templates/' + code + '/test-send', {
+            method: 'POST',
+            body: JSON.stringify({ to: to, variables: variables })
+          });
+          resultDiv.style.display = 'block';
+          if (resp.success) {
+            resultDiv.style.background = '#ecfdf5';
+            resultDiv.style.border = '1px solid #a7f3d0';
+            resultDiv.style.color = '#059669';
+            resultDiv.innerHTML = '<div style="font-weight: 600; margin-bottom: 4px;">测试邮件发送成功</div>' +
+              '<div>收件人: ' + esc(to) + '</div>' +
+              '<div>主题: ' + esc(resp.data && resp.data.subject ? resp.data.subject : '-') + '</div>';
+            toast('测试邮件发送成功');
+          } else {
+            resultDiv.style.background = '#fef2f2';
+            resultDiv.style.border = '1px solid #fecaca';
+            resultDiv.style.color = '#dc2626';
+            resultDiv.innerHTML = '<div style="font-weight: 600; margin-bottom: 4px;">发送失败</div>' +
+              '<div>' + esc(resp.error || '未知错误') + '</div>' +
+              (resp.detail ? '<div style="margin-top: 4px; font-size: 12px; opacity: 0.8;">详情: ' + esc(resp.detail) + '</div>' : '');
+            toast('发送失败: ' + (resp.error || '未知错误'), 'error');
+          }
+        } catch (err) {
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = '#fef2f2';
+          resultDiv.style.border = '1px solid #fecaca';
+          resultDiv.style.color = '#dc2626';
+          resultDiv.innerHTML = '<div style="font-weight: 600;">请求失败</div><div>' + esc(err.message || '网络错误') + '</div>';
+          toast('请求失败', 'error');
+        } finally {
+          btn.disabled = false;
+          btnText.textContent = '重新发送';
+        }
+      });
+
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
     // 发送通道（只读）
     async function renderProviders(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
@@ -927,7 +1091,7 @@ export function getDashboardHTML(): string {
                     '<div class="list-item-subtitle">' + new Date(l.created_at).toLocaleString('zh-CN') + ' · ' + esc(l.subject) + '</div>' +
                   '</div>' +
                   '<div class="list-item-actions">' +
-                    '<span class="badge badge-info">' + esc(l.category || '-') + '</span>' +
+                    '<span class="badge badge-info">' + esc((function() { var m = {VERIFY:'验证邮件',NOTIFY:'通知邮件',MARKETING:'营销邮件',SYSTEM:'系统邮件'}; return m[l.category]||l.category||'-'; })()) + '</span>' +
                     '<span class="badge ' + badgeClass + '">' + esc(l.status) + '</span>' +
                     '<span style="color: var(--text-muted); font-size: 0.8rem;">重试: ' + l.retry_count + '</span>' +
                   '</div>' +
@@ -1016,6 +1180,11 @@ export function getDashboardHTML(): string {
         body: JSON.stringify({ email: email, password: password })
       }).then(function(r) { return r.json(); }).then(function(resp) {
         if (resp.success) {
+          // 保存用户信息到 localStorage，用于侧栏展示
+          if (resp.data && resp.data.user) {
+            localStorage.setItem('teaven_user_name', resp.data.user.name || '');
+            localStorage.setItem('teaven_user_email', resp.data.user.email || '');
+          }
           // 登录成功后，始终调用 key-from-password 获取/创建 API Key
           fetch(API_BASE + '/setup/key-from-password', {
             method: 'POST',
@@ -1082,6 +1251,8 @@ export function getDashboardHTML(): string {
       }).then(function(r) { return r.json(); }).then(function(resp) {
         if (resp.success) {
           localStorage.setItem('teaven_email', email);
+          localStorage.setItem('teaven_user_name', resp.data.user.name);
+          localStorage.setItem('teaven_user_email', resp.data.user.email);
           localStorage.setItem('teaven_api_key', resp.data.api_key.key);
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
@@ -1108,7 +1279,7 @@ export function getDashboardHTML(): string {
     }
 
     // 初始化
-    if (API_KEY) { renderPage('dashboard'); }
+    if (API_KEY) { updateSidebarUser(); renderPage('dashboard'); }
     else { document.getElementById('main-content').innerHTML = setupPage(); }
   </script>
 </body>
