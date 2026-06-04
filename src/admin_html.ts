@@ -814,6 +814,7 @@ export function getAdminHTML(): string {
     var API_BASE = '/v1';
     var API_KEY = localStorage.getItem('teaven_admin_key') || '';
     var _accountsById = {};
+    var _providersData = [];
 
     function esc(s) {
       if (!s) return '';
@@ -1013,6 +1014,7 @@ export function getAdminHTML(): string {
     async function renderProviders(main) {
       var resp = await api('/admin/providers');
       var providers = resp.data || [];
+      _providersData = providers;
 
       main.innerHTML = \`
         <div class="page-header">
@@ -1054,6 +1056,7 @@ export function getAdminHTML(): string {
                     '<span class="badge badge-info">' + esc(p.type) + '</span>' +
                     '<div style="display: flex; gap: 8px;">' +
                       '<button class="btn btn-sm btn-ghost" data-pid="' + esc(p.id) + '" data-penabled="' + (!p.enabled ? 1 : 0) + '" onclick="toggleProvider(this.dataset.pid, +this.dataset.penabled)">' + (p.enabled ? '禁用' : '启用') + '</button>' +
+                      '<button class="btn btn-sm btn-ghost" data-pid="' + esc(p.id) + '" onclick="showAdminProviderEditModal(this.dataset.pid)">编辑</button>' +
                       '<button class="btn btn-sm btn-danger" data-pid="' + esc(p.id) + '" onclick="deleteAdminProvider(this.dataset.pid)">删除</button>' +
                     '</div>' +
                   '</div>' +
@@ -1099,6 +1102,95 @@ export function getAdminHTML(): string {
         if (!config) return;
         var resp = await api('/admin/providers', { method: 'POST', body: JSON.stringify({ name: name, type: type, config: config }) });
         if (resp.success) { overlay.remove(); renderPage('providers'); toast('发送通道创建成功'); }
+        else toast(resp.error, 'error');
+      });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function showAdminProviderEditModal(id) {
+      var p = _providersData.find(function(x) { return x.id === id; });
+      if (!p) { toast('通道数据未找到', 'error'); return; }
+      var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
+
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.setAttribute('data-edit-id', id);
+      overlay.setAttribute('data-edit-type', p.type);
+      overlay.innerHTML = '<div class="modal">' +
+        '<div class="modal-title">编辑发送通道</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">名称 *</label>' +
+          '<input class="form-input" id="p-name" value="' + esc(p.name) + '" placeholder="如：SendGrid 生产环境">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">类型 *</label>' +
+          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\\'.modal-overlay\\'))">' +
+            '<option value="smtp"' + (p.type === 'smtp' ? ' selected' : '') + '>SMTP</option>' +
+            '<option value="api"' + (p.type === 'api' ? ' selected' : '') + '>第三方 API</option>' +
+            '<option value="cloudflare_email"' + (p.type === 'cloudflare_email' ? ' selected' : '') + '>Cloudflare Email</option>' +
+          '</select>' +
+        '</div>' +
+        '<div id="p-config-area"></div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-primary" id="p-save-btn">保存修改</button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+
+      // 填充配置字段
+      var area = overlay.querySelector('#p-config-area');
+      if (p.type === 'smtp') {
+        area.innerHTML = '<div class="form-group"><label class="form-label">Host *</label><input class="form-input" id="pc-host" value="' + esc(config.host || '') + '" placeholder="smtp.example.com"></div>' +
+          '<div class="form-group"><label class="form-label">Port *</label><input class="form-input" id="pc-port" value="' + (config.port || '') + '" placeholder="587" type="number"></div>' +
+          '<div class="form-group"><label class="form-label">Username *</label><input class="form-input" id="pc-user" value="' + esc(config.username || '') + '" placeholder="user@example.com"></div>' +
+          '<div class="form-group"><label class="form-label">Password</label><input class="form-input" id="pc-pass" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的密码出于安全原因不显示，留空则保持原密码不变</div></div>' +
+          '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls"' + (config.encryption === 'tls' ? ' selected' : '') + '>TLS</option><option value="ssl"' + (config.encryption === 'ssl' ? ' selected' : '') + '>SSL</option><option value="none"' + (config.encryption === 'none' ? ' selected' : '') + '>None</option></select></div>';
+      } else if (p.type === 'api') {
+        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(\\'.modal-overlay\\'))"><option value="sendgrid"' + (config.provider_name === 'sendgrid' ? ' selected' : '') + '>SendGrid</option><option value="mailgun"' + (config.provider_name === 'mailgun' ? ' selected' : '') + '>Mailgun</option><option value="resend"' + (config.provider_name === 'resend' ? ' selected' : '') + '>Resend</option><option value="ahasend"' + (config.provider_name === 'ahasend' ? ' selected' : '') + '>AhaSend</option><option value="generic"' + (config.provider_name === 'generic' || !config.provider_name ? ' selected' : '') + '>通用</option></select></div>' +
+          '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" value="' + esc(config.api_url || '') + '" placeholder="https://api.example.com/send"></div>' +
+          '<div class="form-group" id="pc-accountid-group" style="display: ' + (config.provider_name === 'ahasend' ? 'block' : 'none') + ';"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" value="' + esc(config.account_id || '') + '" placeholder="AhaSend Account ID"></div>' +
+          '<div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="pc-apikey" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的 API Key 出于安全原因不显示，留空则保持原 Key 不变</div></div>';
+      } else {
+        area.innerHTML = '<div class="form-group"><label class="form-label">域名 *</label><input class="form-input" id="pc-domain" value="' + esc(config.domain || '') + '" placeholder="example.com"></div>' +
+          '<div class="form-group"><label class="form-label">DKIM Selector</label><input class="form-input" id="pc-dkim" value="' + esc(config.dkim_selector || '') + '" placeholder="mailchannels"></div>';
+      }
+
+      // 如果类型是 api 且是 ahasend，调整 URL/AccountID 显示
+      if (p.type === 'api') {
+        toggleApiProviderFields(overlay);
+      }
+
+      overlay.querySelector('#p-save-btn').addEventListener('click', async function() {
+        var name = overlay.querySelector('#p-name').value.trim();
+        var type = overlay.querySelector('#p-type').value;
+        if (!name) { toast('请输入名称', 'error'); return; }
+        var newConfig = getProviderConfig(overlay, type);
+        if (!newConfig) return;
+
+        // 合并原始配置：如果敏感字段（密码/API Key）未填，保留原始值
+        // 因为后端 updateProvider 会整体替换 config JSON 列
+        var mergedConfig = {};
+        var origConfig = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
+        if (type === p.type) {
+          // 同类型编辑，合并所有原始字段，然后用新值覆盖
+          Object.keys(origConfig).forEach(function(k) { mergedConfig[k] = origConfig[k]; });
+          Object.keys(newConfig).forEach(function(k) {
+            var val = newConfig[k];
+            // 敏感字段为空字符串时保留原值
+            if ((k === 'password' || k === 'api_key') && val === '') return;
+            if (val !== undefined) mergedConfig[k] = val;
+          });
+        } else {
+          // 类型变更，直接用新配置（过滤空敏感字段）
+          Object.keys(newConfig).forEach(function(k) {
+            if (newConfig[k] !== undefined) mergedConfig[k] = newConfig[k];
+          });
+        }
+
+        var body = { name: name, type: type, config: mergedConfig };
+        var resp = await api('/admin/providers/' + id, { method: 'PUT', body: JSON.stringify(body) });
+        if (resp.success) { overlay.remove(); renderPage('providers'); toast('发送通道已更新'); }
         else toast(resp.error, 'error');
       });
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
