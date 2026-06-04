@@ -1288,7 +1288,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '</div>' +
           '<div class="form-group">' +
             '<label class="form-label">发送通道 *</label>' +
-            '<select class="form-select" id="ar-provider" onchange="onRouteProviderChange(this.closest(\\\\'.modal-overlay\\\\'))">' +
+            '<select class="form-select" id="ar-provider" onchange="onRouteProviderChange(this.closest(\\'.modal-overlay\\'))">' +
               '<option value="">-- 选择通道 --</option>' +
               providers.filter(function(p) { return p.enabled; }).map(function(p) {
                 return '<option value="' + esc(p.id) + '">' + esc(p.name) + ' (' + esc(p.type) + ')</option>';
@@ -1308,7 +1308,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<div class="form-hint">数值越大优先级越高，同一用户同分类多条规则时取优先级最高的</div>' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button class="btn btn-ghost" onclick="this.closest(\\\\'.modal-overlay\\\\').remove()">取消</button>' +
+            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
             '<button class="btn btn-primary" id="ar-save-btn">创建</button>' +
           '</div>' +
         '</div>';
