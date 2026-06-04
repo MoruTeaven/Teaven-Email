@@ -982,7 +982,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' + esc(a.name) + '</div>' +
                     '<div class="list-item-subtitle">' + esc(a.email) + ' · ' + esc(a.provider_name || '-') + ' · 今日: ' + (a.sent_today || 0) + '/' + (a.daily_limit || 1000) +
-                      ((a.categories || '') ? ' · <span style="color: var(--primary);">分类: ' + esc(a.categories) + '</span>' : '') +
+                      ((a.categories || '') ? ' · <span style="color: var(--primary);">分类: ' + esc((function() { var m = {VERIFY:'验证邮件',NOTIFY:'通知邮件',MARKETING:'营销邮件',SYSTEM:'系统邮件'}; return a.categories.split(',').map(function(c){return m[c.trim()]||c;}).join(','); })()) + '</span>' : '') +
                     '</div>' +
                   '</div>' +
                   '<div class="list-item-actions">' +
@@ -1034,16 +1034,16 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<label class="form-label">适用分类</label>' +
             '<div id="ac-categories" style="display: flex; flex-wrap: wrap; gap: 8px;">' +
               '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
-                '<input type="checkbox" value="VERIFY" style="accent-color: var(--primary);"> VERIFY' +
+                '<input type="checkbox" value="VERIFY" style="accent-color: var(--primary);"> 验证邮件' +
               '</label>' +
               '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
-                '<input type="checkbox" value="NOTIFY" style="accent-color: var(--primary);"> NOTIFY' +
+                '<input type="checkbox" value="NOTIFY" style="accent-color: var(--primary);"> 通知邮件' +
               '</label>' +
               '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
-                '<input type="checkbox" value="MARKETING" style="accent-color: var(--primary);"> MARKETING' +
+                '<input type="checkbox" value="MARKETING" style="accent-color: var(--primary);"> 营销邮件' +
               '</label>' +
               '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
-                '<input type="checkbox" value="SYSTEM" style="accent-color: var(--primary);"> SYSTEM' +
+                '<input type="checkbox" value="SYSTEM" style="accent-color: var(--primary);"> 系统邮件' +
               '</label>' +
             '</div>' +
             '<div class="form-hint">选择该账号可用于哪些分类邮件的发送，可多选。留空则不参与自动路由。</div>' +
@@ -1129,10 +1129,11 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<label class="form-label">适用分类</label>' +
             '<div id="ae-categories" style="display: flex; flex-wrap: wrap; gap: 8px;">' +
               (function() {
+                var catNames = {VERIFY:'验证邮件', NOTIFY:'通知邮件', MARKETING:'营销邮件', SYSTEM:'系统邮件'};
                 var currentCats = (account.categories || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
                 return ['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'].map(function(cat) {
                   return '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
-                    '<input type="checkbox" value="' + cat + '" style="accent-color: var(--primary);"' + (currentCats.indexOf(cat) >= 0 ? ' checked' : '') + '> ' + cat +
+                    '<input type="checkbox" value="' + cat + '" style="accent-color: var(--primary);"' + (currentCats.indexOf(cat) >= 0 ? ' checked' : '') + '> ' + catNames[cat] +
                   '</label>';
                 }).join('');
               })() +

@@ -753,10 +753,10 @@ export function getDashboardHTML(): string {
         '<div class="form-group">' +
           '<label class="form-label">分类</label>' +
           '<select class="form-select" id="tmpl-category">' +
-            '<option value="VERIFY">VERIFY - 验证</option>' +
-            '<option value="NOTIFY">NOTIFY - 通知</option>' +
-            '<option value="MARKETING">MARKETING - 营销</option>' +
-            '<option value="SYSTEM">SYSTEM - 系统</option>' +
+            '<option value="VERIFY">验证邮件</option>' +
+            '<option value="NOTIFY">通知邮件</option>' +
+            '<option value="MARKETING">营销邮件</option>' +
+            '<option value="SYSTEM">系统邮件</option>' +
           '</select>' +
         '</div>' +
         '<div class="form-group">' +
