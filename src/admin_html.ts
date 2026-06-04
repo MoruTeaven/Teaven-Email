@@ -1076,7 +1076,7 @@ export function getAdminHTML(): string {
         '</div>' +
         '<div class="form-group">' +
           '<label class="form-label">类型 *</label>' +
-          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\'.modal-overlay\'))">' +
+          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\\'.modal-overlay\\'))">' +
             '<option value="smtp">SMTP</option>' +
             '<option value="api">第三方 API</option>' +
             '<option value="cloudflare_email">Cloudflare Email</option>' +
@@ -1084,7 +1084,7 @@ export function getAdminHTML(): string {
         '</div>' +
         '<div id="p-config-area"></div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="p-save-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -1114,7 +1114,7 @@ export function getAdminHTML(): string {
           '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="pc-pass" type="password" placeholder="••••"></div>' +
           '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>';
       } else if (type === 'api') {
-        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(\'.modal-overlay\'))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="generic">通用</option></select></div>' +
+        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(\\'.modal-overlay\\'))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="generic">通用</option></select></div>' +
           '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>' +
           '<div class="form-group" id="pc-accountid-group" style="display: none;"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
@@ -1265,7 +1265,7 @@ export function getAdminHTML(): string {
             '<input class="form-input" id="ac-limit" type="number" value="1000">' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
             '<button class="btn btn-primary" id="ac-save-btn">创建</button>' +
           '</div>' +
         '</div>';
@@ -1338,7 +1338,7 @@ export function getAdminHTML(): string {
             '<input class="form-input" id="ae-limit" type="number" value="' + (account.daily_limit || 1000) + '">' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
             '<button class="btn btn-primary" id="ae-save-btn">保存修改</button>' +
           '</div>' +
         '</div>';
@@ -1381,7 +1381,7 @@ export function getAdminHTML(): string {
           '<div style="margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);">默认发给自己，可修改为其他邮箱</div>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="at-send-btn"><span class="fas fa-paper-plane"></span> 发送测试</button>' +
         '</div>' +
       '</div>';
@@ -1445,7 +1445,7 @@ export function getAdminHTML(): string {
           '</label>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="ct-save-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -1469,7 +1469,7 @@ export function getAdminHTML(): string {
             '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">API Key（仅显示一次）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
-            '<button class="btn btn-primary" onclick="this.closest(\'.modal-overlay\').remove(); renderPage(\'tenants\');" style="width: 100%;">关闭</button>' +
+            '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\'tenants\');" style="width: 100%;">关闭</button>' +
           '</div>';
           toast('租户创建成功');
         } else {
@@ -1498,7 +1498,7 @@ export function getAdminHTML(): string {
         '<div class="code-block" style="margin-bottom: 16px;">' + esc(resp.data.api_key.key) + '</div>' +
         '<p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 16px;">切换后将进入该租户的管理后台，原始超管 Key 已暂存</p>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button>' +
         '</div>' +
       '</div>';
