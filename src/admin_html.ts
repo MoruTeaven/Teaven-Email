@@ -866,7 +866,7 @@ export function getAdminHTML(): string {
       if (!resp.success) { main.innerHTML = setupPage(); return; }
       var d = resp.data;
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">全局总览</h1>
           <p class="page-subtitle">PLATFORM OVERVIEW</p>
@@ -944,7 +944,7 @@ export function getAdminHTML(): string {
             </div>
           </div>
         </div>
-      `;
+      \`;
     }
 
     // 租户管理
@@ -952,7 +952,7 @@ export function getAdminHTML(): string {
       var resp = await api('/admin/tenants');
       var tenants = resp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">租户管理</h1>
           <p class="page-subtitle">TENANT MANAGEMENT</p>
@@ -969,7 +969,7 @@ export function getAdminHTML(): string {
         </div>
 
         <div class="card">
-          \${tenants.length === 0 ? `
+          \${tenants.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-users" style="font-size: 2rem; color: var(--text-muted);"></span>
@@ -977,7 +977,7 @@ export function getAdminHTML(): string {
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无租户</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">创建第一个租户开始使用平台</div>
             </div>
-          ` : `
+          \` : \`
             <div class="list-card">
               \${tenants.map(function(t) {
                 return '<div class="list-item">' +
@@ -996,9 +996,9 @@ export function getAdminHTML(): string {
                 '</div>';
               }).join('')}
             </div>
-          `}
+          \`}
         </div>
-      `;
+      \`;
     }
 
     async function toggleTenant(id, status) {
@@ -1012,7 +1012,7 @@ export function getAdminHTML(): string {
       var resp = await api('/admin/providers');
       var providers = resp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">发送通道</h1>
           <p class="page-subtitle">MAIL DELIVERY PROVIDERS</p>
@@ -1029,7 +1029,7 @@ export function getAdminHTML(): string {
         </div>
 
         <div class="card">
-          \${providers.length === 0 ? `
+          \${providers.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-connected" style="font-size: 2rem; color: var(--text-muted);"></span>
@@ -1037,7 +1037,7 @@ export function getAdminHTML(): string {
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无发送通道</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">添加发送通道以启用邮件投递</div>
             </div>
-          ` : `
+          \` : \`
             <div class="provider-grid">
               \${providers.map(function(p) {
                 var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
@@ -1058,9 +1058,9 @@ export function getAdminHTML(): string {
                 '</div>';
               }).join('')}
             </div>
-          `}
+          \`}
         </div>
-      `;
+      \`;
     }
 
     function showAdminProviderModal() {
@@ -1180,7 +1180,7 @@ export function getAdminHTML(): string {
       var accountsResp = await api('/admin/accounts');
       var accounts = accountsResp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">发件账号</h1>
           <p class="page-subtitle">SENDER ACCOUNTS MANAGEMENT</p>
@@ -1197,7 +1197,7 @@ export function getAdminHTML(): string {
         </div>
 
         <div class="card">
-          \${accounts.length === 0 ? `
+          \${accounts.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-mail" style="font-size: 2rem; color: var(--text-muted);"></span>
@@ -1205,7 +1205,7 @@ export function getAdminHTML(): string {
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无发件账号</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">添加发件账号以发送邮件</div>
             </div>
-          ` : `
+          \` : \`
             <div class="list-card">
               \${accounts.map(function(a) {
                 return '<div class="list-item">' +
@@ -1221,9 +1221,9 @@ export function getAdminHTML(): string {
                 '</div>';
               }).join('')}
             </div>
-          `}
+          \`}
         </div>
-      `;
+      \`;
     }
 
     function showAddAccountModal() {

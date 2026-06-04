@@ -899,7 +899,7 @@ export function getDashboardHTML(): string {
       if (!resp.success) { main.innerHTML = setupPage(); return; }
       var d = resp.data;
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">仪表盘</h1>
           <p class="page-subtitle">MAIL PLATFORM DASHBOARD</p>
@@ -980,7 +980,7 @@ export function getDashboardHTML(): string {
             }).join('') || '<div class="empty-state"><div class="empty-title">暂无数据</div></div>'}
           </div>
         </div>
-      `;
+      \`;
     }
 
     // API Keys
@@ -989,7 +989,7 @@ export function getDashboardHTML(): string {
       var resp = await api('/api-keys');
       var keys = resp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">API Keys</h1>
           <p class="page-subtitle">MANAGE YOUR API ACCESS KEYS</p>
@@ -1006,13 +1006,13 @@ export function getDashboardHTML(): string {
         </div>
 
         <div class="card">
-          \${keys.length === 0 ? `
+          \${keys.length === 0 ? \`
             <div class="empty-state">
               <div class="empty-icon"><span class="iconpark-key"></span></div>
               <div class="empty-title">暂无 API Key</div>
               <div class="empty-desc">创建你的第一个 API Key 来开始使用邮件服务</div>
             </div>
-          ` : `
+          \` : \`
             <div class="list-card">
               \${keys.map(function(k) {
                 return '<div class="list-item">' +
@@ -1028,9 +1028,9 @@ export function getDashboardHTML(): string {
                 '</div>';
               }).join('')}
             </div>
-          `}
+          \`}
         </div>
-      `;
+      \`;
     }
 
     function showCreateApiKeyModal() {
@@ -1103,7 +1103,7 @@ export function getDashboardHTML(): string {
       var resp = await api('/templates');
       var templates = resp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">模板管理</h1>
           <p class="page-subtitle">EMAIL TEMPLATE LIBRARY</p>
@@ -1120,13 +1120,13 @@ export function getDashboardHTML(): string {
         </div>
 
         <div class="card">
-          \${templates.length === 0 ? `
+          \${templates.length === 0 ? \`
             <div class="empty-state">
               <div class="empty-icon"><span class="iconpark-file-text"></span></div>
               <div class="empty-title">暂无模板</div>
               <div class="empty-desc">创建邮件模板后，通过 API 调用模板编号即可发送邮件</div>
             </div>
-          ` : `
+          \` : \`
             <div class="list-card">
               \${templates.map(function(t) {
                 var vars = typeof t.variables === 'string' ? JSON.parse(t.variables) : (t.variables || []);
@@ -1143,9 +1143,9 @@ export function getDashboardHTML(): string {
                 '</div>';
               }).join('')}
             </div>
-          `}
+          \`}
         </div>
-      `;
+      \`;
     }
 
     function showTemplateModal(code) {
@@ -1279,7 +1279,7 @@ export function getDashboardHTML(): string {
       var providers = pResp.data || [];
       var routes = rResp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">发送通道</h1>
           <p class="page-subtitle">MAIL DELIVERY PROVIDERS CONFIGURATION</p>
@@ -1292,13 +1292,13 @@ export function getDashboardHTML(): string {
 
         <div id="provider-tab-providers">
           <div class="card">
-            \${providers.length === 0 ? `
+            \${providers.length === 0 ? \`
               <div class="empty-state">
                 <div class="empty-icon"><span class="iconpark-connected"></span></div>
                 <div class="empty-title">暂无发送通道</div>
                 <div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div>
               </div>
-            ` : `
+            \` : \`
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
                 \${providers.map(function(p) {
                   var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
@@ -1313,7 +1313,7 @@ export function getDashboardHTML(): string {
                   '</div>';
                 }).join('')}
               </div>
-            `}
+            \`}
           </div>
         </div>
 
@@ -1328,13 +1328,13 @@ export function getDashboardHTML(): string {
             </div>
           </div>
           <div class="card">
-            \${routes.length === 0 ? `
+            \${routes.length === 0 ? \`
               <div class="empty-state">
                 <div class="empty-icon"><span class="iconpark-git-branch"></span></div>
                 <div class="empty-title">暂无路由规则</div>
                 <div class="empty-desc">配置不同邮件分类使用不同的发送通道发送</div>
               </div>
-            ` : `
+            \` : \`
               <div class="list-card">
                 \${routes.map(function(r) {
                   return '<div class="list-item">' +
@@ -1348,10 +1348,10 @@ export function getDashboardHTML(): string {
                   '</div>';
                 }).join('')}
               </div>
-            `}
+            \`}
           </div>
         </div>
-      `;
+      \`;
     }
 
     function switchProviderTab(tab) {
@@ -1422,20 +1422,20 @@ export function getDashboardHTML(): string {
       var resp = await api('/mail/logs?limit=100');
       var logs = resp.data || [];
 
-      main.innerHTML = `
+      main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">发送日志</h1>
           <p class="page-subtitle">MAIL DELIVERY LOGS</p>
         </div>
 
         <div class="card">
-          \${logs.length === 0 ? `
+          \${logs.length === 0 ? \`
             <div class="empty-state">
               <div class="empty-icon"><span class="iconpark-time"></span></div>
               <div class="empty-title">暂无日志</div>
               <div class="empty-desc">发送邮件后可以在此查看投递状态</div>
             </div>
-          ` : `
+          \` : \`
             <div class="list-card">
               \${logs.map(function(l) {
                 var badgeClass = l.status === 'sent' ? 'badge-success' : l.status === 'failed' ? 'badge-danger' : l.status === 'pending' ? 'badge-warning' : 'badge-muted';
@@ -1452,9 +1452,9 @@ export function getDashboardHTML(): string {
                 '</div>';
               }).join('')}
             </div>
-          `}
+          \`}
         </div>
-      `;
+      \`;
     }
 
     // 登录页面
