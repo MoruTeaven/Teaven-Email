@@ -813,6 +813,7 @@ export function getAdminHTML(): string {
   <script>
     var API_BASE = '/v1';
     var API_KEY = localStorage.getItem('teaven_admin_key') || '';
+    var _accountsById = {};
 
     function esc(s) {
       if (!s) return '';
@@ -1181,6 +1182,10 @@ export function getAdminHTML(): string {
       var accountsResp = await api('/admin/accounts');
       var accounts = accountsResp.data || [];
 
+      // 缓存账号数据供编辑/测试使用
+      _accountsById = {};
+      accounts.forEach(function(a) { _accountsById[a.id] = a; });
+
       main.innerHTML = \`
         <div class="page-header">
           <h1 class="page-title">发件账号</h1>
@@ -1216,6 +1221,8 @@ export function getAdminHTML(): string {
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (a.enabled ? 'badge-success' : 'badge-muted') + '">' + (a.enabled ? '启用' : '禁用') + '</span>' +
+                    '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" onclick="showEditAccountModal(this.dataset.acctid)"><span class="fas fa-edit"></span> 编辑</button>' +
+                    '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" onclick="showTestAccountModal(this.dataset.acctid)"><span class="fas fa-paper-plane"></span> 测试</button>' +
                     '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" data-acctenabled="' + (!a.enabled ? 1 : 0) + '" onclick="toggleAccount(this.dataset.acctid, +this.dataset.acctenabled)">' + (a.enabled ? '禁用' : '启用') + '</button>' +
                     '<button class="btn btn-sm btn-danger" data-acctid="' + esc(a.id) + '" onclick="deleteAdminAccount(this.dataset.acctid)">删除</button>' +
                   '</div>' +
@@ -1292,6 +1299,125 @@ export function getAdminHTML(): string {
       await api('/admin/accounts/' + id, { method: 'DELETE' });
       renderPage('accounts');
       toast('账号已删除');
+    }
+
+    // ==================== 编辑发件账号 ====================
+    function showEditAccountModal(acctId) {
+      var account = _accountsById[acctId];
+      if (!account) { toast('账号数据未找到，请刷新页面', 'error'); return; }
+
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+
+      api('/admin/providers').then(function(resp) {
+        var providers = resp.data || [];
+        overlay.innerHTML = '<div class="modal" style="max-width: 500px;">' +
+          '<div class="modal-title">编辑发件账号</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">发送通道</label>' +
+            '<select class="form-select" id="ae-provider">' +
+              providers.map(function(p) {
+                return '<option value="' + esc(p.id) + '"' + (p.id === account.provider_id ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type) + ')</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">账号名称</label>' +
+            '<input class="form-input" id="ae-name" value="' + esc(account.name) + '" placeholder="如：通知邮箱">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">邮箱地址</label>' +
+            '<input class="form-input" id="ae-email" value="' + esc(account.email) + '" placeholder="noreply@example.com">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">显示名称</label>' +
+            '<input class="form-input" id="ae-display" value="' + esc(account.display_name || '') + '" placeholder="Teaven 通知">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">每日限额</label>' +
+            '<input class="form-input" id="ae-limit" type="number" value="' + (account.daily_limit || 1000) + '">' +
+          '</div>' +
+          '<div class="modal-footer">' +
+            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+            '<button class="btn btn-primary" id="ae-save-btn">保存修改</button>' +
+          '</div>' +
+        '</div>';
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#ae-save-btn').addEventListener('click', async function() {
+          var body = {
+            provider_id: overlay.querySelector('#ae-provider').value,
+            name: overlay.querySelector('#ae-name').value.trim(),
+            email: overlay.querySelector('#ae-email').value.trim(),
+            display_name: overlay.querySelector('#ae-display').value.trim(),
+            daily_limit: parseInt(overlay.querySelector('#ae-limit').value || '1000')
+          };
+          if (!body.name || !body.email) { toast('请填写账号名称和邮箱', 'error'); return; }
+          var resp = await api('/admin/accounts/' + acctId, { method: 'PUT', body: JSON.stringify(body) });
+          if (resp.success) { overlay.remove(); renderPage('accounts'); toast('账号已更新'); }
+          else toast(resp.error, 'error');
+        });
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      });
+    }
+
+    // ==================== 测试发件账号 ====================
+    function showTestAccountModal(acctId) {
+      var account = _accountsById[acctId];
+      if (!account) { toast('账号数据未找到，请刷新页面', 'error'); return; }
+
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal" style="max-width: 460px;">' +
+        '<div class="modal-title">发送测试邮件</div>' +
+        '<div style="margin-bottom: 16px; padding: 12px 16px; background: var(--bg-base); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-secondary);">' +
+          '<div><strong style="color: var(--text-primary);">账号：</strong>' + esc(account.name) + '</div>' +
+          '<div><strong style="color: var(--text-primary);">邮箱：</strong>' + esc(account.email) + '</div>' +
+          '<div><strong style="color: var(--text-primary);">通道：</strong>' + esc(account.provider_name || '-') + '</div>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">收件邮箱</label>' +
+          '<input class="form-input" id="at-to" type="email" value="' + esc(account.email) + '" placeholder="输入收件人邮箱">' +
+          '<div style="margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);">默认发给自己，可修改为其他邮箱</div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-primary" id="at-send-btn"><span class="fas fa-paper-plane"></span> 发送测试</button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#at-send-btn').addEventListener('click', async function() {
+        var btn = this;
+        var toEmail = overlay.querySelector('#at-to').value.trim();
+        if (!toEmail) { toast('请输入收件邮箱', 'error'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="fas fa-spinner fa-spin"></span> 发送中...';
+
+        try {
+          var resp = await api('/admin/accounts/' + acctId + '/test', { method: 'POST', body: JSON.stringify({ to: toEmail }) });
+          if (resp.success) {
+            overlay.remove();
+            toast('测试邮件发送成功！请查收 ' + toEmail, 'success');
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="fas fa-paper-plane"></span> 发送测试';
+            toast('发送失败：' + (resp.error || '未知错误'), 'error');
+            if (resp.detail) {
+              var detail = document.createElement('div');
+              detail.style.cssText = 'margin-top: 12px; padding: 10px 12px; background: var(--bg-base); border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--danger); max-height: 200px; overflow-y: auto; white-space: pre-wrap;';
+              detail.textContent = '详细信息：' + resp.detail;
+              overlay.querySelector('.modal').appendChild(detail);
+            }
+          }
+        } catch (e) {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="fas fa-paper-plane"></span> 发送测试';
+          toast('请求异常：' + e.message, 'error');
+        }
+      });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
     // 创建租户

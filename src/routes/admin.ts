@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { superAdminMiddleware, generateApiKey } from '../auth';
 import { getDB } from '../db';
+import { sendEmail } from '../mailer';
 import type { Permission } from '../types';
 
 const adminRouter = new Hono<{ Bindings: Env }>();
@@ -206,11 +207,14 @@ adminRouter.delete('/providers/:id', superAdminMiddleware(), async (c) => {
 
 // ========== 跨租户发件账号管理 ==========
 
-// GET /v1/admin/accounts - 所有全局发件账号
+// GET /v1/admin/accounts - 所有全局发件账号（含通道名称）
 adminRouter.get('/accounts', superAdminMiddleware(), async (c) => {
-  const db = getDB(c.env.DB);
-  const accounts = await db.getAllAccounts();
-  return c.json({ success: true, data: accounts });
+  const rows = await c.env.DB.prepare(
+    `SELECT a.*, p.name as provider_name, p.type as provider_type
+     FROM accounts a LEFT JOIN providers p ON a.provider_id = p.id
+     ORDER BY a.created_at DESC`
+  ).all();
+  return c.json({ success: true, data: rows.results });
 });
 
 // POST /v1/admin/accounts - 管理员创建全局发件账号
@@ -255,21 +259,87 @@ adminRouter.delete('/accounts/:id', superAdminMiddleware(), async (c) => {
 
 // PUT /v1/admin/accounts/:id - 管理员更新任意账号
 adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
   const id = c.req.param('id');
-  let body: { enabled?: number; daily_limit?: number; display_name?: string };
+
+  // 验证账号存在
+  const existing = await db.getAccountById(id);
+  if (!existing) return c.json({ success: false, error: 'Account not found' }, 404);
+
+  let body: { enabled?: number; daily_limit?: number; display_name?: string; name?: string; email?: string; provider_id?: string };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  // 如果修改 provider_id，验证新通道存在
+  if (body.provider_id) {
+    const provider = await db.getProviderById(body.provider_id);
+    if (!provider) return c.json({ success: false, error: 'Provider not found' }, 404);
+  }
 
   const sets: string[] = [];
   const vals: unknown[] = [];
   if (body.enabled !== undefined) { sets.push('enabled = ?'); vals.push(body.enabled); }
   if (body.daily_limit !== undefined) { sets.push('daily_limit = ?'); vals.push(body.daily_limit); }
   if (body.display_name !== undefined) { sets.push('display_name = ?'); vals.push(body.display_name); }
+  if (body.name !== undefined) { sets.push('name = ?'); vals.push(body.name); }
+  if (body.email !== undefined) { sets.push('email = ?'); vals.push(body.email); }
+  if (body.provider_id !== undefined) { sets.push('provider_id = ?'); vals.push(body.provider_id); }
   if (sets.length === 0) return c.json({ success: false, error: 'Nothing to update' }, 400);
 
   sets.push("updated_at = datetime('now')");
   vals.push(id);
   await c.env.DB.prepare(`UPDATE accounts SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
   return c.json({ success: true });
+});
+
+// ========== 跨租户统计 ==========
+
+// POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置
+adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+  const id = c.req.param('id');
+
+  const account = await db.getAccountById(id);
+  if (!account) {
+    return c.json({ success: false, error: 'Account not found' }, 404);
+  }
+
+  const provider = await db.getProviderById(account.provider_id);
+  if (!provider) {
+    return c.json({ success: false, error: 'Associated provider not found' }, 404);
+  }
+
+  let body: { to?: string };
+  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  const toEmail = body.to || account.email;
+
+  const result = await sendEmail(provider, {
+    from: account.email,
+    fromName: account.display_name || undefined,
+    to: toEmail,
+    subject: '[Teaven Email] 测试邮件 - 账号配置验证',
+    html: '<div style="font-family: -apple-system, BlinkMacSystemFont, \'PingFang SC\', \'Microsoft YaHei\', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff;">' +
+  '<div style="text-align: center; margin-bottom: 32px;">' +
+    '<div style="display: inline-block; width: 48px; height: 48px; background: #f97316; border-radius: 12px; text-align: center; line-height: 48px; font-size: 24px; font-weight: bold; color: white; margin-bottom: 16px;">T</div>' +
+    '<h2 style="margin: 0; font-size: 20px; color: #1f2937;">Teaven Email 测试邮件</h2>' +
+    '<p style="margin: 8px 0 0; font-size: 14px; color: #6b7280;">这是一封自动发送的测试邮件，用于验证发件账号配置是否正确。</p>' +
+  '</div>' +
+  '<table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">' +
+    '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563; width: 100px;">账号名称</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + escapeHtml(account.name) + '</td></tr>' +
+    '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发件邮箱</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + escapeHtml(account.email) + '</td></tr>' +
+    '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发送通道</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + escapeHtml(provider.name) + ' (' + escapeHtml(provider.type) + ')</td></tr>' +
+    '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发送时间</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + new Date().toISOString() + '</td></tr>' +
+  '</table>' +
+  '<div style="margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px;">' +
+    '<p style="margin: 0; font-size: 14px; color: #059669;">如果你收到了这封邮件，说明发件账号 <strong>' + escapeHtml(account.name) + '</strong> 配置正确，可以正常使用。</p>' +
+  '</div>' +
+'</div>',
+  });
+
+  if (result.success) {
+    return c.json({ success: true, message: '测试邮件发送成功', messageId: result.messageId });
+  }
+  return c.json({ success: false, error: result.error || '发送失败', detail: result.providerResponse });
 });
 
 // ========== 跨租户统计 ==========
@@ -308,6 +378,10 @@ adminRouter.get('/stats', superAdminMiddleware(), async (c) => {
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export default adminRouter;
