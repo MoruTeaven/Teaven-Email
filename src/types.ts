@@ -70,6 +70,7 @@ export interface Account {
   config: string | null;
   daily_limit: number;
   sent_today: number;
+  categories: string;  // 逗号分隔的分类，如 "VERIFY,NOTIFY,MARKETING"。超管统一管理，全平台共享。
   enabled: number;
   created_at: string;
   updated_at: string;

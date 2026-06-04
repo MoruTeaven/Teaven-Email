@@ -67,42 +67,32 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   // 确定分类
   const category = body.category || template.category;
 
-  // 查找路由规则
-  const route = await db.getCategoryRoute(auth.userId, category);
+  // 按分类从 accounts 表匹配（全局共享，无用户限制）
+  // 账号的 categories 字段为逗号分隔的分类列表
+  const matchingAccounts = await db.getAccountsByCategory(category);
+  let selected = matchingAccounts.length > 0 ? selectAccount(matchingAccounts) : null;
 
-  // 查找发送通道
-  let providerId: string | null = route?.provider_id || null;
-  let accountId: string | null = route?.account_id || null;
+  // 如果按分类没找到，回退到第一个启用的全局 Provider + 负载均衡
+  let providerId: string | null = selected?.provider_id || null;
+  let accountId: string | null = selected?.id || null;
 
   if (!providerId) {
-    // 没有路由规则，使用第一个启用的全局发送通道
     const providers = await db.getEnabledProviders();
     if (providers.length === 0) {
       return c.json({ success: false, error: 'No enabled email provider found' }, 500);
     }
     providerId = providers[0].id;
-  }
-
-  // 查找发件账号（全局账号，所有用户共用）
-  let fromEmail = 'noreply@teaven.email';
-  let fromName: string | null = null;
-
-  if (accountId) {
-    const account = await db.getAccountById(accountId);
-    if (account) {
-      fromEmail = account.email;
-      fromName = account.display_name;
-    }
-  } else {
-    // 自动选择账号（负载均衡）
-    const accounts = await db.getEnabledAccountsByProvider(providerId);
-    const selected = selectAccount(accounts);
+    // 用通用 Provider 再做一次负载均衡
+    const fallbackAccounts = await db.getEnabledAccountsByProvider(providerId);
+    selected = selectAccount(fallbackAccounts);
     if (selected) {
       accountId = selected.id;
-      fromEmail = selected.email;
-      fromName = selected.display_name;
     }
   }
+
+  // 查找发件账号
+  let fromEmail = selected?.email || 'noreply@teaven.email';
+  let fromName: string | null = selected?.display_name || null;
 
   // 创建邮件日志
   const mailLogId = crypto.randomUUID();
@@ -184,10 +174,12 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   const html = body.html || body.text || '';
   const textContent = body.text || htmlToText(html);
 
-  // 路由逻辑
-  const route = await db.getCategoryRoute(auth.userId, category);
-  let providerId: string | null = route?.provider_id || null;
-  let accountId: string | null = route?.account_id || null;
+  // 按分类从 accounts 表匹配（全局共享，无用户限制）
+  const matchingAccounts = await db.getAccountsByCategory(category);
+  let selected = matchingAccounts.length > 0 ? selectAccount(matchingAccounts) : null;
+
+  let providerId: string | null = selected?.provider_id || null;
+  let accountId: string | null = selected?.id || null;
 
   if (!providerId) {
     const providers = await db.getEnabledProviders();
@@ -195,27 +187,15 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
       return c.json({ success: false, error: 'No enabled email provider found' }, 500);
     }
     providerId = providers[0].id;
-  }
-
-  let fromEmail = 'noreply@teaven.email';
-  let fromName: string | null = null;
-
-  if (!accountId) {
-    // 自动选择账号（负载均衡，全局账号）
-    const accounts = await db.getEnabledAccountsByProvider(providerId);
-    const selected = selectAccount(accounts);
+    const fallbackAccounts = await db.getEnabledAccountsByProvider(providerId);
+    selected = selectAccount(fallbackAccounts);
     if (selected) {
       accountId = selected.id;
-      fromEmail = selected.email;
-      fromName = selected.display_name;
-    }
-  } else {
-    const account = await db.getAccountById(accountId);
-    if (account) {
-      fromEmail = account.email;
-      fromName = account.display_name;
     }
   }
+
+  let fromEmail = selected?.email || 'noreply@teaven.email';
+  let fromName: string | null = selected?.display_name || null;
 
   const mailLogId = crypto.randomUUID();
   const mailLog: Omit<MailLog, 'created_at'> = {

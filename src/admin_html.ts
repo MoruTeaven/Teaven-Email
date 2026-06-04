@@ -354,10 +354,6 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
           <span class="nav-text">发件账号</span>
         </button>
-        <button class="nav-item" data-page="routes">
-          <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h3l3-9 4 18 3-9h5"/></svg></span>
-          <span class="nav-text">分类路由</span>
-        </button>
         <div class="sidebar-section-title">监控</div>
         <button class="nav-item" data-page="logs">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
@@ -514,7 +510,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
     function renderPage(page) {
       var bp = document.getElementById('breadcrumbPageAdm');
-      var names = {dashboard:'仪表盘',users:'用户管理',providers:'发送通道',accounts:'发件账号',routes:'分类路由',logs:'发送日志',analytics:'数据分析',settings:'系统设置'};
+      var names = {dashboard:'仪表盘',users:'用户管理',providers:'发送通道',accounts:'发件账号',logs:'发送日志',analytics:'数据分析',settings:'系统设置'};
       if (bp) bp.textContent = names[page] || page;
       var main = document.getElementById('main-content');
       switch(page) {
@@ -522,7 +518,6 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         case 'users': renderUsers(main); break;
         case 'providers': renderProviders(main); break;
         case 'accounts': renderAllAccounts(main); break;
-        case 'routes': renderRoutes(main); break;
         case 'logs': renderLogs(main); break;
         case 'analytics': renderAnalytics(main); break;
         case 'settings': renderSettings(main); break;
@@ -986,7 +981,9 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' + esc(a.name) + '</div>' +
-                    '<div class="list-item-subtitle">' + esc(a.email) + ' · ' + esc(a.provider_name || '-') + ' · 今日: ' + (a.sent_today || 0) + '/' + (a.daily_limit || 1000) + '</div>' +
+                    '<div class="list-item-subtitle">' + esc(a.email) + ' · ' + esc(a.provider_name || '-') + ' · 今日: ' + (a.sent_today || 0) + '/' + (a.daily_limit || 1000) +
+                      ((a.categories || '') ? ' · <span style="color: var(--primary);">分类: ' + esc(a.categories) + '</span>' : '') +
+                    '</div>' +
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (a.enabled ? 'badge-success' : 'badge-muted') + '">' + (a.enabled ? '启用' : '禁用') + '</span>' +
@@ -1033,6 +1030,24 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<label class="form-label">每日限额</label>' +
             '<input class="form-input" id="ac-limit" type="number" value="1000">' +
           '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">适用分类</label>' +
+            '<div id="ac-categories" style="display: flex; flex-wrap: wrap; gap: 8px;">' +
+              '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
+                '<input type="checkbox" value="VERIFY" style="accent-color: var(--primary);"> VERIFY' +
+              '</label>' +
+              '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
+                '<input type="checkbox" value="NOTIFY" style="accent-color: var(--primary);"> NOTIFY' +
+              '</label>' +
+              '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
+                '<input type="checkbox" value="MARKETING" style="accent-color: var(--primary);"> MARKETING' +
+              '</label>' +
+              '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
+                '<input type="checkbox" value="SYSTEM" style="accent-color: var(--primary);"> SYSTEM' +
+              '</label>' +
+            '</div>' +
+            '<div class="form-hint">选择该账号可用于哪些分类邮件的发送，可多选。留空则不参与自动路由。</div>' +
+          '</div>' +
           '<div class="modal-footer">' +
             '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
             '<button class="btn btn-primary" id="ac-save-btn">创建</button>' +
@@ -1041,12 +1056,16 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         document.body.appendChild(overlay);
 
         overlay.querySelector('#ac-save-btn').addEventListener('click', async function() {
+          // 收集选中的分类
+          var checkedCats = [];
+          overlay.querySelectorAll('#ac-categories input[type=checkbox]:checked').forEach(function(cb) { checkedCats.push(cb.value); });
           var body = {
             provider_id: overlay.querySelector('#ac-provider').value,
             name: overlay.querySelector('#ac-name').value.trim(),
             email: overlay.querySelector('#ac-email').value.trim(),
             display_name: overlay.querySelector('#ac-display').value.trim(),
-            daily_limit: parseInt(overlay.querySelector('#ac-limit').value || '1000')
+            daily_limit: parseInt(overlay.querySelector('#ac-limit').value || '1000'),
+            categories: checkedCats.join(',')
           };
           if (!body.name || !body.email) { toast('请填写账号名称和邮箱', 'error'); return; }
           var resp = await api('/admin/accounts', { method: 'POST', body: JSON.stringify(body) });
@@ -1106,6 +1125,20 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<label class="form-label">每日限额</label>' +
             '<input class="form-input" id="ae-limit" type="number" value="' + (account.daily_limit || 1000) + '">' +
           '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">适用分类</label>' +
+            '<div id="ae-categories" style="display: flex; flex-wrap: wrap; gap: 8px;">' +
+              (function() {
+                var currentCats = (account.categories || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+                return ['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'].map(function(cat) {
+                  return '<label style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem;">' +
+                    '<input type="checkbox" value="' + cat + '" style="accent-color: var(--primary);"' + (currentCats.indexOf(cat) >= 0 ? ' checked' : '') + '> ' + cat +
+                  '</label>';
+                }).join('');
+              })() +
+            '</div>' +
+            '<div class="form-hint">留空则不参与自动路由，所有用户均可使用配置了分类的账号发送对应分类的邮件。</div>' +
+          '</div>' +
           '<div class="modal-footer">' +
             '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
             '<button class="btn btn-primary" id="ae-save-btn">保存修改</button>' +
@@ -1114,12 +1147,15 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         document.body.appendChild(overlay);
 
         overlay.querySelector('#ae-save-btn').addEventListener('click', async function() {
+          var checkedCats = [];
+          overlay.querySelectorAll('#ae-categories input[type=checkbox]:checked').forEach(function(cb) { checkedCats.push(cb.value); });
           var body = {
             provider_id: overlay.querySelector('#ae-provider').value,
             name: overlay.querySelector('#ae-name').value.trim(),
             email: overlay.querySelector('#ae-email').value.trim(),
             display_name: overlay.querySelector('#ae-display').value.trim(),
-            daily_limit: parseInt(overlay.querySelector('#ae-limit').value || '1000')
+            daily_limit: parseInt(overlay.querySelector('#ae-limit').value || '1000'),
+            categories: checkedCats.join(',')
           };
           if (!body.name || !body.email) { toast('请填写账号名称和邮箱', 'error'); return; }
           var resp = await api('/admin/accounts/' + acctId, { method: 'PUT', body: JSON.stringify(body) });
@@ -1190,180 +1226,6 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     }
 
     // ========== 分类路由管理（超管统一配置） ==========
-
-    var _routesData = [];
-
-    async function renderRoutes(main) {
-      var resp = await api('/admin/routes');
-      _routesData = resp.data || [];
-
-      // 同时拉取用户和账号列表用于表单选择
-      var usersResp = await api('/admin/tenants');
-      var users = usersResp.data || [];
-      var accountsResp = await api('/admin/accounts');
-      var accounts = accountsResp.data || [];
-
-      main.innerHTML = \`
-        <div class="page-header">
-          <h1 class="page-title">分类路由</h1>
-          <p class="page-subtitle">CATEGORY ROUTING MANAGEMENT</p>
-        </div>
-
-        <div class="toolbar">
-          <div class="toolbar-left"></div>
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="showAddRouteModal()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              添加路由规则
-            </button>
-          </div>
-        </div>
-
-        <div class="card">
-          \${_routesData.length === 0 ? \`
-            <div style="text-align: center; padding: 64px 32px;">
-              <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
-              </div>
-              <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无分类路由</div>
-              <div style="font-size: 0.9rem; color: var(--text-muted);">为用户配置不同邮件分类使用的发送通道和账号</div>
-            </div>
-          \` : \`
-            <div class="list-card">
-              \${_routesData.map(function(r) {
-                return '<div class="list-item">' +
-                  '<div class="list-item-info">' +
-                    '<div class="list-item-title">' +
-                      '<span class="badge badge-info">' + esc(r.category) + '</span>' +
-                      '<span style="margin-left: 8px; font-size: 0.85rem; color: var(--text-secondary);">' + esc(r.user_name) + ' (' + esc(r.user_email) + ')</span>' +
-                    '</div>' +
-                    '<div class="list-item-subtitle">通道: ' + esc(r.provider_name || r.provider_id) +
-                      ' · 账号: ' + (r.account_email || '自动选择') +
-                      ' · 优先级: ' + r.priority + '</div>' +
-                  '</div>' +
-                  '<div class="list-item-actions">' +
-                    '<span class="badge ' + (r.enabled ? 'badge-success' : 'badge-muted') + '">' + (r.enabled ? '启用' : '禁用') + '</span>' +
-                    '<button class="btn btn-sm btn-danger" data-rid="' + esc(r.id) + '" onclick="deleteAdminRoute(this.dataset.rid)">删除</button>' +
-                  '</div>' +
-                '</div>';
-              }).join('')}
-            </div>
-          \`}
-        </div>
-      \`;
-    }
-
-    function showAddRouteModal() {
-      // 并行获取数据
-      Promise.all([
-        api('/admin/tenants'),
-        api('/admin/providers'),
-        api('/admin/accounts')
-      ]).then(function(results) {
-        var users = results[0].data || [];
-        var providers = results[1].data || [];
-        var accounts = results[2].data || [];
-
-        var overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.innerHTML = '<div class="modal">' +
-          '<div class="modal-title">添加分类路由</div>' +
-          '<div class="form-group">' +
-            '<label class="form-label">用户 *</label>' +
-            '<select class="form-select" id="ar-tenant">' +
-              '<option value="">-- 选择用户 --</option>' +
-              users.filter(function(t) { return t.status === 'active'; }).map(function(t) {
-                return '<option value="' + esc(t.id) + '">' + esc(t.name) + ' (' + esc(t.email) + ')</option>';
-              }).join('') +
-            '</select>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label class="form-label">分类 *</label>' +
-            '<select class="form-select" id="ar-category">' +
-              '<option value="VERIFY">VERIFY - 验证邮件</option>' +
-              '<option value="NOTIFY">NOTIFY - 通知邮件</option>' +
-              '<option value="MARKETING">MARKETING - 营销邮件</option>' +
-              '<option value="SYSTEM">SYSTEM - 系统邮件</option>' +
-            '</select>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label class="form-label">发送通道 *</label>' +
-            '<select class="form-select" id="ar-provider" onchange="onRouteProviderChange(this.closest(\\'.modal-overlay\\'))">' +
-              '<option value="">-- 选择通道 --</option>' +
-              providers.filter(function(p) { return p.enabled; }).map(function(p) {
-                return '<option value="' + esc(p.id) + '">' + esc(p.name) + ' (' + esc(p.type) + ')</option>';
-              }).join('') +
-            '</select>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label class="form-label">发件账号（可选）</label>' +
-            '<select class="form-select" id="ar-account">' +
-              '<option value="">-- 自动选择 --</option>' +
-            '</select>' +
-            '<div class="form-hint">留空则由系统自动负载均衡选择，指定后该分类的邮件固定通过此账号发送</div>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label class="form-label">优先级</label>' +
-            '<input class="form-input" id="ar-priority" type="number" value="0" min="0">' +
-            '<div class="form-hint">数值越大优先级越高，同一用户同分类多条规则时取优先级最高的</div>' +
-          '</div>' +
-          '<div class="modal-footer">' +
-            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
-            '<button class="btn btn-primary" id="ar-save-btn">创建</button>' +
-          '</div>' +
-        '</div>';
-        document.body.appendChild(overlay);
-
-        // 缓存 accounts 数据用于通道切换时过滤账号
-        overlay._accountsData = accounts;
-        overlay._providersData = providers;
-
-        overlay.querySelector('#ar-save-btn').addEventListener('click', async function() {
-          var user_id = overlay.querySelector('#ar-tenant').value;
-          var category = overlay.querySelector('#ar-category').value;
-          var provider_id = overlay.querySelector('#ar-provider').value;
-          var account_id = overlay.querySelector('#ar-account').value || null;
-          var priority = parseInt(overlay.querySelector('#ar-priority').value || '0');
-
-          if (!user_id || !category || !provider_id) { toast('请填写所有必填字段', 'error'); return; }
-
-          var body = { user_id: user_id, category: category, provider_id: provider_id, priority: priority };
-          if (account_id) body.account_id = account_id;
-
-          var resp = await api('/admin/routes', { method: 'POST', body: JSON.stringify(body) });
-          if (resp.success) { overlay.remove(); renderPage('routes'); toast('路由创建成功'); }
-          else toast(resp.error, 'error');
-        });
-
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-      });
-    }
-
-    // 通道切换时过滤可选账号
-    function onRouteProviderChange(overlay) {
-      var providerId = overlay.querySelector('#ar-provider').value;
-      var accounts = overlay._accountsData || [];
-      var acctSelect = overlay.querySelector('#ar-account');
-      acctSelect.innerHTML = '<option value="">-- 自动选择 --</option>';
-
-      if (providerId) {
-        var filtered = accounts.filter(function(a) { return a.provider_id === providerId && a.enabled; });
-        filtered.forEach(function(a) {
-          var opt = document.createElement('option');
-          opt.value = a.id;
-          opt.textContent = a.name + ' (' + a.email + ')';
-          acctSelect.appendChild(opt);
-        });
-      }
-    }
-
-    async function deleteAdminRoute(id) {
-      if (!confirm('确定删除此路由规则？此操作不可撤销。')) return;
-      var resp = await api('/admin/routes/' + id, { method: 'DELETE' });
-      if (resp.success) { renderPage('routes'); toast('路由已删除'); }
-      else toast(resp.error, 'error');
-    }
-
     // 创建用户
     function showCreateUserModal() {
       var overlay = document.createElement('div');

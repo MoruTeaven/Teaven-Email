@@ -215,10 +215,22 @@ adminRouter.get('/accounts', superAdminMiddleware(), async (c) => {
 adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
 
-  let body: { provider_id: string; name: string; email: string; display_name?: string; daily_limit?: number };
+  let body: { provider_id: string; name: string; email: string; display_name?: string; daily_limit?: number; categories?: string };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
   if (!body.provider_id || !body.name || !body.email) {
     return c.json({ success: false, error: 'provider_id, name, email are required' }, 400);
+  }
+
+  // 校验 categories 值（逗号分隔的合法分类）
+  if (body.categories) {
+    const parts = body.categories.split(',').map(s => s.trim()).filter(Boolean);
+    const validCategories = ['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'];
+    for (const p of parts) {
+      if (!validCategories.includes(p)) {
+        return c.json({ success: false, error: `Invalid category: ${p}. Valid: ${validCategories.join(', ')}` }, 400);
+      }
+    }
+    body.categories = parts.join(','); // 规范化
   }
 
   // 验证 provider 存在
@@ -236,6 +248,7 @@ adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
     config: null,
     daily_limit: body.daily_limit || 1000,
     sent_today: 0,
+    categories: body.categories || '',
     enabled: 1,
   };
 
@@ -260,8 +273,20 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   const existing = await db.getAccountById(id);
   if (!existing) return c.json({ success: false, error: 'Account not found' }, 404);
 
-  let body: { enabled?: number; daily_limit?: number; display_name?: string; name?: string; email?: string; provider_id?: string };
+  let body: { enabled?: number; daily_limit?: number; display_name?: string; name?: string; email?: string; provider_id?: string; categories?: string };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  // 校验 categories 值
+  if (body.categories !== undefined) {
+    const parts = body.categories.split(',').map(s => s.trim()).filter(Boolean);
+    const validCategories = ['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'];
+    for (const p of parts) {
+      if (!validCategories.includes(p)) {
+        return c.json({ success: false, error: `Invalid category: ${p}. Valid: ${validCategories.join(', ')}` }, 400);
+      }
+    }
+    body.categories = parts.join(',');
+  }
 
   // 如果修改 provider_id，验证新通道存在
   if (body.provider_id) {
@@ -277,6 +302,7 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   if (body.name !== undefined) { sets.push('name = ?'); vals.push(body.name); }
   if (body.email !== undefined) { sets.push('email = ?'); vals.push(body.email); }
   if (body.provider_id !== undefined) { sets.push('provider_id = ?'); vals.push(body.provider_id); }
+  if (body.categories !== undefined) { sets.push('categories = ?'); vals.push(body.categories); }
   if (sets.length === 0) return c.json({ success: false, error: 'Nothing to update' }, 400);
 
   sets.push("updated_at = datetime('now')");
@@ -285,89 +311,7 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true });
 });
 
-// ========== 分类路由管理（超管统一管理，用户只读） ==========
-
-// GET /v1/admin/routes - 获取所有分类路由（含用户、通道、账号信息）
-adminRouter.get('/routes', superAdminMiddleware(), async (c) => {
-  const db = getDB(c.env.DB);
-  const routes = await db.getAllCategoryRoutesAdmin();
-  return c.json({ success: true, data: routes });
-});
-
-// POST /v1/admin/routes - 为指定用户创建分类路由
-adminRouter.post('/routes', superAdminMiddleware(), async (c) => {
-  const db = getDB(c.env.DB);
-
-  let body: {
-    user_id: string;
-    category: string;
-    provider_id: string;
-    account_id?: string;
-    priority?: number;
-  };
-  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
-
-  if (!body.user_id || !body.category || !body.provider_id) {
-    return c.json({ success: false, error: 'user_id, category and provider_id are required' }, 400);
-  }
-
-  if (!['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'].includes(body.category)) {
-    return c.json({ success: false, error: 'category must be VERIFY, NOTIFY, MARKETING, or SYSTEM' }, 400);
-  }
-
-  // 验证用户存在
-  const user = await db.getUserById(body.user_id);
-  if (!user) {
-    return c.json({ success: false, error: 'User not found' }, 404);
-  }
-
-  // 验证 provider 存在
-  const provider = await db.getProviderById(body.provider_id);
-  if (!provider) {
-    return c.json({ success: false, error: 'Provider not found' }, 404);
-  }
-
-  // 如果指定了 account_id，验证其存在且属于该 provider
-  if (body.account_id) {
-    const account = await db.getAccountById(body.account_id);
-    if (!account) {
-      return c.json({ success: false, error: 'Account not found' }, 404);
-    }
-    if (account.provider_id !== body.provider_id) {
-      return c.json({ success: false, error: 'Account does not belong to the specified provider' }, 400);
-    }
-  }
-
-  const route = {
-    id: crypto.randomUUID(),
-    user_id: body.user_id,
-    category: body.category,
-    provider_id: body.provider_id,
-    account_id: body.account_id || null,
-    priority: body.priority || 0,
-    enabled: 1,
-  };
-
-  await db.createCategoryRoute(route);
-
-  return c.json({ success: true, data: route }, 201);
-});
-
-// DELETE /v1/admin/routes/:id - 删除分类路由
-adminRouter.delete('/routes/:id', superAdminMiddleware(), async (c) => {
-  const db = getDB(c.env.DB);
-  const id = c.req.param('id');
-
-  const existing = await db.getCategoryRouteById(id);
-  if (!existing) {
-    return c.json({ success: false, error: 'Route not found' }, 404);
-  }
-
-  await db.deleteCategoryRouteById(id);
-  return c.json({ success: true, message: 'Route deleted' });
-});
-
-// ========== 全局统计 ==========
+// ========== 跨租户统计 ==========
 
 // POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置
 adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {

@@ -2,7 +2,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type {
   User, ApiKey, EmailProvider, Account, Template,
-  TemplateVersion, MailLog, MailQueueItem, CategoryRoute, Webhook
+  TemplateVersion, MailLog, MailQueueItem, Webhook
 } from './types';
 
 export function getDB(db: D1Database) {
@@ -146,12 +146,14 @@ export function getDB(db: D1Database) {
 
     async createAccount(account: Omit<Account, 'created_at' | 'updated_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO accounts (id, provider_id, name, email, display_name, config, daily_limit, sent_today, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO accounts (id, provider_id, name, email, display_name, config, daily_limit, sent_today, categories, enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         account.id, account.provider_id, account.name,
         account.email, account.display_name, account.config,
-        account.daily_limit, account.sent_today, account.enabled
+        account.daily_limit, account.sent_today,
+        account.categories || '',
+        account.enabled
       ).run();
     },
 
@@ -251,60 +253,19 @@ export function getDB(db: D1Database) {
       return result.results;
     },
 
-    // ============ Category Routes ============
-    async getCategoryRoute(userId: string, category: string): Promise<CategoryRoute | null> {
-      return db.prepare(
-        'SELECT * FROM category_routes WHERE user_id = ? AND category = ? AND enabled = 1 ORDER BY priority DESC LIMIT 1'
-      ).bind(userId, category).first<CategoryRoute>();
-    },
+    // ============ Category-Based Account Routing ============
+    // 分类路由已合并到 accounts 表，通过 categories 字段（逗号分隔）匹配。
+    // 查询已启用且未超每日限额的账号，按 sent_today 升序（最少用的优先）。
 
-    async getCategoryRoutes(userId: string): Promise<CategoryRoute[]> {
+    async getAccountsByCategory(category: string): Promise<Account[]> {
       const result = await db.prepare(
-        'SELECT * FROM category_routes WHERE user_id = ? ORDER BY priority DESC'
-      ).bind(userId).all<CategoryRoute>();
+        `SELECT * FROM accounts
+         WHERE enabled = 1
+           AND sent_today < daily_limit
+           AND (',' || categories || ',') LIKE ?
+         ORDER BY sent_today ASC`
+      ).bind(`%,${category},%`).all<Account>();
       return result.results;
-    },
-
-    async createCategoryRoute(route: Omit<CategoryRoute, 'created_at' | 'updated_at'>): Promise<void> {
-      await db.prepare(
-        `INSERT INTO category_routes (id, user_id, category, provider_id, account_id, priority, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).bind(
-        route.id, route.user_id, route.category, route.provider_id,
-        route.account_id, route.priority, route.enabled
-      ).run();
-    },
-
-    async deleteCategoryRoute(id: string, userId: string): Promise<void> {
-      await db.prepare(
-        'DELETE FROM category_routes WHERE id = ? AND user_id = ?'
-      ).bind(id, userId).run();
-    },
-
-    // 超管用：获取所有分类路由（含用户、通道、账号信息）
-    async getAllCategoryRoutesAdmin(): Promise<(CategoryRoute & { user_name: string; user_email: string; provider_name: string; account_email: string | null })[]> {
-      const result = await db.prepare(
-        `SELECT cr.*,
-                u.name as user_name, u.email as user_email,
-                p.name as provider_name,
-                a.email as account_email
-         FROM category_routes cr
-         JOIN users u ON cr.user_id = u.id
-         JOIN providers p ON cr.provider_id = p.id
-         LEFT JOIN accounts a ON cr.account_id = a.id
-         ORDER BY cr.user_id, cr.priority DESC`
-      ).all();
-      return result.results as any;
-    },
-
-    // 超管用：按 ID 删除分类路由（不校验 user_id）
-    async deleteCategoryRouteById(id: string): Promise<void> {
-      await db.prepare('DELETE FROM category_routes WHERE id = ?').bind(id).run();
-    },
-
-    // 超管用：查询分类路由是否存在
-    async getCategoryRouteById(id: string): Promise<CategoryRoute | null> {
-      return db.prepare('SELECT * FROM category_routes WHERE id = ?').bind(id).first<CategoryRoute>();
     },
 
     // ============ Mail Logs ============

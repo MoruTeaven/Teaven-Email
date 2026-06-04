@@ -261,9 +261,9 @@ export async function sendWithRetry(
 }
 
 // 获取可用的发送账号（负载均衡）
-export function selectAccount(
-  accounts: { id: string; email: string; display_name: string | null; sent_today: number; daily_limit: number; enabled: number }[]
-): { id: string; email: string; display_name: string | null } | null {
+export function selectAccount<T extends { id: string; email: string; display_name: string | null; provider_id?: string; sent_today: number; daily_limit: number; enabled: number }>(
+  accounts: T[]
+): T | null {
   const available = accounts
     .filter(a => a.enabled === 1 && a.sent_today < a.daily_limit)
     .sort((a, b) => a.sent_today - b.sent_today); // 最少发送的优先

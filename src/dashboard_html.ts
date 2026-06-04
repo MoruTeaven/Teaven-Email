@@ -857,13 +857,11 @@ export function getDashboardHTML(): string {
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
-    // 发送通道（只读 + 分类路由只读展示）
+    // 发送通道（只读）
     async function renderProviders(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
       var pResp = await api('/providers');
-      var rResp = await api('/providers/routes');
       var providers = pResp.data || [];
-      var routes = rResp.data || [];
 
       main.innerHTML = \`
         <div class="page-header">
@@ -895,27 +893,6 @@ export function getDashboardHTML(): string {
             </div>
           \`}
         </div>
-
-        \${routes.length > 0 ? \`
-          <div style="margin-top: 32px;">
-            <div class="page-header" style="margin-bottom: 16px;">
-              <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">分类路由</h2>
-              <p style="font-size: 0.75rem; color: var(--text-muted); margin: 4px 0 0;">由管理员统一配置，你当前生效的路由规则</p>
-            </div>
-            <div class="card">
-              <div class="list-card">
-                \${routes.map(function(r) {
-                  return '<div class="list-item">' +
-                    '<div class="list-item-info">' +
-                      '<div class="list-item-title"><span class="badge badge-info">' + esc(r.category) + '</span></div>' +
-                      '<div class="list-item-subtitle">通道: ' + esc(r.provider_id) + (r.account_id ? ' · 账号: ' + esc(r.account_id) : ' · 自动选择账号') + ' · 优先级: ' + r.priority + '</div>' +
-                    '</div>' +
-                  '</div>';
-                }).join('')}
-              </div>
-            </div>
-          </div>
-        \` : ''}
       \`;
     }
 
