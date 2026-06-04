@@ -10,6 +10,10 @@ const apiKeyRouter = new Hono<{ Bindings: Env }>();
 apiKeyRouter.get('/', authMiddleware(), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
+
+  // 懒清理：删除已过期的自动创建 key
+  await db.cleanupExpiredKeys();
+
   const keys = await db.getApiKeysByUser(auth.userId);
 
   // 脱敏处理 - 只返回前缀
@@ -64,6 +68,8 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
     api_key_prefix: prefix,
     permissions,
     enabled: 1,
+    auto_created: 0,
+    expires_at: null,
     last_used_at: null,
   };
 

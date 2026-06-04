@@ -13,7 +13,7 @@ const adminRouter = new Hono<{ Bindings: Env }>();
 adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT u.id, u.name, u.email, u.status, u.is_super_admin, u.created_at,
-     (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id) as api_key_count,
+     (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id AND auto_created = 0) as api_key_count,
      (SELECT COUNT(*) FROM templates WHERE user_id = u.id) as template_count,
      (SELECT COUNT(*) FROM mail_logs WHERE user_id = u.id) as mail_count
      FROM users u WHERE u.status != 'deleted' ORDER BY u.created_at DESC`
@@ -98,6 +98,8 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
     api_key_prefix: prefix,
     permissions: allPermissions,
     enabled: 1,
+    auto_created: 0,
+    expires_at: null,
     last_used_at: null,
   });
 

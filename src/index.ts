@@ -10,6 +10,7 @@ import dashboardRouter from './routes/dashboard';
 import setupRouter from './routes/setup';
 import adminRouter from './routes/admin';
 import { processQueue } from './queue_processor';
+import { getDB } from './db';
 import { getDashboardHTML } from './dashboard_html';
 import { getAdminHTML } from './admin_html';
 
@@ -80,7 +81,20 @@ export default {
     switch (event.cron) {
       case '*/30 * * * *':
         ctx.waitUntil(processQueue(env));
+        ctx.waitUntil(cleanupExpiredKeys(env));
         break;
     }
   },
 };
+
+async function cleanupExpiredKeys(env: Env): Promise<void> {
+  try {
+    const db = getDB(env.DB);
+    const count = await db.cleanupExpiredKeys();
+    if (count > 0) {
+      console.log(`Cleaned up ${count} expired auto-created API keys`);
+    }
+  } catch (err) {
+    console.error('Failed to cleanup expired keys:', err);
+  }
+}

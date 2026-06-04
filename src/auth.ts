@@ -172,6 +172,13 @@ export function authMiddleware(requiredPermissions?: Permission[]) {
       return c.json({ success: false, error: 'Invalid or disabled API key' }, 401);
     }
 
+    // 检查 key 是否已过期（登录自动创建的 key 24 小时后过期）
+    if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) <= new Date()) {
+      // 懒清理：删除已过期的 key
+      await db.deleteApiKey(apiKeyRecord.id, apiKeyRecord.user_id);
+      return c.json({ success: false, error: 'API key has expired. Please log in again.' }, 401);
+    }
+
     // 检查用户状态
     const user = await db.getUserById(apiKeyRecord.user_id);
     if (!user || user.status !== 'active') {
@@ -219,6 +226,12 @@ export function superAdminMiddleware() {
 
     if (!apiKeyRecord) {
       return c.json({ success: false, error: 'Invalid API key' }, 401);
+    }
+
+    // 检查 key 是否已过期
+    if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) <= new Date()) {
+      await db.deleteApiKey(apiKeyRecord.id, apiKeyRecord.user_id);
+      return c.json({ success: false, error: 'API key has expired. Please log in again.' }, 401);
     }
 
     const user = await db.getUserById(apiKeyRecord.user_id);

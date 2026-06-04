@@ -87,6 +87,8 @@ setupRouter.post('/init', async (c) => {
     api_key_prefix: prefix,
     permissions: allPermissions,
     enabled: 1,
+    auto_created: 0,
+    expires_at: null,
     last_used_at: null,
   });
 
@@ -193,7 +195,7 @@ setupRouter.post('/key-from-password', async (c) => {
     return c.json({ success: false, error: 'Invalid email or password' }, 401);
   }
 
-  // 生成新的 API Key
+  // 生成新的 API Key（自动创建，24小时后过期）
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
   const { raw, hash, prefix } = await generateApiKey();
   const apiKeyId = crypto.randomUUID();
@@ -206,6 +208,8 @@ setupRouter.post('/key-from-password', async (c) => {
     api_key_prefix: prefix,
     permissions: allPermissions,
     enabled: 1,
+    auto_created: 1,
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     last_used_at: null,
   });
 
@@ -245,6 +249,15 @@ async function ensureTables(db: D1Database): Promise<void> {
   ];
 
   for (const sql of tables) {
+    try { await db.prepare(sql).run(); } catch {}
+  }
+
+  // 为已有表添加新字段（忽略已存在的列）
+  const alterStatements = [
+    `ALTER TABLE api_keys ADD COLUMN auto_created INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE api_keys ADD COLUMN expires_at TEXT`,
+  ];
+  for (const sql of alterStatements) {
     try { await db.prepare(sql).run(); } catch {}
   }
 }

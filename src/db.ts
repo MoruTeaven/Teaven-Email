@@ -36,20 +36,22 @@ export function getDB(db: D1Database) {
         .bind(hash).first<ApiKey>();
     },
 
-    async getApiKeysByUser(userId: string): Promise<ApiKey[]> {
-      const result = await db.prepare(
-        'SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
-      ).bind(userId).all<ApiKey>();
+    async getApiKeysByUser(userId: string, includeAutoCreated: boolean = false): Promise<ApiKey[]> {
+      const sql = includeAutoCreated
+        ? 'SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
+        : 'SELECT * FROM api_keys WHERE user_id = ? AND auto_created = 0 ORDER BY created_at DESC';
+      const result = await db.prepare(sql).bind(userId).all<ApiKey>();
       return result.results;
     },
 
     async createApiKey(apiKey: Omit<ApiKey, 'created_at' | 'updated_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, permissions, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, permissions, enabled, auto_created, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         apiKey.id, apiKey.user_id, apiKey.name, apiKey.api_key_hash,
-        apiKey.api_key_prefix, JSON.stringify(apiKey.permissions), apiKey.enabled
+        apiKey.api_key_prefix, JSON.stringify(apiKey.permissions), apiKey.enabled,
+        apiKey.auto_created ?? 0, apiKey.expires_at ?? null
       ).run();
     },
 
@@ -69,6 +71,13 @@ export function getDB(db: D1Database) {
       await db.prepare(
         `UPDATE api_keys SET enabled = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`
       ).bind(enabled, id, userId).run();
+    },
+
+    async cleanupExpiredKeys(): Promise<number> {
+      const result = await db.prepare(
+        `DELETE FROM api_keys WHERE auto_created = 1 AND expires_at IS NOT NULL AND expires_at <= datetime('now')`
+      ).run();
+      return result.meta?.changes ?? 0;
     },
 
     // ============ 发送通道 (全局，不绑定用户) ============

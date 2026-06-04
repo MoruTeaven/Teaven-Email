@@ -19,6 +19,8 @@ export interface ApiKey {
   api_key_prefix: string;
   permissions: Permission[];
   enabled: number;
+  auto_created: number;       // 1 = 登录自动创建, 0 = 手动创建
+  expires_at: string | null;  // 自动创建的 key 过期时间，NULL = 永不过期
   last_used_at: string | null;
   created_at: string;
   updated_at: string;
