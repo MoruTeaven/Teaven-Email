@@ -37,11 +37,25 @@ export function getDB(db: D1Database) {
     },
 
     async getApiKeysByUser(userId: string, includeAutoCreated: boolean = false): Promise<ApiKey[]> {
-      const sql = includeAutoCreated
-        ? 'SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
-        : 'SELECT * FROM api_keys WHERE user_id = ? AND auto_created = 0 ORDER BY created_at DESC';
-      const result = await db.prepare(sql).bind(userId).all<ApiKey>();
-      return result.results;
+      try {
+        // 优先走完整查询（依赖 migration 005 的 auto_created / expires_at 列）
+        const sql = includeAutoCreated
+          ? 'SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
+          : 'SELECT * FROM api_keys WHERE user_id = ? AND auto_created = 0 ORDER BY created_at DESC';
+        const result = await db.prepare(sql).bind(userId).all<ApiKey>();
+        return result.results;
+      } catch (err) {
+        // 如果 migration 005 尚未应用到生产库，auto_created 列不存在
+        // 降级：不做 auto_created 过滤，应用层自行处理
+        if (err instanceof Error && (err.message.includes('auto_created') || err.message.includes('no such column'))) {
+          console.warn('[db] auto_created column missing, falling back to unfiltered query. Run migration 005.');
+          const result = await db.prepare(
+            'SELECT * FROM api_keys WHERE user_id = ? ORDER BY created_at DESC'
+          ).bind(userId).all<ApiKey>();
+          return result.results;
+        }
+        throw err;
+      }
     },
 
     async createApiKey(apiKey: Omit<ApiKey, 'created_at' | 'updated_at'>): Promise<void> {

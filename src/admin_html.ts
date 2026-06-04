@@ -480,7 +480,24 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         },
         ...opts
       });
-      return res.json();
+
+      var text = await res.text();
+      var data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        // 服务端返回非 JSON（如 Cloudflare 错误页 / HTML）
+        console.error('[api] Invalid JSON response for', path, 'status', res.status);
+        toast('服务器返回了无效数据（状态码 ' + res.status + '），请稍后重试', 'error');
+        throw new Error('Invalid JSON response: ' + text.substring(0, 200));
+      }
+
+      if (!res.ok) {
+        var errMsg = (data && data.error) || ('HTTP ' + res.status);
+        toast(errMsg, 'error');
+        throw new Error(errMsg);
+      }
+      return data;
     }
 
     function toast(msg, type) {
@@ -624,8 +641,13 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
     // 用户管理
     async function renderUsers(main) {
-      var resp = await api('/admin/tenants');
-      var users = resp.data || [];
+      var users = [];
+      try {
+        var resp = await api('/admin/tenants');
+        users = resp.data || [];
+      } catch (e) {
+        console.error('[renderUsers] Failed to load users:', e);
+      }
 
       main.innerHTML = \`
         <div class="page-header">

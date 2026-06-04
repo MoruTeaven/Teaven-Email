@@ -11,14 +11,30 @@ const adminRouter = new Hono<{ Bindings: Env }>();
 
 // GET /v1/admin/tenants - 所有用户
 adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
-  const rows = await c.env.DB.prepare(
-    `SELECT u.id, u.name, u.email, u.status, u.is_super_admin, u.created_at,
+  const queryWithAutoCreated = `SELECT u.id, u.name, u.email, u.status, u.is_super_admin, u.created_at,
      (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id AND auto_created = 0) as api_key_count,
      (SELECT COUNT(*) FROM templates WHERE user_id = u.id) as template_count,
      (SELECT COUNT(*) FROM mail_logs WHERE user_id = u.id) as mail_count
-     FROM users u WHERE u.status != 'deleted' ORDER BY u.created_at DESC`
-  ).all();
-  return c.json({ success: true, data: rows.results });
+     FROM users u WHERE u.status != 'deleted' ORDER BY u.created_at DESC`;
+
+  const queryFallback = `SELECT u.id, u.name, u.email, u.status, u.is_super_admin, u.created_at,
+     (SELECT COUNT(*) FROM api_keys WHERE user_id = u.id) as api_key_count,
+     (SELECT COUNT(*) FROM templates WHERE user_id = u.id) as template_count,
+     (SELECT COUNT(*) FROM mail_logs WHERE user_id = u.id) as mail_count
+     FROM users u WHERE u.status != 'deleted' ORDER BY u.created_at DESC`;
+
+  try {
+    const rows = await c.env.DB.prepare(queryWithAutoCreated).all();
+    return c.json({ success: true, data: rows.results });
+  } catch (err) {
+    // 兼容 migration 005 未应用到生产库的情况（auto_created 列不存在）
+    if (err instanceof Error && (err.message.includes('auto_created') || err.message.includes('no such column'))) {
+      console.warn('[admin] auto_created column missing, falling back to unfiltered query. Run migration 005.');
+      const rows = await c.env.DB.prepare(queryFallback).all();
+      return c.json({ success: true, data: rows.results });
+    }
+    throw err;
+  }
 });
 
 // GET /v1/admin/tenants/:id - 用户详情

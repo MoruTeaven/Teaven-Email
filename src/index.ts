@@ -56,6 +56,16 @@ v1.route('/admin', adminRouter);
 // 注册 v1 路由组
 app.route('/v1', v1);
 
+// 全局错误处理 — 捕获所有未处理的异常，避免裸 500
+app.onError((err, c) => {
+  console.error(`[${c.req.method} ${c.req.path}] Unhandled error:`, err);
+  return c.json({
+    success: false,
+    error: 'Internal Server Error',
+    message: err instanceof Error ? err.message : String(err),
+  }, 500);
+});
+
 // Cron 触发器 - 处理邮件队列
 // 在 wrangler.toml 中配置：
 // [triggers]
