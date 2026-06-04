@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teaven Email - 预览版</title>
+  <!-- IconPark Icons - 国内CDN -->
+  <link rel="stylesheet" href="https://lf6-fe.byted.org/obj/tds/icons/2.2.0/iconpark.css">
+  <style>
+    :root {
+      /* 橙色主题色彩系统 - OKLCH */
+      --orange-50: oklch(97% 0.02 50);
+      --orange-100: oklch(93% 0.04 50);
+      --orange-200: oklch(86% 0.08 50);
+      --orange-300: oklch(78% 0.12 48);
+      --orange-400: oklch(70% 0.16 45);
+      --orange-500: oklch(65% 0.18 42);
+      --orange-600: oklch(55% 0.16 38);
+      --orange-700: oklch(48% 0.14 35);
+      --orange-800: oklch(40% 0.10 32);
+
+      /* 主色 */
+      --primary: var(--orange-500);
+      --primary-hover: var(--orange-600);
+      --primary-glow: oklch(65% 0.25 42 / 0.3);
+
+      /* 深色背景 - 暖色调灰 */
+      --bg-base: oklch(14% 0.015 45);
+      --bg-elevated: oklch(18% 0.018 45);
+      --bg-card: oklch(22% 0.02 45);
+      --bg-card-hover: oklch(26% 0.022 45);
+      --bg-input: oklch(16% 0.015 45);
+
+      /* 边框 */
+      --border: oklch(30% 0.015 45);
+      --border-focus: var(--primary);
+
+      /* 文字 */
+      --text-primary: oklch(98% 0.01 50);
+      --text-secondary: oklch(70% 0.02 50);
+      --text-muted: oklch(50% 0.015 45);
+
+      /* 语义色 */
+      --success: oklch(70% 0.15 145);
+      --warning: oklch(80% 0.15 85);
+      --danger: oklch(65% 0.2 25);
+      --info: oklch(75% 0.12 220);
+
+      /* 圆角 */
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      /* 阴影 - 橙色光晕 */
+      --shadow-sm: 0 2px 8px oklch(0% 0 0 / 0.3);
+      --shadow-md: 0 8px 24px oklch(0% 0 0 / 0.4);
+      --shadow-lg: 0 16px 48px oklch(0% 0 0 / 0.5);
+      --shadow-glow: 0 0 40px var(--primary-glow);
+
+      /* 过渡 */
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --transition-fast: 150ms var(--ease-out-quart);
+      --transition-normal: 300ms var(--ease-out-quart);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ========== 布局 ========== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-elevated);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 32px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--orange-400), var(--orange-600));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-sub {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--primary);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      text-decoration: none;
+    }
+
+    .nav-item .icon {
+      font-size: 1.25rem;
+      width: 24px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, oklch(55% 0.18 42 / 0.2), oklch(55% 0.18 42 / 0.05));
+      color: var(--primary);
+      border: 1px solid oklch(55% 0.18 42 / 0.3);
+    }
+
+    .nav-item.active .icon {
+      color: var(--primary);
+    }
+
+    .sidebar-footer {
+      padding: 24px 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    .admin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: oklch(55% 0.18 42 / 0.15);
+      border: 1px solid oklch(55% 0.18 42 / 0.3);
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--orange-400), var(--orange-600));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      color: white;
+    }
+
+    .user-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .user-email {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* 主内容区 */
+    .main {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 56px;
+      max-width: 1400px;
+    }
+
+    /* 页面标题 */
+    .page-header {
+      margin-bottom: 48px;
+    }
+
+    .page-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .page-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ========== 卡片系统 ========== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: all var(--transition-normal);
+    }
+
+    .card:hover {
+      border-color: oklch(40% 0.12 42 / 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ========== 统计卡片 ========== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+      opacity: 0.6;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+
+    .stat-icon.orange {
+      background: oklch(55% 0.18 42 / 0.15);
+      color: var(--primary);
+    }
+
+    .stat-icon.green {
+      background: oklch(70% 0.15 145 / 0.15);
+      color: var(--success);
+    }
+
+    .stat-icon.red {
+      background: oklch(65% 0.2 25 / 0.15);
+      color: var(--danger);
+    }
+
+    .stat-icon.yellow {
+      background: oklch(80% 0.15 85 / 0.15);
+      color: var(--warning);
+    }
+
+    .stat-icon.blue {
+      background: oklch(75% 0.12 220 / 0.15);
+      color: var(--info);
+    }
+
+    .stat-icon.purple {
+      background: oklch(70% 0.18 300 / 0.15);
+      color: oklch(70% 0.18 300);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stat-value.orange { color: var(--primary); }
+    .stat-value.green { color: var(--success); }
+    .stat-value.red { color: var(--danger); }
+    .stat-value.yellow { color: var(--warning); }
+    .stat-value.blue { color: var(--info); }
+    .stat-value.purple { color: oklch(70% 0.18 300); }
+
+    .stat-change {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ========== 按钮 ========== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--orange-500), var(--orange-600));
+      color: white;
+      box-shadow: 0 4px 16px oklch(55% 0.18 42 / 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px oklch(55% 0.18 42 / 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 0.8rem;
+    }
+
+    .btn-lg {
+      padding: 16px 32px;
+      font-size: 1rem;
+    }
+
+    /* ========== 徽章 ========== */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: oklch(70% 0.15 145 / 0.15);
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background: oklch(80% 0.15 85 / 0.15);
+      color: var(--warning);
+    }
+
+    .badge-danger {
+      background: oklch(65% 0.2 25 / 0.15);
+      color: var(--danger);
+    }
+
+    .badge-info {
+      background: oklch(55% 0.18 42 / 0.15);
+      color: var(--primary);
+    }
+
+    .badge-muted {
+      background: oklch(50% 0.015 45 / 0.5);
+      color: var(--text-muted);
+    }
+
+    .badge-super {
+      background: oklch(55% 0.18 42 / 0.25);
+      color: var(--primary);
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    /* ========== 列表卡片 ========== */
+    .list-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      transition: all var(--transition-fast);
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .list-item-info {
+      flex: 1;
+    }
+
+    .list-item-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .list-item-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .list-item-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* ========== 工具栏 ========== */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    /* ========== 提供商网格 ========== */
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .provider-card {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: all var(--transition-fast);
+    }
+
+    .provider-card:hover {
+      border-color: oklch(40% 0.12 42 / 0.3);
+    }
+
+    .provider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .provider-name {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .provider-config {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-bottom: 12px;
+    }
+
+    /* ========== 响应式 ========== */
+    @media (max-width: 1200px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 24px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-title {
+        font-size: 1.75rem;
+      }
+
+      .provider-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">Teaven</div>
+        <div class="logo-sub">Admin Panel</div>
+      </div>
+      <div class="sidebar-nav">
+        <button class="nav-item active">
+          <span class="icon iconpark-dashboard"></span>
+          全局总览
+        </button>
+        <button class="nav-item">
+          <span class="icon iconpark-users"></span>
+          租户管理
+        </button>
+        <button class="nav-item">
+          <span class="icon iconpark-connected"></span>
+          发送通道
+        </button>
+        <button class="nav-item">
+          <span class="icon iconpark-mail"></span>
+          发件账号
+        </button>
+      </div>
+      <div class="sidebar-footer">
+        <div class="admin-badge">
+          <span class="iconpark-crown"></span>
+          超级管理员
+        </div>
+      </div>
+    </nav>
+    <main class="main">
+      <div class="page-header">
+        <h1 class="page-title">全局总览</h1>
+        <p class="page-subtitle">PLATFORM OVERVIEW</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon orange"><span class="iconpark-users"></span></div>
+          <div class="stat-label">租户数</div>
+          <div class="stat-value orange">12</div>
+          <div class="stat-change">个活跃租户</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><span class="iconpark-connected"></span></div>
+          <div class="stat-label">发送通道</div>
+          <div class="stat-value blue">5</div>
+          <div class="stat-change">个通道配置</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple"><span class="iconpark-mail"></span></div>
+          <div class="stat-label">发件账号</div>
+          <div class="stat-value purple">23</div>
+          <div class="stat-change">个账号</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><span class="iconpark-file-text"></span></div>
+          <div class="stat-label">模板数</div>
+          <div class="stat-value orange">48</div>
+          <div class="stat-change">个邮件模板</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><span class="iconpark-send"></span></div>
+          <div class="stat-label">总邮件数</div>
+          <div class="stat-value green">125,847</div>
+          <div class="stat-change">封已发送</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><span class="iconpark-clock"></span></div>
+          <div class="stat-label">今日发送</div>
+          <div class="stat-value orange">1,284</div>
+          <div class="stat-change">封今日</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><span class="iconpark-close-circle"></span></div>
+          <div class="stat-label">今日失败</div>
+          <div class="stat-value red">23</div>
+          <div class="stat-change">封失败</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">平台健康状态</div>
+            <div class="card-subtitle">PLATFORM HEALTH STATUS</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+          <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
+            <div style="font-size: 3rem; font-weight: 800; color: var(--success); margin-bottom: 12px;">
+              <span class="iconpark-check-circle" style="font-size: 3rem;"></span>
+            </div>
+            <div style="font-size: 1.1rem; font-weight: 600;">运行正常</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">All Systems Operational</div>
+          </div>
+          <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
+            <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">12</div>
+            <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">活跃租户</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Active Tenants</div>
+          </div>
+          <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
+            <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">98.2%</div>
+            <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">送达率</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Delivery Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 32px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">租户管理</div>
+            <div class="card-subtitle">TENANT MANAGEMENT</div>
+          </div>
+          <button class="btn btn-primary">
+            <span class="iconpark-plus"></span>
+            新建租户
+          </button>
+        </div>
+        <div class="list-card">
+          <div class="list-item">
+            <div class="list-item-info">
+              <div class="list-item-title">
+                张三
+                <span class="badge-super">超管</span>
+              </div>
+              <div class="list-item-subtitle">admin@teaven.com · API Keys: 3 · 模板: 12 · 邮件: 45,231</div>
+            </div>
+            <div class="list-item-actions">
+              <span class="badge badge-success">active</span>
+              <button class="btn btn-sm btn-ghost">禁用</button>
+              <button class="btn btn-sm btn-secondary">模拟登录</button>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-info">
+              <div class="list-item-title">李四</div>
+              <div class="list-item-subtitle">lisi@company.com · API Keys: 2 · 模板: 8 · 邮件: 12,456</div>
+            </div>
+            <div class="list-item-actions">
+              <span class="badge badge-success">active</span>
+              <button class="btn btn-sm btn-ghost">禁用</button>
+              <button class="btn btn-sm btn-secondary">模拟登录</button>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-info">
+              <div class="list-item-title">王五</div>
+              <div class="list-item-subtitle">wangwu@startup.io · API Keys: 1 · 模板: 5 · 邮件: 3,892</div>
+            </div>
+            <div class="list-item-actions">
+              <span class="badge badge-danger">disabled</span>
+              <button class="btn btn-sm btn-ghost">启用</button>
+              <button class="btn btn-sm btn-secondary">模拟登录</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 32px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">发送通道</div>
+            <div class="card-subtitle">MAIL DELIVERY PROVIDERS</div>
+          </div>
+          <button class="btn btn-primary">
+            <span class="iconpark-plus"></span>
+            添加发送通道
+          </button>
+        </div>
+        <div class="provider-grid">
+          <div class="provider-card">
+            <div class="provider-header">
+              <div class="provider-name">SendGrid 生产</div>
+              <span class="badge badge-success">启用</span>
+            </div>
+            <div class="provider-config">API: sendgrid</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge badge-info">api</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-ghost">禁用</button>
+                <button class="btn btn-sm btn-danger">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="provider-card">
+            <div class="provider-header">
+              <div class="provider-name">SMTP 备用</div>
+              <span class="badge badge-success">启用</span>
+            </div>
+            <div class="provider-config">SMTP: smtp.backup.com:587</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge badge-info">smtp</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-ghost">禁用</button>
+                <button class="btn btn-sm btn-danger">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="provider-card">
+            <div class="provider-header">
+              <div class="provider-name">Cloudflare 邮件</div>
+              <span class="badge badge-muted">禁用</span>
+            </div>
+            <div class="provider-config">Cloudflare: teaven.com</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="badge badge-info">cloudflare_email</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-ghost">启用</button>
+                <button class="btn btn-sm btn-danger">删除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

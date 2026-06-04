@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teaven Email - 管理后台</title>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/remixicon/4.6.0/remixicon.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/chart.js/4.4.8/chart.umd.min.js"></script>
+<style>
+:root {
+  --c-orange-50: #fff7ed;
+  --c-orange-100: #ffedd5;
+  --c-orange-200: #fed7aa;
+  --c-orange-300: #fdba74;
+  --c-orange-400: #fb923c;
+  --c-orange-500: #f97316;
+  --c-orange-600: #ea580c;
+  --c-orange-700: #c2410c;
+  --c-orange-800: #9a3412;
+  --c-success: #10b981;
+  --c-warning: #f59e0b;
+  --c-error: #ef4444;
+  --c-info: #3b82f6;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,.06),0 2px 4px -2px rgba(0,0,0,.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.06),0 4px 6px -4px rgba(0,0,0,.04);
+  --transition: 150ms cubic-bezier(.4,0,.2,1);
+}
+[data-theme="light"] {
+  --bg: #f8f9fb;
+  --bg-surface: #fff;
+  --bg-hover: #f1f3f5;
+  --bg-active: #e9ecef;
+  --bg-input: #f1f3f5;
+  --bg-sidebar: #fff;
+  --bg-topbar: rgba(255,255,255,.8);
+  --bg-modal: #fff;
+  --bg-tooltip: #1e293b;
+  --bg-badge: #f1f3f5;
+  --bg-chart: #f8f9fb;
+  --border: #e5e7eb;
+  --border-light: #f1f3f5;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --text-inverse: #fff;
+  --orange-bg: #fff7ed;
+  --orange-border: #fed7aa;
+  --success-bg: #ecfdf5;
+  --success-border: #a7f3d0;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+  --card-shadow: var(--shadow-sm);
+  --sidebar-border: #e5e7eb;
+  --topbar-blur: blur(12px);
+}
+[data-theme="dark"] {
+  --bg: #0c0d10;
+  --bg-surface: #141518;
+  --bg-hover: #1c1d22;
+  --bg-active: #24252b;
+  --bg-input: #1c1d22;
+  --bg-sidebar: #101114;
+  --bg-topbar: rgba(12,13,16,.85);
+  --bg-modal: #18191e;
+  --bg-tooltip: #e2e8f0;
+  --bg-badge: #1c1d22;
+  --bg-chart: #141518;
+  --border: #23242a;
+  --border-light: #1c1d22;
+  --text: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-inverse: #111827;
+  --orange-bg: rgba(249,115,22,.12);
+  --orange-border: rgba(249,115,22,.25);
+  --success-bg: rgba(16,185,129,.12);
+  --success-border: rgba(16,185,129,.25);
+  --warning-bg: rgba(245,158,11,.12);
+  --warning-border: rgba(245,158,11,.25);
+  --error-bg: rgba(239,68,68,.12);
+  --error-border: rgba(239,68,68,.25);
+  --info-bg: rgba(59,130,246,.12);
+  --info-border: rgba(59,130,246,.25);
+  --card-shadow: 0 1px 3px rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.15);
+  --sidebar-border: #1c1d22;
+  --topbar-blur: blur(16px);
+}
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+a{color:var(--c-orange-500);text-decoration:none}
+a:hover{color:var(--c-orange-600)}
+
+/* Layout */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:250px;background:var(--bg-sidebar);border-right:1px solid var(--sidebar-border);position:fixed;top:0;left:0;bottom:0;z-index:40;display:flex;flex-direction:column;transition:width var(--transition),transform var(--transition);overflow:hidden}
+.sidebar.collapsed{width:68px}
+.sidebar-brand{padding:18px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-light);flex-shrink:0;white-space:nowrap}
+.sidebar-brand .logo-icon{width:30px;height:30px;border-radius:var(--radius-sm);background:var(--c-orange-500);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.9rem;flex-shrink:0}
+.sidebar-brand .logo-text{font-weight:700;font-size:1.1rem;color:var(--text);opacity:1;transition:opacity .15s}
+.sidebar.collapsed .logo-text{opacity:0;width:0;overflow:hidden}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:2px}
+.nav-section{margin-top:16px;margin-bottom:4px}
+.nav-section:first-child{margin-top:0}
+.nav-label{padding:8px 14px 4px;font-size:.65rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden}
+.sidebar.collapsed .nav-label{opacity:0;height:0;padding:0;overflow:hidden}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 13px;border-radius:var(--radius-sm);color:var(--text-secondary);font-size:.875rem;font-weight:450;cursor:pointer;transition:all var(--transition);border:none;background:none;width:100%;text-align:left;white-space:nowrap;overflow:hidden;position:relative;text-decoration:none}
+.nav-item:hover{background:var(--bg-hover);color:var(--text)}
+.nav-item.active{background:var(--orange-bg);color:var(--c-orange-600);font-weight:550}
+.nav-item.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;background:var(--c-orange-500);border-radius:0 3px 3px 0}
+.nav-item i{font-size:1.15rem;width:20px;text-align:center;flex-shrink:0}
+.nav-item-text{opacity:1;transition:opacity .15s}
+.sidebar.collapsed .nav-item-text{opacity:0;width:0;overflow:hidden}
+.nav-badge{margin-left:auto;font-size:.65rem;background:var(--c-orange-500);color:#fff;padding:1px 7px;border-radius:99px;font-weight:600}
+.sidebar.collapsed .nav-badge{opacity:0}
+.sidebar-footer{padding:12px 10px;border-top:1px solid var(--border-light);flex-shrink:0}
+.sidebar-collapse-btn{display:flex;align-items:center;gap:11px;padding:8px 13px;border-radius:var(--radius-sm);color:var(--text-muted);font-size:.8rem;cursor:pointer;border:none;background:none;width:100%;text-align:left;white-space:nowrap;overflow:hidden;transition:all var(--transition)}
+.sidebar-collapse-btn:hover{background:var(--bg-hover);color:var(--text)}
+.sidebar-collapse-btn i{font-size:1.1rem;width:20px;text-align:center;flex-shrink:0;transition:transform var(--transition)}
+.sidebar.collapsed .sidebar-collapse-btn i{transform:rotate(180deg)}
+
+/* Topbar */
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg-topbar);backdrop-filter:var(--topbar-blur);-webkit-backdrop-filter:var(--topbar-blur);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.mobile-menu-btn{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;padding:4px}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-muted)}
+.breadcrumb span{color:var(--text-secondary)}
+.breadcrumb i{font-size:.85rem}
+.breadcrumb .current{color:var(--text);font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:6px}
+.topbar-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.15rem;transition:all var(--transition);position:relative}
+.topbar-btn:hover{background:var(--bg-hover);color:var(--text)}
+.topbar-btn .dot{position:absolute;top:7px;right:7px;width:7px;height:7px;background:var(--c-error);border-radius:50%;border:2px solid var(--bg-topbar)}
+.theme-btn i{font-size:1.2rem}
+.user-chip{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border-radius:var(--radius-full);border:1px solid var(--border);cursor:pointer;transition:all var(--transition);margin-left:4px}
+.user-chip:hover{background:var(--bg-hover)}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--c-orange-400),var(--c-orange-600));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.75rem;flex-shrink:0}
+.user-chip .user-name{font-size:.8rem;font-weight:500;color:var(--text)}
+.user-chip .user-role{font-size:.65rem;color:var(--text-muted)}
+
+/* Main */
+.main-wrap{flex:1;margin-left:250px;transition:margin var(--transition)}
+.sidebar.collapsed ~ .main-wrap{margin-left:68px}
+.main-content{padding:28px 32px 48px;max-width:1440px}
+
+/* Page header */
+.page-header{margin-bottom:28px}
+.page-header h2{font-size:1.45rem;font-weight:700;color:var(--text)}
+.page-header p{font-size:.8rem;color:var(--text-muted);margin-top:3px}
+.page-actions{display:flex;align-items:center;gap:10px}
+
+/* Stats grid */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px}
+.stat-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;transition:all var(--transition);position:relative;overflow:hidden}
+.stat-card:hover{border-color:var(--orange-border);box-shadow:var(--shadow)}
+.stat-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.stat-label{font-size:.75rem;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.stat-icon{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.stat-icon.orange{background:var(--orange-bg);color:var(--c-orange-500)}
+.stat-icon.green{background:var(--success-bg);color:var(--c-success)}
+.stat-icon.red{background:var(--error-bg);color:var(--c-error)}
+.stat-icon.blue{background:var(--info-bg);color:var(--c-info)}
+.stat-icon.yellow{background:var(--warning-bg);color:var(--c-warning)}
+.stat-value{font-size:1.75rem;font-weight:750;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
+.stat-sub{font-size:.73rem;color:var(--text-muted);margin-top:6px;display:flex;align-items:center;gap:4px}
+.stat-sub.up{color:var(--c-success)}
+.stat-sub.down{color:var(--c-error)}
+
+/* Cards */
+.card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border-light)}
+.card-title{font-size:.9rem;font-weight:600;color:var(--text)}
+.card-subtitle{font-size:.73rem;color:var(--text-muted);margin-top:2px}
+.card-body{padding:22px}
+.card-footer{padding:14px 22px;border-top:1px solid var(--border-light);background:var(--bg)}
+.card+.card,.card+.stats-row,.stats-row+.card{margin-top:22px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:.83rem;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all var(--transition);white-space:nowrap;line-height:1.4}
+.btn-primary{background:var(--c-orange-500);color:#fff;border-color:var(--c-orange-500)}
+.btn-primary:hover{background:var(--c-orange-600);border-color:var(--c-orange-600)}
+.btn-secondary{background:var(--bg-surface);color:var(--text);border-color:var(--border)}
+.btn-secondary:hover{background:var(--bg-hover);border-color:var(--text-muted)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border-color:transparent}
+.btn-ghost:hover{background:var(--bg-hover);color:var(--text)}
+.btn-danger{background:var(--error-bg);color:var(--c-error);border-color:var(--error-border)}
+.btn-danger:hover{background:var(--c-error);color:#fff;border-color:var(--c-error)}
+.btn-sm{padding:5px 11px;font-size:.77rem}
+.btn-xs{padding:3px 8px;font-size:.72rem;gap:4px}
+.btn-icon{width:32px;height:32px;padding:0;border-radius:var(--radius-sm)}
+.btn-group{display:flex;gap:8px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:550;white-space:nowrap}
+.badge-success{background:var(--success-bg);color:var(--c-success);border:1px solid var(--success-border)}
+.badge-warning{background:var(--warning-bg);color:var(--c-warning);border:1px solid var(--warning-border)}
+.badge-error{background:var(--error-bg);color:var(--c-error);border:1px solid var(--error-border)}
+.badge-info{background:var(--info-bg);color:var(--c-info);border:1px solid var(--info-border)}
+.badge-muted{background:var(--bg-badge);color:var(--text-muted);border:1px solid var(--border)}
+.badge-orange{background:var(--orange-bg);color:var(--c-orange-600);border:1px solid var(--orange-border)}
+.badge-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.badge-dot.green{background:var(--c-success)}
+.badge-dot.red{background:var(--c-error)}
+.badge-dot.yellow{background:var(--c-warning)}
+
+/* Tables */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{padding:11px 16px;text-align:left;font-size:.73rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap;cursor:pointer;user-select:none;transition:color var(--transition)}
+.data-table th:hover{color:var(--text)}
+.data-table th i{font-size:.75rem;margin-left:3px;opacity:.4}
+.data-table th.sorted i{opacity:1;color:var(--c-orange-500)}
+.data-table td{padding:12px 16px;border-bottom:1px solid var(--border-light);font-size:.83rem;vertical-align:middle}
+.data-table tbody tr{transition:background var(--transition)}
+.data-table tbody tr:hover{background:var(--bg-hover)}
+.data-table .cell-id{font-family:"JetBrains Mono","Fira Code",monospace;font-size:.75rem;color:var(--text-muted)}
+.data-table .cell-primary{font-weight:550;color:var(--text)}
+.data-table .cell-secondary{font-size:.77rem;color:var(--text-muted)}
+.data-table .cell-actions{display:flex;gap:4px;justify-content:flex-end}
+
+/* Filters */
+.filter-bar{display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid var(--border-light);flex-wrap:wrap}
+.filter-input{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.82rem;outline:none;min-width:220px;transition:border-color var(--transition)}
+.filter-input:focus{border-color:var(--c-orange-500)}
+.filter-input input{border:none;background:none;outline:none;color:var(--text);font-size:.82rem;width:100%}
+.filter-input i{color:var(--text-muted);font-size:1rem;flex-shrink:0}
+.filter-select{padding:7px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.82rem;outline:none;cursor:pointer;transition:border-color var(--transition)}
+.filter-select:focus{border-color:var(--c-orange-500)}
+.filter-grow{flex:1}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--border-light)}
+.pagination-info{font-size:.78rem;color:var(--text-muted)}
+.pagination-btns{display:flex;align-items:center;gap:4px}
+.page-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-surface);color:var(--text-secondary);font-size:.8rem;cursor:pointer;transition:all var(--transition)}
+.page-btn:hover:not(:disabled){border-color:var(--c-orange-500);color:var(--c-orange-500)}
+.page-btn.active{background:var(--c-orange-500);color:#fff;border-color:var(--c-orange-500)}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* Forms */
+.form-section+.form-section{margin-top:28px;padding-top:28px;border-top:1px solid var(--border-light)}
+.form-section-title{font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:.78rem;font-weight:500;color:var(--text-secondary);display:flex;align-items:center;gap:6px}
+.form-label .required{color:var(--c-error);font-size:.7rem}
+.form-input,.form-select,.form-textarea{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.83rem;outline:none;transition:border-color var(--transition);width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--c-orange-500);box-shadow:0 0 0 3px var(--orange-bg)}
+.form-input.error,.form-select.error{border-color:var(--c-error)}
+.form-input.error:focus{box-shadow:0 0 0 3px var(--error-bg)}
+.form-textarea{resize:vertical;min-height:90px}
+.form-hint{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+.form-error{font-size:.72rem;color:var(--c-error);margin-top:2px}
+.form-select-wrapper{position:relative}
+.form-select-wrapper::after{content:'\ea4e';font-family:'remixicon';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;font-size:1rem}
+
+/* Toggle */
+.toggle-wrapper{display:flex;align-items:center;gap:10px}
+.toggle{position:relative;width:40px;height:22px;border-radius:99px;background:var(--border);cursor:pointer;transition:background var(--transition);flex-shrink:0}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:transform var(--transition)}
+.toggle.on{background:var(--c-orange-500)}
+.toggle.on::after{transform:translateX(18px)}
+.toggle-label{font-size:.83rem;color:var(--text);user-select:none}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:0}
+.tab-btn{padding:12px 20px;border:none;background:none;color:var(--text-muted);font-size:.83rem;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all var(--transition);margin-bottom:-1px}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--c-orange-500);border-bottom-color:var(--c-orange-500)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--bg-modal);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;animation:slideUp .2s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border-light)}
+.modal-header h3{font-size:1.05rem;font-weight:650}
+.modal-close{width:30px;height:30px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.15rem;transition:all var(--transition)}
+.modal-close:hover{background:var(--bg-hover);color:var(--text)}
+.modal-body{padding:22px 24px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--border-light)}
+
+/* Toast */
+.toast-container{position:fixed;top:70px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg-modal);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);font-size:.83rem;animation:toastIn .3s ease;min-width:280px}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+.toast.success{border-left:3px solid var(--c-success)}
+.toast.error{border-left:3px solid var(--c-error)}
+.toast.warning{border-left:3px solid var(--c-warning)}
+.toast i{font-size:1.1rem;flex-shrink:0}
+.toast.success i{color:var(--c-success)}
+.toast.error i{color:var(--c-error)}
+.toast.warning i{color:var(--c-warning)}
+
+/* Charts */
+.chart-wrap{position:relative;width:100%;height:260px}
+.chart-wrap.large{height:320px}
+.chart-wrap canvas{width:100%!important;height:100%!important}
+
+/* Donut */
+.donut-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.donut-item{display:flex;align-items:center;gap:10px;font-size:.8rem}
+.donut-color{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.donut-label{color:var(--text);flex:1}
+.donut-value{color:var(--text-muted);font-variant-numeric:tabular-nums}
+.donut-pct{color:var(--text-secondary);font-weight:550;margin-left:8px}
+
+/* Activity List */
+.activity-list{display:flex;flex-direction:column}
+.activity-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border-light)}
+.activity-item:last-child{border-bottom:none}
+.activity-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;margin-top:2px}
+.activity-icon.orange{background:var(--orange-bg);color:var(--c-orange-500)}
+.activity-icon.green{background:var(--success-bg);color:var(--c-success)}
+.activity-icon.red{background:var(--error-bg);color:var(--c-error)}
+.activity-icon.blue{background:var(--info-bg);color:var(--c-info)}
+.activity-body{flex:1;min-width:0}
+.activity-title{font-size:.83rem;font-weight:500;color:var(--text)}
+.activity-desc{font-size:.75rem;color:var(--text-muted);margin-top:2px}
+.activity-time{font-size:.7rem;color:var(--text-muted);margin-top:4px}
+
+/* Progress */
+.progress-bar{width:100%;height:6px;background:var(--bg-input);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;border-radius:99px;transition:width .4s ease}
+.progress-fill.orange{background:var(--c-orange-500)}
+.progress-fill.green{background:var(--c-success)}
+.progress-fill.yellow{background:var(--c-warning)}
+
+/* Avatars */
+.avatars-stack{display:flex;align-items:center}
+.avatars-stack .avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--bg-surface);margin-left:-8px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:#fff;flex-shrink:0}
+.avatars-stack .avatar:first-child{margin-left:0}
+.avatars-stack .more{background:var(--bg-badge);color:var(--text-muted);font-size:.6rem}
+
+/* Grid 2-col */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+
+/* Info row */
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.info-item{display:flex;flex-direction:column;gap:3px}
+.info-item .info-label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.info-item .info-value{font-size:.85rem;font-weight:500;color:var(--text)}
+
+/* Empty State */
+.empty-state{text-align:center;padding:48px 24px}
+.empty-state .empty-icon{width:56px;height:56px;margin:0 auto 16px;background:var(--bg-input);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted)}
+.empty-state h4{font-size:.9rem;font-weight:600;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:.78rem;color:var(--text-muted);max-width:320px;margin:0 auto 16px}
+
+/* Mobile drawer */
+.mobile-drawer{display:none;position:fixed;inset:0;z-index:50;pointer-events:none}
+.mobile-drawer.open{pointer-events:auto}
+.mobile-drawer-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .2s}
+.mobile-drawer.open .mobile-drawer-backdrop{opacity:1}
+.mobile-drawer-content{position:absolute;top:0;left:0;bottom:0;width:270px;background:var(--bg-sidebar);transform:translateX(-100%);transition:transform .2s ease;overflow-y:auto}
+.mobile-drawer.open .mobile-drawer-content{transform:translateX(0)}
+
+/* Settings page nav */
+.settings-nav{display:flex;flex-direction:column;gap:1px;min-width:180px}
+.settings-nav-item{padding:10px 14px;border-radius:var(--radius-sm);font-size:.82rem;color:var(--text-secondary);cursor:pointer;transition:all var(--transition);border:none;background:none;text-align:left}
+.settings-nav-item:hover{background:var(--bg-hover);color:var(--text)}
+.settings-nav-item.active{background:var(--orange-bg);color:var(--c-orange-600);font-weight:550}
+.settings-content{flex:1}
+
+/* Responsive */
+@media(max-width:1024px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .grid-2{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main-wrap{margin-left:0!important}
+  .mobile-menu-btn{display:flex}
+  .sidebar-collapse-btn{display:none}
+  .mobile-drawer{display:block}
+  .sidebar .nav-label{opacity:1;height:auto;padding:8px 14px 4px}
+  .sidebar .nav-item-text{opacity:1;width:auto}
+  .sidebar .nav-badge{opacity:1}
+  .sidebar .logo-text{opacity:1;width:auto}
+}
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .main-content{padding:16px}
+  .topbar{padding:0 12px}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .filter-input{min-width:0}
+  .user-chip .user-name,.user-chip .user-role{display:none}
+  .btn-group{flex-wrap:wrap}
+  .data-table{display:block;overflow-x:auto}
+}
+
+/* Print & reduced motion */
+@media(prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Mobile Drawer -->
+<div class="mobile-drawer" id="mobileDrawer">
+  <div class="mobile-drawer-backdrop" onclick="toggleMobileDrawer()"></div>
+  <div class="mobile-drawer-content" id="mobileDrawerContent"></div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo-icon">T</div>
+    <span class="logo-text">Teaven Email</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-label">主菜单</div>
+      <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <i class="ri-dashboard-3-line"></i><span class="nav-item-text">仪表盘</span>
+      </a>
+      <a class="nav-item" data-page="users" onclick="navigate('users')">
+        <i class="ri-group-line"></i><span class="nav-item-text">用户管理</span>
+      </a>
+      <a class="nav-item" data-page="templates" onclick="navigate('templates')">
+        <i class="ri-file-code-line"></i><span class="nav-item-text">模板管理</span>
+      </a>
+      <a class="nav-item" data-page="api" onclick="navigate('api')">
+        <i class="ri-key-2-line"></i><span class="nav-item-text">API 密钥</span>
+      </a>
+      <a class="nav-item" data-page="providers" onclick="navigate('providers')">
+        <i class="ri-server-line"></i><span class="nav-item-text">发送通道</span>
+      </a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">监控</div>
+      <a class="nav-item" data-page="logs" onclick="navigate('logs')">
+        <i class="ri-history-line"></i><span class="nav-item-text">发送日志</span>
+        <span class="nav-badge">128</span>
+      </a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">系统</div>
+      <a class="nav-item" data-page="settings" onclick="navigate('settings')">
+        <i class="ri-settings-3-line"></i><span class="nav-item-text">系统设置</span>
+      </a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="折叠侧边栏">
+      <i class="ri-sidebar-fold-line"></i><span class="nav-item-text">折叠导航</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main-wrap" id="mainWrap">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="mobile-menu-btn" onclick="toggleMobileDrawer()"><i class="ri-menu-line"></i></button>
+      <div class="breadcrumb" id="breadcrumb">
+        <span>Teaven</span><i class="ri-arrow-right-s-line"></i>
+        <span class="current">仪表盘</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" title="通知"><i class="ri-notification-3-line"></i><span class="dot"></span></button>
+      <button class="topbar-btn theme-btn" onclick="toggleTheme()" title="切换主题">
+        <i class="ri-sun-line" id="themeIconSun"></i>
+        <i class="ri-moon-line" id="themeIconMoon" style="display:none"></i>
+      </button>
+      <div class="user-chip">
+        <div class="user-avatar">A</div>
+        <span class="user-name">Admin</span>
+        <span class="user-role">超级管理员</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="main-content" id="mainContent"></main>
+</div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Modal Container -->
+<div id="modalContainer"></div>
+
+<script>
+/* ========== MOCK DATA ========== */
+const MOCK = {
+  stats: { totalUsers: 128, activeUsers: 115, totalMails: 245680, todaySent: 3421, todayDelivered: 3387, todayFailed: 34, todayBounced: 12, templates: 24, providers: 5, apiKeys: 36, deliveryRate: 98.7, growth: 12.5 },
+  chartData: { labels: ['5/29','5/30','5/31','6/01','6/02','6/03','6/04'], sent: [2850,3100,2980,3450,3280,3560,3421], delivered: [2810,3050,2930,3400,3240,3520,3387], failed: [40,50,50,50,40,40,34] },
+  domainData: { labels: ['teaven.com','work.com','dev.cn','其他'], data: [45, 28, 18, 9], colors: ['#f97316','#fb923c','#fdba74','#e5e7eb'] },
+  users: [
+    { id:'u_001', name:'张三', email:'admin@teaven.com', role:'超级管理员', status:'active', templates:12, mails:45231, lastLogin:'2026-06-04 09:15', avatar:'Z' },
+    { id:'u_002', name:'李四', email:'lisi@company.com', role:'用户', status:'active', templates:8, mails:12456, lastLogin:'2026-06-04 08:30', avatar:'L' },
+    { id:'u_003', name:'王五', email:'wangwu@startup.io', role:'用户', status:'disabled', templates:5, mails:3892, lastLogin:'2026-05-28 14:20', avatar:'W' },
+    { id:'u_004', name:'赵六', email:'zhaoliu@org.cn', role:'用户', status:'active', templates:15, mails:67210, lastLogin:'2026-06-04 10:05', avatar:'Z' },
+    { id:'u_005', name:'孙七', email:'sunqi@tech.cn', role:'管理员', status:'active', templates:20, mails:89340, lastLogin:'2026-06-04 09:45', avatar:'S' },
+    { id:'u_006', name:'周八', email:'zhouba@dev.io', role:'用户', status:'active', templates:3, mails:1240, lastLogin:'2026-05-30 16:00', avatar:'Z' },
+    { id:'u_007', name:'吴九', email:'wujiu@mail.cn', role:'用户', status:'disabled', templates:6, mails:5678, lastLogin:'2026-05-15 11:30', avatar:'W' },
+    { id:'u_008', name:'郑十', email:'zhengshi@corp.com', role:'管理员', status:'active', templates:18, mails:45678, lastLogin:'2026-06-04 07:50', avatar:'Z' }
+  ],
+  templates: [
+    { code:'VERIFY_CODE', name:'验证码邮件', category:'VERIFY', version:3, vars:['code','expire'], lastModified:'2026-06-03' },
+    { code:'PASSWORD_RESET', name:'密码重置', category:'VERIFY', version:2, vars:['link','expire','name'], lastModified:'2026-06-01' },
+    { code:'ORDER_NOTIFY', name:'订单通知', category:'NOTIFY', version:5, vars:['orderId','status','items','total','link'], lastModified:'2026-06-04' },
+    { code:'WELCOME', name:'欢迎邮件', category:'NOTIFY', version:4, vars:['name','link'], lastModified:'2026-05-28' },
+    { code:'NEWSLETTER', name:'营销周报', category:'MARKETING', version:8, vars:['title','content','link','unsub'], lastModified:'2026-06-02' },
+    { code:'INVOICE', name:'发票通知', category:'SYSTEM', version:1, vars:['invoiceId','amount','due'], lastModified:'2026-05-20' }
+  ],
+  apiKeys: [
+    { id:'ak_001', name:'生产环境', prefix:'sk_prod', permissions:'send,read', status:'active', lastUsed:'2026-06-04 10:30', created:'2026-03-15' },
+    { id:'ak_002', name:'测试环境', prefix:'sk_test', permissions:'send,read,manage', status:'active', lastUsed:'2026-06-03 15:45', created:'2026-04-01' },
+    { id:'ak_003', name:'移动端应用', prefix:'sk_mob', permissions:'send', status:'disabled', lastUsed:'从未使用', created:'2026-05-10' },
+    { id:'ak_004', name:'CI/CD 流水线', prefix:'sk_cicd', permissions:'send,read', status:'active', lastUsed:'2026-06-04 08:00', created:'2026-04-20' },
+    { id:'ak_005', name:'数据分析平台', prefix:'sk_anal', permissions:'read', status:'active', lastUsed:'2026-06-04 09:55', created:'2026-05-05' }
+  ],
+  providers: [
+    { id:'pr_001', name:'SendGrid 生产', type:'api', detail:'API: sendgrid', status:'enabled', accounts:4, todaySent:1850 },
+    { id:'pr_002', name:'SMTP 备用', type:'smtp', detail:'SMTP: smtp.backup.com:587', status:'enabled', accounts:2, todaySent:980 },
+    { id:'pr_003', name:'Cloudflare 邮件', type:'cloudflare_email', detail:'Cloudflare: teaven.com', status:'disabled', accounts:1, todaySent:0 },
+    { id:'pr_004', name:'Resend 测试', type:'api', detail:'API: resend', status:'enabled', accounts:2, todaySent:420 },
+    { id:'pr_005', name:'Mailgun 备选', type:'api', detail:'API: mailgun', status:'enabled', accounts:1, todaySent:171 }
+  ],
+  logs: [
+    { time:'2026-06-04 10:30:15', to:'user@example.com', subject:'您的验证码是 123456', category:'VERIFY', status:'sent', retry:0 },
+    { time:'2026-06-04 10:28:42', to:'customer@company.com', subject:'订单 #12345 已发货', category:'NOTIFY', status:'sent', retry:0 },
+    { time:'2026-06-04 10:25:10', to:'invalid@domain.xyz', subject:'密码重置链接', category:'VERIFY', status:'failed', retry:3 },
+    { time:'2026-06-04 10:20:05', to:'weekly@sub.io', subject:'本周产品更新', category:'MARKETING', status:'sent', retry:0 },
+    { time:'2026-06-04 10:18:33', to:'sys@corp.com', subject:'系统维护通知', category:'SYSTEM', status:'sent', retry:0 },
+    { time:'2026-06-04 10:15:22', to:'bounce@old.com', subject:'账户激活', category:'VERIFY', status:'bounced', retry:1 },
+    { time:'2026-06-04 10:10:08', to:'newuser@startup.cn', subject:'欢迎加入', category:'NOTIFY', status:'sent', retry:0 },
+    { time:'2026-06-04 10:05:50', to:'admin@teaven.com', subject:'日报统计 6/4', category:'SYSTEM', status:'sent', retry:0 }
+  ],
+  recentActivity: [
+    { type:'send', icon:'ri-send-plane-line', iconColor:'green', title:'邮件发送成功', desc:'验证码邮件 → user@example.com', time:'1分钟前' },
+    { type:'fail', icon:'ri-close-circle-line', iconColor:'red', title:'发送失败', desc:'密码重置邮件 → invalid@domain.xyz (DNS错误)', time:'5分钟前' },
+    { type:'template', icon:'ri-file-edit-line', iconColor:'orange', title:'模板更新', desc:'ORDER_NOTIFY 更新至 v5', time:'15分钟前' },
+    { type:'key', icon:'ri-key-2-line', iconColor:'blue', title:'API Key 创建', desc:'CI/CD 流水线密钥已生成', time:'1小时前' },
+    { type:'user', icon:'ri-user-add-line', iconColor:'orange', title:'新用户注册', desc:'郑十 (zhengshi@corp.com) 注册并激活', time:'2小时前' },
+    { type:'send', icon:'ri-send-plane-line', iconColor:'green', title:'邮件发送成功', desc:'营销周报 → 850位订阅者', time:'3小时前' }
+  ]
+};
+
+/* ========== THEME ========== */
+function initTheme() {
+  const saved = localStorage.getItem('teaven-theme');
+  if (saved) { document.documentElement.setAttribute('data-theme', saved); }
+  else { const prefersDark = window.matchMedia('(prefers-color-scheme:dark)').matches; document.documentElement.setAttribute('data-theme', prefersDark?'dark':'light'); }
+  updateThemeIcon();
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('teaven-theme', next);
+  updateThemeIcon();
+  if (window.currentChart) { window.currentChart.destroy(); renderCharts(); }
+}
+function updateThemeIcon() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  document.getElementById('themeIconSun').style.display = isLight ? 'none' : '';
+  document.getElementById('themeIconMoon').style.display = isLight ? '' : 'none';
+}
+
+/* ========== SIDEBAR ========== */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+  localStorage.setItem('teaven-sidebar', document.getElementById('sidebar').classList.contains('collapsed') ? 'collapsed' : '');
+}
+function initSidebar() {
+  if (localStorage.getItem('teaven-sidebar') === 'collapsed') document.getElementById('sidebar').classList.add('collapsed');
+}
+function toggleMobileDrawer() {
+  const d = document.getElementById('mobileDrawer');
+  d.classList.toggle('open');
+  if (d.classList.contains('open')) { copySidebarToDrawer(); }
+}
+function closeMobileDrawer() { document.getElementById('mobileDrawer').classList.remove('open'); }
+function copySidebarToDrawer() {
+  document.getElementById('mobileDrawerContent').innerHTML = document.querySelector('.sidebar-nav').outerHTML + document.querySelector('.sidebar-footer').outerHTML;
+  document.querySelectorAll('#mobileDrawerContent .nav-item').forEach(function(item) {
+    item.addEventListener('click', function() { closeMobileDrawer(); });
+  });
+}
+
+/* ========== NAVIGATION ========== */
+function navigate(page) {
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  document.querySelector('[data-page="'+page+'"]').classList.add('active');
+  const bc = document.getElementById('breadcrumb');
+  const pages = { dashboard:'仪表盘', users:'用户管理', templates:'模板管理', api:'API 密钥', providers:'发送通道', logs:'发送日志', settings:'系统设置' };
+  bc.innerHTML = '<span>Teaven</span><i class="ri-arrow-right-s-line"></i><span class="current">'+pages[page]+'</span>';
+  if (window.currentChart) { window.currentChart.destroy(); window.currentChart = null; }
+  renderPage(page);
+  closeMobileDrawer();
+}
+
+/* ========== TOAST ========== */
+function toast(msg, type='success') {
+  const c = document.getElementById('toastContainer');
+  const icons = { success:'ri-checkbox-circle-fill', error:'ri-close-circle-fill', warning:'ri-error-warning-fill' };
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = '<i class="'+icons[type]+'"></i>' + msg;
+  c.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transform = 'translateX(30px)'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+/* ========== MODAL ========== */
+function showModal(title, content, footer) {
+  const container = document.getElementById('modalContainer');
+  container.innerHTML = '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-header"><h3>'+title+'</h3><button class="modal-close" onclick="closeModal()"><i class="ri-close-line"></i></button></div><div class="modal-body">'+content+'</div>'+(footer?'<div class="modal-footer">'+footer+'</div>':'')+'</div></div>';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() { document.getElementById('modalContainer').innerHTML = ''; document.body.style.overflow = ''; }
+
+/* ========== UTILS ========== */
+function esc(s) { return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
+function statusBadge(status) {
+  const map = { active:'success', sent:'success', delivered:'success', enabled:'success', disabled:'error', failed:'error', bounced:'warning', pending:'warning', draft:'muted' };
+  const labels = { active:'启用', sent:'已发送', delivered:'已送达', enabled:'已启用', disabled:'已禁用', failed:'失败', bounced:'退信', pending:'待处理', draft:'草稿' };
+  const cls = map[status] || 'muted';
+  return '<span class="badge badge-'+cls+'"><span class="badge-dot '+cls+'"></span>'+esc(labels[status]||status)+'</span>';
+}
+
+/* ========== RENDER - DASHBOARD ========== */
+function renderDashboard() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div><h2>仪表盘</h2><p>邮件平台运行概览与核心指标</p></div>
+      <div class="btn-group"><button class="btn btn-secondary btn-sm"><i class="ri-refresh-line"></i>刷新数据</button><button class="btn btn-primary btn-sm"><i class="ri-download-line"></i>导出报表</button></div>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="grid-2">
+      <div class="card"><div class="card-header"><div><div class="card-title">发送量趋势</div><div class="card-subtitle">近7天邮件发送与投递数据</div></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartSendTrend"></canvas></div></div></div>
+      <div class="card"><div class="card-header"><div><div class="card-title">域名分布</div><div class="card-subtitle">发送域名占比统计</div></div></div><div class="card-body"><div class="chart-wrap"><canvas id="chartDomain"></canvas></div><div class="donut-list" id="donutList"></div></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-header"><div><div class="card-title">最近活动</div><div class="card-subtitle">平台实时动态</div></div></div><div class="card-body" id="activityList" style="padding-top:0"></div></div>
+      <div class="card"><div class="card-header"><div><div class="card-title">系统健康</div><div class="card-subtitle">关键服务状态监控</div></div></div><div class="card-body" id="healthList" style="padding-top:0"></div></div>
+    </div>`;
+  renderStatsCards();
+  renderActivity();
+  renderHealth();
+  setTimeout(renderCharts, 100);
+}
+
+function renderStatsCards() {
+  const d = MOCK.stats;
+  document.getElementById('statsRow').innerHTML = [
+    { label:'今日发送', value:d.todaySent, sub:'↑ '+d.growth+'% 较昨日', trend:'up', icon:'ri-send-plane-line', iconCls:'green' },
+    { label:'送达数量', value:d.todayDelivered, sub:d.deliveryRate+'% 送达率', trend:'up', icon:'ri-check-double-line', iconCls:'orange' },
+    { label:'发送失败', value:d.todayFailed, sub:d.todayBounced+' 封退信', trend:'down', icon:'ri-close-circle-line', iconCls:'red' },
+    { label:'总邮件数', value:d.totalMails.toLocaleString(), sub:d.templates+' 个活跃模板', trend:'', icon:'ri-mail-line', iconCls:'blue' }
+  ].map(function(s) {
+    return '<div class="stat-card"><div class="stat-top"><span class="stat-label">'+s.label+'</span><div class="stat-icon '+s.iconCls+'"><i class="'+s.icon+'"></i></div></div><div class="stat-value">'+s.value.toLocaleString()+'</div><div class="stat-sub '+(s.trend||'')+'">'+(s.trend==='up'?'<i class="ri-arrow-up-line"></i>':s.trend==='down'?'<i class="ri-arrow-down-line"></i>':'')+s.sub+'</div></div>';
+  }).join('');
+}
+
+function renderCharts() {
+  Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+  Chart.defaults.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  Chart.defaults.font.family = "'PingFang SC','Microsoft YaHei',sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.plugins.tooltip.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-tooltip').trim();
+  Chart.defaults.plugins.tooltip.titleColor = getComputedStyle(document.documentElement).getPropertyValue('--text-inverse').trim();
+  Chart.defaults.plugins.tooltip.bodyColor = getComputedStyle(document.documentElement).getPropertyValue('--text-inverse').trim();
+
+  const ctx1 = document.getElementById('chartSendTrend');
+  if (ctx1) {
+    new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels: MOCK.chartData.labels,
+        datasets: [
+          { label:'发送量', data:MOCK.chartData.sent, borderColor:'#f97316', backgroundColor:'rgba(249,115,22,.08)', fill:true, tension:.35, pointRadius:3, pointHoverRadius:6, borderWidth:2 },
+          { label:'送达量', data:MOCK.chartData.delivered, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.06)', fill:true, tension:.35, pointRadius:3, pointHoverRadius:6, borderWidth:2 }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false, interaction:{intersect:false,mode:'index'}, plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:20}}}, scales:{x:{grid:{display:false}},y:{grid:{color:getComputedStyle(document.documentElement).getPropertyValue('--border-light').trim()},beginAtZero:false}}}
+    });
+  }
+
+  const ctx2 = document.getElementById('chartDomain');
+  if (ctx2) {
+    new Chart(ctx2, {
+      type: 'doughnut',
+      data: { labels:MOCK.domainData.labels, datasets:[{ data:MOCK.domainData.data, backgroundColor:MOCK.domainData.colors, borderWidth:0, hoverBorderWidth:0 }] },
+      options: { responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{display:false}} }
+    });
+    document.getElementById('donutList').innerHTML = MOCK.domainData.labels.map(function(l,i) {
+      return '<div class="donut-item"><span class="donut-color" style="background:'+MOCK.domainData.colors[i]+'"></span><span class="donut-label">'+l+'</span><span class="donut-value">'+MOCK.domainData.data[i]+'</span><span class="donut-pct">'+Math.round(MOCK.domainData.data[i]/MOCK.domainData.data.reduce(function(a,b){return a+b})*100)+'%</span></div>';
+    }).join('');
+  }
+}
+
+function renderActivity() {
+  document.getElementById('activityList').innerHTML = '<div class="activity-list">'+MOCK.recentActivity.map(function(a) {
+    return '<div class="activity-item"><div class="activity-icon '+a.iconColor+'"><i class="'+a.icon+'"></i></div><div class="activity-body"><div class="activity-title">'+a.title+'</div><div class="activity-desc">'+a.desc+'</div><div class="activity-time">'+a.time+'</div></div></div>';
+  }).join('')+'</div>';
+}
+
+function renderHealth() {
+  const services = [
+    { name:'SMTP 代理', status:'healthy', latency:'23ms', uptime:'99.99%' },
+    { name:'API 服务', status:'healthy', latency:'12ms', uptime:'99.97%' },
+    { name:'队列处理', status:'healthy', latency:'45ms', uptime:'99.95%' },
+    { name:'数据库连接', status:'healthy', latency:'8ms', uptime:'99.99%' },
+    { name:'CDN 分发', status:'degraded', latency:'156ms', uptime:'99.82%' }
+  ];
+  document.getElementById('healthList').innerHTML = services.map(function(s) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-light);"><div><div style="font-size:.83rem;font-weight:500;">'+s.name+'</div><div style="font-size:.7rem;color:var(--text-muted);">延迟: '+s.latency+' · 可用率: '+s.uptime+'</div></div><span class="badge '+(s.status==='healthy'?'badge-success':'badge-warning')+'">'+ (s.status==='healthy'?'正常':'降级')+'</span></div>';
+  }).join('');
+}
+
+/* ========== RENDER - USERS ========== */
+function renderUsers() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div><h2>用户管理</h2><p>管理平台所有注册用户与权限</p></div>
+      <button class="btn btn-primary" onclick="showCreateUserModal()"><i class="ri-user-add-line"></i>新建用户</button>
+    </div>
+    <div class="card"><div class="filter-bar">
+      <div class="filter-input"><i class="ri-search-line"></i><input placeholder="搜索用户名称或邮箱..." oninput="filterTable('userTable',this.value)" id="userSearch"></div>
+      <select class="filter-select" onchange="filterByStatus('userTable',this.value)">
+        <option value="all">全部状态</option><option value="active">已启用</option><option value="disabled">已禁用</option>
+      </select>
+      <div class="filter-grow"></div>
+      <button class="btn btn-secondary btn-sm"><i class="ri-filter-3-line"></i>筛选</button>
+      <button class="btn btn-ghost btn-sm"><i class="ri-download-line"></i>导出</button>
+    </div>
+    <div style="overflow-x:auto;"><table class="data-table" id="userTable"><thead><tr>
+      <th onclick="sortTable('userTable',0)">用户 <i class="ri-arrow-up-down-line"></i></th><th onclick="sortTable('userTable',1)">邮箱 <i class="ri-arrow-up-down-line"></i></th>
+      <th onclick="sortTable('userTable',2)">角色 <i class="ri-arrow-up-down-line"></i></th><th>状态</th><th>模板/邮件</th>
+      <th onclick="sortTable('userTable',5)">最后登录 <i class="ri-arrow-up-down-line"></i></th><th>操作</th>
+    </tr></thead><tbody id="userTableBody"></tbody></table></div>
+    <div class="pagination"><div class="pagination-info">共 <strong id="userTotal">0</strong> 条记录</div><div class="pagination-btns" id="userPagination"></div></div></div>`;
+  renderUserTable(MOCK.users);
+}
+
+function renderUserTable(data, page, perPage) {
+  page = page || 1; perPage = perPage || 6;
+  var start = (page - 1) * perPage;
+  var paged = data.slice(start, start + perPage);
+  document.getElementById('userTableBody').innerHTML = paged.map(function(u) {
+    return '<tr><td><div class="cell-primary">'+esc(u.name)+'</div><div class="cell-id">'+esc(u.id)+'</div></td><td>'+esc(u.email)+'</td><td>'+esc(u.role)+'</td><td>'+statusBadge(u.status)+'</td><td>'+u.templates+' / '+u.mails.toLocaleString()+'</td><td class="cell-secondary">'+u.lastLogin+'</td><td class="cell-actions"><button class="btn btn-ghost btn-xs" onclick="toast(\'查看用户详情\')"><i class="ri-eye-line"></i></button><button class="btn btn-ghost btn-xs" onclick="toast(\'编辑用户\')"><i class="ri-edit-line"></i></button><button class="btn btn-ghost btn-xs" style="color:var(--c-error)" onclick="toast(\'操作成功\')"><i class="ri-delete-bin-line"></i></button></td></tr>';
+  }).join('');
+  document.getElementById('userTotal').textContent = data.length;
+  var totalPages = Math.ceil(data.length / perPage);
+  var btns = '<button class="page-btn" '+(page<=1?'disabled':'')+' onclick="renderUserTable(MOCK.users,'+(page-1)+')"><i class="ri-arrow-left-s-line"></i></button>';
+  for (var i = 1; i <= totalPages; i++) { btns += '<button class="page-btn '+(i===page?'active':'')+'" onclick="renderUserTable(MOCK.users,'+i+')">'+i+'</button>'; }
+  btns += '<button class="page-btn" '+(page>=totalPages?'disabled':'')+' onclick="renderUserTable(MOCK.users,'+(page+1)+')"><i class="ri-arrow-right-s-line"></i></button>';
+  document.getElementById('userPagination').innerHTML = btns;
+}
+
+function filterTable(tableId, query) {
+  var rows = document.querySelectorAll('#'+tableId+' tbody tr');
+  rows.forEach(function(r) { r.style.display = r.textContent.toLowerCase().includes(query.toLowerCase()) ? '' : 'none'; });
+}
+function filterByStatus(tableId, status) {
+  var rows = document.querySelectorAll('#'+tableId+' tbody tr');
+  rows.forEach(function(r) {
+    if (status === 'all') { r.style.display = ''; return; }
+    r.style.display = r.textContent.toLowerCase().includes(status.toLowerCase()) ? '' : 'none';
+  });
+}
+var sortDirection = {};
+function sortTable(tableId, colIdx) {
+  var tbody = document.querySelector('#'+tableId+' tbody');
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  var key = tableId+'_'+colIdx;
+  sortDirection[key] = !sortDirection[key];
+  rows.sort(function(a,b) {
+    var va = a.cells[colIdx].textContent.trim();
+    var vb = b.cells[colIdx].textContent.trim();
+    var na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) return sortDirection[key] ? na-nb : nb-na;
+    return sortDirection[key] ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+function showCreateUserModal() {
+  showModal('新建用户',
+    '<div class="form-grid"><div class="form-group"><label class="form-label">姓名 <span class="required">*</span></label><input class="form-input" placeholder="如：张三"></div><div class="form-group"><label class="form-label">邮箱 <span class="required">*</span></label><input class="form-input" type="email" placeholder="user@example.com"></div><div class="form-group"><label class="form-label">角色 <span class="required">*</span></label><div class="form-select-wrapper"><select class="form-select"><option>用户</option><option>管理员</option></select></div></div><div class="form-group"><label class="form-label">密码 <span class="required">*</span></label><input class="form-input" type="password" placeholder="至少6位密码"></div></div>',
+    '<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="closeModal();toast(\'用户创建成功\')">创建用户</button>'
+  );
+}
+
+/* ========== RENDER - TEMPLATES ========== */
+function renderTemplates() {
+  var mc = document.getElementById('mainContent');
+  var cards = MOCK.templates.map(function(t) {
+    var catCls = t.category === 'VERIFY' ? 'orange' : t.category === 'NOTIFY' ? 'info' : t.category === 'MARKETING' ? 'warning' : 'muted';
+    return '<div class="card" style="cursor:pointer;transition:all var(--transition)" onmouseenter="this.style.borderColor=getComputedStyle(this).getPropertyValue(\'--orange-border\')" onmouseleave="this.style.borderColor=\'\'"><div class="card-header"><div><div class="card-title">'+esc(t.name)+'</div><div class="card-subtitle"><code style="font-size:.75rem;background:var(--bg-input);padding:2px 6px;border-radius:4px;color:var(--c-orange-500)">'+esc(t.code)+'</code></div></div><span class="badge badge-'+catCls+'">'+esc(t.category)+'</span></div><div class="card-body" style="padding-top:0"><div class="info-grid"><div class="info-item"><span class="info-label">版本</span><span class="info-value">v'+t.version+'</span></div><div class="info-item"><span class="info-label">变量</span><span class="info-value">'+t.vars.map(function(v){return '<code style="font-size:.72rem;background:var(--bg-input);padding:1px 6px;border-radius:4px;margin-right:4px">{{'+esc(v)+'}}</code>'}).join('')+'</span></div></div></div><div class="card-footer" style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-ghost btn-xs" onclick="toast(\'预览模板: '+esc(t.code)+'\')"><i class="ri-eye-line"></i> 预览</button><button class="btn btn-ghost btn-xs" onclick="toast(\'编辑模板\')"><i class="ri-edit-line"></i> 编辑</button><button class="btn btn-ghost btn-xs" style="color:var(--c-error)" onclick="toast(\'模板已删除\')"><i class="ri-delete-bin-line"></i></button></div></div>';
+  }).join('');
+  mc.innerHTML = '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;"><div><h2>模板管理</h2><p>管理邮件模板库，共计 '+MOCK.stats.templates+' 个模板</p></div><button class="btn btn-primary" onclick="showCreateTemplateModal()"><i class="ri-add-line"></i>创建模板</button></div><div class="tabs"><button class="tab-btn active">全部模板</button><button class="tab-btn">验证类</button><button class="tab-btn">通知类</button><button class="tab-btn">营销类</button><button class="tab-btn">系统类</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:18px;">'+cards+'</div>';
+}
+
+function showCreateTemplateModal() {
+  showModal('创建邮件模板',
+    '<div class="form-grid"><div class="form-group"><label class="form-label">模板编号 <span class="required">*</span></label><input class="form-input" placeholder="如：VERIFY_CODE"></div><div class="form-group"><label class="form-label">模板名称 <span class="required">*</span></label><input class="form-input" placeholder="如：验证码邮件"></div><div class="form-group"><label class="form-label">分类</label><div class="form-select-wrapper"><select class="form-select"><option>VERIFY</option><option>NOTIFY</option><option>MARKETING</option><option>SYSTEM</option></select></div></div><div class="form-group"><label class="form-label">邮件主题 <span class="required">*</span></label><input class="form-input" placeholder="如：您的验证码是 {{code}}"></div><div class="form-group full"><label class="form-label">HTML 内容 <span class="required">*</span></label><textarea class="form-textarea" placeholder="&lt;h1&gt;您的验证码：{{code}}&lt;/h1&gt;"></textarea><span class="form-hint">支持 Handlebars 模板语法，变量使用 {{变量名}}</span></div></div>',
+    '<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="closeModal();toast(\'模板创建成功\')">创建</button>'
+  );
+}
+
+/* ========== RENDER - API KEYS ========== */
+function renderAPI() {
+  var mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;"><div><h2>API 密钥</h2><p>共计 '+MOCK.stats.apiKeys+' 个密钥</p></div><button class="btn btn-primary" onclick="showCreateAPIKeyModal()"><i class="ri-add-line"></i>创建密钥</button></div>
+    <div class="card"><div class="filter-bar"><div class="filter-input"><i class="ri-search-line"></i><input placeholder="搜索密钥名称或前缀..." oninput="filterTable(\'apiTable\',this.value)"></div><div class="filter-grow"></div></div>
+    <div style="overflow-x:auto;"><table class="data-table" id="apiTable"><thead><tr><th>名称</th><th>前缀</th><th>权限</th><th>状态</th><th>最后使用</th><th>创建时间</th><th>操作</th></tr></thead><tbody>`+
+    MOCK.apiKeys.map(function(k) {
+      return '<tr><td class="cell-primary">'+esc(k.name)+'</td><td class="cell-id">'+esc(k.prefix)+'_****' + '</td><td>'+k.permissions.split(',').map(function(p){return '<span class="badge badge-info" style="margin-right:4px">'+p+'</span>'}).join('')+'</td><td>'+statusBadge(k.status)+'</td><td class="cell-secondary">'+k.lastUsed+'</td><td class="cell-secondary">'+k.created+'</td><td class="cell-actions"><button class="btn btn-ghost btn-xs" onclick="toast(\'密钥已'+(k.status==='active'?'禁用':'启用')+'\')">'+(k.status==='active'?'禁用':'启用')+'</button><button class="btn btn-ghost btn-xs" style="color:var(--c-error)" onclick="toast(\'密钥已删除\')"><i class="ri-delete-bin-line"></i></button></td></tr>';
+    }).join('')+
+    '</tbody></table></div></div>';
+}
+
+function showCreateAPIKeyModal() {
+  showModal('创建 API 密钥',
+    '<div class="form-group"><label class="form-label">名称 <span class="required">*</span></label><input class="form-input" placeholder="如：官网生产环境"></div><div class="form-group" style="margin-top:16px"><label class="form-label">权限</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">'+['send','read','manage','admin'].map(function(p){return '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;background:var(--bg-input);border-radius:var(--radius-sm);font-size:.82rem"><input type="checkbox" style="accent-color:var(--c-orange-500)" '+(p==='send'?'checked':'')+'> '+p+'</label>'}).join('')+'</div></div>',
+    '<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="closeModal();toast(\'密钥创建成功，请妥善保管\')">创建</button>'
+  );
+}
+
+/* ========== RENDER - PROVIDERS ========== */
+function renderProviders() {
+  var mc = document.getElementById('mainContent');
+  var cards = MOCK.providers.map(function(p) {
+    var typeCls = p.type === 'api' ? 'info' : p.type === 'smtp' ? 'orange' : 'muted';
+    return '<div class="card" style="cursor:pointer" onmouseenter="this.style.borderColor=getComputedStyle(this).getPropertyValue(\'--orange-border\')" onmouseleave="this.style.borderColor=\'\'"><div class="card-header"><div><div class="card-title">'+esc(p.name)+'</div><div class="card-subtitle">'+esc(p.detail)+'</div></div>'+statusBadge(p.status)+'</div><div class="card-body" style="padding-top:0"><div class="stat-value" style="font-size:1.4rem;margin-bottom:6px">'+p.todaySent.toLocaleString()+'</div><div class="stat-label">今日发送</div></div><div class="card-footer" style="display:flex;justify-content:space-between;align-items:center"><span class="badge badge-'+typeCls+'">'+esc(p.type)+'</span><div class="btn-group"><button class="btn btn-ghost btn-xs" onclick="toast(\'通道已'+(p.status==='enabled'?'禁用':'启用')+'\')">'+(p.status==='enabled'?'禁用':'启用')+'</button><button class="btn btn-ghost btn-xs" style="color:var(--c-error)" onclick="toast(\'通道已删除\')"><i class="ri-delete-bin-line"></i></button></div></div></div>';
+  }).join('');
+  mc.innerHTML = '<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;"><div><h2>发送通道</h2><p>共计 '+MOCK.stats.providers+' 个通道，今日累计发送 '+MOCK.providers.reduce(function(s,p){return s+p.todaySent},0).toLocaleString()+' 封</p></div><button class="btn btn-primary" onclick="toast(\'通道创建成功\')"><i class="ri-add-line"></i>添加通道</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px">'+cards+'</div>';
+}
+
+/* ========== RENDER - LOGS ========== */
+function renderLogs() {
+  var mc = document.getElementById('mainContent');
+  var totalLogs = MOCK.logs.length;
+  mc.innerHTML = `
+    <div class="page-header"><div><h2>发送日志</h2><p>实时邮件投递记录，最近 '+totalLogs+' 条</p></div></div>
+    <div class="card"><div class="filter-bar">
+      <div class="filter-input"><i class="ri-search-line"></i><input placeholder="搜索收件人或主题..." oninput="filterTable(\'logTable\',this.value)"></div>
+      <select class="filter-select" onchange="filterByStatus(\'logTable\',this.value)"><option value="all">全部状态</option><option value="sent">已发送</option><option value="failed">失败</option><option value="bounced">退信</option></select>
+      <div class="filter-grow"></div>
+    </div>
+    <div style="overflow-x:auto;"><table class="data-table" id="logTable"><thead><tr><th onclick="sortTable(\'logTable\',0)">时间 <i class="ri-arrow-up-down-line"></i></th><th>收件人</th><th>主题</th><th>分类</th><th>状态</th><th>重试</th></tr></thead><tbody>`+
+    MOCK.logs.map(function(l) {
+      var catCls = l.category === 'VERIFY' ? 'orange' : l.category === 'NOTIFY' ? 'info' : l.category === 'MARKETING' ? 'warning' : 'muted';
+      return '<tr><td class="cell-secondary">'+l.time+'</td><td class="cell-primary">'+esc(l.to)+'</td><td>'+esc(l.subject)+'</td><td><span class="badge badge-'+catCls+'">'+esc(l.category)+'</span></td><td>'+statusBadge(l.status)+'</td><td>'+l.retry+'</td></tr>';
+    }).join('')+
+    '</tbody></table></div><div class="pagination"><div class="pagination-info">显示 <strong>1-'+totalLogs+'</strong> 条，共 <strong>4,856</strong> 条</div><div class="pagination-btns"><button class="page-btn active">1</button><button class="page-btn">2</button><button class="page-btn">3</button><button class="page-btn"><i class="ri-arrow-right-s-line"></i></button></div></div></div>`;
+}
+
+/* ========== RENDER - SETTINGS ========== */
+function renderSettings() {
+  var mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header"><div><h2>系统设置</h2><p>平台配置与偏好管理</p></div></div>
+    <div style="display:flex;gap:28px">
+      <div class="settings-nav">
+        <button class="settings-nav-item active" onclick="switchSettingsTab('general',this)">基本设置</button>
+        <button class="settings-nav-item" onclick="switchSettingsTab('security',this)">安全策略</button>
+        <button class="settings-nav-item" onclick="switchSettingsTab('notification',this)">通知配置</button>
+        <button class="settings-nav-item" onclick="switchSettingsTab('advanced',this)">高级选项</button>
+      </div>
+      <div class="settings-content card" style="flex:1"><div class="card-body" id="settingsContent"></div></div>
+    </div>`;
+  renderGeneralSettings();
+}
+
+function switchSettingsTab(tab, btn) {
+  document.querySelectorAll('.settings-nav-item').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  if (tab === 'general') renderGeneralSettings();
+  else if (tab === 'security') renderSecuritySettings();
+  else if (tab === 'notification') renderNotificationSettings();
+  else renderAdvancedSettings();
+}
+
+function renderGeneralSettings() {
+  document.getElementById('settingsContent').innerHTML = `
+    <div class="form-section"><div class="form-section-title">站点信息</div><div class="form-grid">
+      <div class="form-group"><label class="form-label">站点名称 <span class="required">*</span></label><input class="form-input" value="Teaven Email"></div>
+      <div class="form-group"><label class="form-label">站点描述</label><input class="form-input" placeholder="多租户邮件管理平台"></div>
+      <div class="form-group"><label class="form-label">管理员邮箱 <span class="required">*</span></label><input class="form-input" value="admin@teaven.com"></div>
+      <div class="form-group"><label class="form-label">默认语言</label><div class="form-select-wrapper"><select class="form-select"><option>简体中文</option><option>English</option></select></div></div>
+    </div></div>
+    <div class="form-section"><div class="form-section-title">偏好设置</div><div class="form-grid">
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">启用新用户自动激活</span></div></div>
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">启用每日邮件报告</span></div></div>
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle" onclick="this.classList.toggle('on')"></div><span class="toggle-label">启用调试模式</span></div></div>
+    </div></div>
+    <div style="margin-top:28px;text-align:right"><button class="btn btn-primary" onclick="toast('设置已保存')">保存设置</button></div>`;
+}
+
+function renderSecuritySettings() {
+  document.getElementById('settingsContent').innerHTML = `
+    <div class="form-section"><div class="form-section-title">密码策略</div><div class="form-grid">
+      <div class="form-group"><label class="form-label">最小密码长度</label><input class="form-input" type="number" value="8"></div>
+      <div class="form-group"><label class="form-label">密码过期天数</label><input class="form-input" type="number" value="90" placeholder="0 表示永不过期"></div>
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">要求包含特殊字符</span></div></div>
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">启用双因素认证（2FA）</span></div></div>
+    </div></div>
+    <div class="form-section"><div class="form-section-title">API 安全</div><div class="form-grid">
+      <div class="form-group"><label class="form-label">请求频率限制（次/分钟）</label><input class="form-input" type="number" value="60"></div>
+      <div class="form-group"><label class="form-label">Token 过期时间（小时）</label><input class="form-input" type="number" value="24"></div>
+    </div></div>
+    <div style="margin-top:28px;text-align:right"><button class="btn btn-primary" onclick="toast('安全设置已保存')">保存设置</button></div>`;
+}
+
+function renderNotificationSettings() {
+  document.getElementById('settingsContent').innerHTML = `
+    <div class="form-section"><div class="form-section-title">通知渠道</div><div class="form-grid">
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">邮件通知（发送失败告警）</span></div></div>
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle on" onclick="this.classList.toggle('on')"></div><span class="toggle-label">Webhook 回调通知</span></div></div>
+      <div class="form-group full"><div class="toggle-wrapper"><div class="toggle" onclick="this.classList.toggle('on')"></div><span class="toggle-label">每日汇总报告邮件</span></div></div>
+    </div></div>
+    <div class="form-section"><div class="form-section-title">Webhook 配置</div><div class="form-grid">
+      <div class="form-group full"><label class="form-label">回调 URL</label><input class="form-input" placeholder="https://your-app.com/webhook/email"></div>
+      <div class="form-group full"><label class="form-label">签名密钥</label><input class="form-input" type="password" value="whsec_xxxxxxxxxxxx"></div>
+    </div></div>
+    <div style="margin-top:28px;text-align:right"><button class="btn btn-primary" onclick="toast('通知设置已保存')">保存设置</button></div>`;
+}
+
+function renderAdvancedSettings() {
+  document.getElementById('settingsContent').innerHTML = `
+    <div class="form-section"><div class="form-section-title">性能配置</div><div class="form-grid">
+      <div class="form-group"><label class="form-label">连接超时（毫秒）</label><input class="form-input" type="number" value="30000"></div>
+      <div class="form-group"><label class="form-label">最大重试次数</label><input class="form-input" type="number" value="3"></div>
+      <div class="form-group"><label class="form-label">并发连接数</label><input class="form-input" type="number" value="100"></div>
+      <div class="form-group"><label class="form-label">日志保留天数</label><input class="form-input" type="number" value="90"></div>
+    </div></div>
+    <div class="form-section"><div class="form-section-title">危险操作</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="btn btn-danger" onclick="toast('缓存已清除','warning')"><i class="ri-delete-back-2-line"></i>清除系统缓存</button>
+        <button class="btn btn-danger" onclick="toast('日志已清理','warning')"><i class="ri-history-line"></i>清理过期日志</button>
+      </div>
+    </div>
+    <div style="margin-top:28px;text-align:right"><button class="btn btn-primary" onclick="toast('设置已保存')">保存设置</button></div>`;
+}
+
+/* ========== MAIN ========== */
+function renderPage(page) {
+  var map = { dashboard:renderDashboard, users:renderUsers, templates:renderTemplates, api:renderAPI, providers:renderProviders, logs:renderLogs, settings:renderSettings };
+  (map[page] || renderDashboard)();
+}
+
+/* ========== INIT ========== */
+initTheme();
+initSidebar();
+renderPage('dashboard');
+</script>
+</body>
+</html>
