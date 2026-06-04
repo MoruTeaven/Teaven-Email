@@ -1469,7 +1469,7 @@ export function getAdminHTML(): string {
             '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">API Key（仅显示一次）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
-            '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\'tenants\');" style="width: 100%;">关闭</button>' +
+            '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\\'tenants\\');" style="width: 100%;">关闭</button>' +
           '</div>';
           toast('租户创建成功');
         } else {
