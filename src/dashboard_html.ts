@@ -601,10 +601,12 @@ export function getDashboardHTML(): string {
           \` : \`
             <div class="list-card">
               \${keys.map(function(k) {
+                var permLabels = {SEND_MAIL:'发送邮件',MANAGE_TEMPLATE:'管理模板',READ_LOG:'读取日志',MANAGE_PROVIDER:'管理通道'};
+                var perms = (k.permissions||[]).map(function(p){return permLabels[p]||p;}).join(' · ');
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' + esc(k.name) + '</div>' +
-                    '<div class="list-item-subtitle">前缀: ' + esc(k.prefix) + '*** · 最后使用: ' + (k.last_used_at ? new Date(k.last_used_at).toLocaleString('zh-CN') : '从未使用') + '</div>' +
+                    '<div class="list-item-subtitle">权限: ' + perms + ' · 前缀: ' + esc(k.prefix) + '*** · 最后使用: ' + (k.last_used_at ? new Date(k.last_used_at).toLocaleString('zh-CN') : '从未使用') + '</div>' +
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (k.enabled ? 'badge-success' : 'badge-muted') + '">' + (k.enabled ? '启用' : '禁用') + '</span>' +
@@ -631,10 +633,10 @@ export function getDashboardHTML(): string {
         '<div class="form-group">' +
           '<label class="form-label">权限</label>' +
           '<div style="display: flex; flex-wrap: wrap; gap: 12px;">' +
-            ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'].map(function(p) {
+            [{v:'SEND_MAIL',l:'发送邮件'},{v:'MANAGE_TEMPLATE',l:'管理模板'},{v:'READ_LOG',l:'读取日志'},{v:'MANAGE_PROVIDER',l:'管理通道'}].map(function(p) {
               return '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; background: var(--bg-base); border-radius: var(--radius-md);">' +
-                '<input type="checkbox" value="' + p + '" ' + (p === 'SEND_MAIL' ? 'checked' : '') + ' class="ak-perm" style="accent-color: var(--primary);">' +
-                '<span style="font-size: 0.85rem;">' + p + '</span>' +
+                '<input type="checkbox" value="' + p.v + '" ' + (p.v === 'SEND_MAIL' ? 'checked' : '') + ' class="ak-perm" style="accent-color: var(--primary);">' +
+                '<span style="font-size: 0.85rem;">' + p.l + '</span>' +
               '</label>';
             }).join('') +
           '</div>' +

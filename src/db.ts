@@ -59,14 +59,30 @@ export function getDB(db: D1Database) {
     },
 
     async createApiKey(apiKey: Omit<ApiKey, 'created_at' | 'updated_at'>): Promise<void> {
-      await db.prepare(
-        `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, permissions, enabled, auto_created, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(
-        apiKey.id, apiKey.user_id, apiKey.name, apiKey.api_key_hash,
-        apiKey.api_key_prefix, JSON.stringify(apiKey.permissions), apiKey.enabled,
-        apiKey.auto_created ?? 0, apiKey.expires_at ?? null
-      ).run();
+      try {
+        await db.prepare(
+          `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, permissions, enabled, auto_created, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          apiKey.id, apiKey.user_id, apiKey.name, apiKey.api_key_hash,
+          apiKey.api_key_prefix, JSON.stringify(apiKey.permissions), apiKey.enabled,
+          apiKey.auto_created ?? 0, apiKey.expires_at ?? null
+        ).run();
+      } catch (err) {
+        // 兼容 migration 005 未应用到生产库的情况（auto_created / expires_at 列不存在）
+        if (err instanceof Error && (err.message.includes('auto_created') || err.message.includes('no such column'))) {
+          console.warn('[db] auto_created column missing, creating api key without auto_created/expires_at. Run migration 005.');
+          await db.prepare(
+            `INSERT INTO api_keys (id, user_id, name, api_key_hash, api_key_prefix, permissions, enabled)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            apiKey.id, apiKey.user_id, apiKey.name, apiKey.api_key_hash,
+            apiKey.api_key_prefix, JSON.stringify(apiKey.permissions), apiKey.enabled
+          ).run();
+          return;
+        }
+        throw err;
+      }
     },
 
     async updateApiKeyLastUsed(id: string): Promise<void> {
@@ -88,10 +104,19 @@ export function getDB(db: D1Database) {
     },
 
     async cleanupExpiredKeys(): Promise<number> {
-      const result = await db.prepare(
-        `DELETE FROM api_keys WHERE auto_created = 1 AND expires_at IS NOT NULL AND expires_at <= datetime('now')`
-      ).run();
-      return result.meta?.changes ?? 0;
+      try {
+        const result = await db.prepare(
+          `DELETE FROM api_keys WHERE auto_created = 1 AND expires_at IS NOT NULL AND expires_at <= datetime('now')`
+        ).run();
+        return result.meta?.changes ?? 0;
+      } catch (err) {
+        // 兼容 migration 005 未应用到生产库的情况（auto_created / expires_at 列不存在）
+        if (err instanceof Error && (err.message.includes('auto_created') || err.message.includes('no such column'))) {
+          console.warn('[db] auto_created column missing, skipping cleanupExpiredKeys. Run migration 005.');
+          return 0;
+        }
+        throw err;
+      }
     },
 
     // ============ 发送通道 (全局，不绑定用户) ============
