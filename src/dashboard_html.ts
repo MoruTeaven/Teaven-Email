@@ -1055,7 +1055,7 @@ export function getDashboardHTML(): string {
           '</div>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="ak-create-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -1189,7 +1189,7 @@ export function getDashboardHTML(): string {
         '</div>' +
         (isEdit ? '<div class="form-group"><label class="form-label">更新说明</label><input class="form-input" id="tmpl-changelog" placeholder="如：修改了按钮颜色"></div>' : '') +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="tmpl-save-btn">' + (isEdit ? '更新' : '创建') + '</button>' +
         '</div>' +
       '</div>';
@@ -1251,7 +1251,7 @@ export function getDashboardHTML(): string {
         '</div>' +
         '<div id="pv-result" style="margin: 20px 0;"></div>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">关闭</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">关闭</button>' +
           '<button class="btn btn-primary" id="pv-refresh">刷新预览</button>' +
         '</div>' +
       '</div>';
@@ -1391,7 +1391,7 @@ export function getDashboardHTML(): string {
           '<input class="form-input" id="rt-priority" type="number" value="0">' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="rt-save-btn">创建</button>' +
         '</div>' +
       '</div>';
