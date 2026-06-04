@@ -1479,7 +1479,7 @@ export function getAdminHTML(): string {
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
-    // 模拟登录
+    // 模拟登录（使用签名临时令牌，24h有效，不创建永久API Key）
     async function impersonateTenant(tid) {
       var resp = await api('/admin/tenants/' + tid + '/impersonate', { method: 'POST' });
       if (!resp.success) { toast(resp.error, 'error'); return; }
@@ -1490,13 +1490,13 @@ export function getAdminHTML(): string {
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal" style="border-color: var(--primary);">' +
         '<div style="text-align: center; margin-bottom: 24px;">' +
-          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-user" style="color: var(--primary);"></span></div>' +
+          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-user-secret" style="color: var(--primary);"></span></div>' +
           '<div class="modal-title" style="text-align: center;">模拟登录</div>' +
         '</div>' +
         '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
-        '<p style="color: var(--text-muted); margin-bottom: 12px;">生成的 API Key（仅显示一次）：</p>' +
-        '<div class="code-block" style="margin-bottom: 16px;">' + esc(resp.data.api_key.key) + '</div>' +
-        '<p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 16px;">切换后将进入该租户的管理后台，原始超管 Key 已暂存</p>' +
+        '<p style="color: var(--text-muted); margin-bottom: 12px;">临时令牌（24小时有效，无需管理）：</p>' +
+        '<div class="code-block" style="margin-bottom: 12px; font-size: 0.78rem;">' + esc(resp.data.impersonation_token) + '</div>' +
+        '<p style="color: var(--warning); font-size: 0.78rem; margin-bottom: 16px;"><span class="fas fa-info-circle"></span> 令牌24小时后自动过期，无需手动清理。到期后需重新模拟登录。</p>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
           '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button>' +
@@ -1506,7 +1506,7 @@ export function getAdminHTML(): string {
 
       overlay.querySelector('#impersonate-switch-btn').addEventListener('click', function() {
         localStorage.setItem('teaven_super_admin_key_backup', origKey);
-        localStorage.setItem('teaven_api_key', resp.data.api_key.key);
+        localStorage.setItem('teaven_api_key', resp.data.impersonation_token);
         localStorage.setItem('teaven_email', resp.data.user.email);
         window.location.href = '/dashboard';
       });

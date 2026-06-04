@@ -1,6 +1,6 @@
 // Teaven Email - 超级管理员路由（跨租户管理）
 import { Hono } from 'hono';
-import { superAdminMiddleware, generateApiKey } from '../auth';
+import { superAdminMiddleware, generateApiKey, generateImpersonationToken } from '../auth';
 import { getDB } from '../db';
 import { sendEmail } from '../mailer';
 import type { Permission } from '../types';
@@ -110,7 +110,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
   }, 201);
 });
 
-// POST /v1/admin/tenants/:id/impersonate - 模拟登录任意租户（为其生成 API Key）
+// POST /v1/admin/tenants/:id/impersonate - 模拟登录任意租户（返回签名临时令牌，24h有效） 
 adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
   const id = c.req.param('id');
@@ -123,28 +123,22 @@ adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) =
     return c.json({ success: false, error: 'Tenant is not active' }, 400);
   }
 
-  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
-  const { raw, hash, prefix } = await generateApiKey();
-  const apiKeyId = crypto.randomUUID();
+  const secret = c.env.IMPERSONATION_SECRET || '';
+  if (!secret) {
+    return c.json({ success: false, error: 'Impersonation not configured' }, 500);
+  }
 
-  await db.createApiKey({
-    id: apiKeyId,
-    user_id: user.id,
-    name: 'Admin Impersonation',
-    api_key_hash: hash,
-    api_key_prefix: prefix,
-    permissions: allPermissions,
-    enabled: 1,
-    last_used_at: null,
-  });
+  // 生成签名模拟令牌（24小时有效），不再创建永久 API Key
+  const token = await generateImpersonationToken(user.id, secret);
 
   return c.json({
     success: true,
     data: {
       user: { id: user.id, name: user.name, email: user.email },
-      api_key: { id: apiKeyId, name: 'Admin Impersonation', key: raw, prefix, permissions: allPermissions },
+      impersonation_token: token,
+      expires_in: 24 * 60 * 60, // 24 hours in seconds
     },
-  }, 201);
+  }, 200);
 });
 
 // ========== 全局发送通道管理 ==========

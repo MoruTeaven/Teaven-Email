@@ -197,6 +197,7 @@ export interface ApiResponse<T = unknown> {
 
 export interface AuthContext {
   userId: string;
-  apiKeyId: string;
+  apiKeyId: string | null;  // null when using impersonation token
   permissions: Permission[];
+  impersonated?: boolean;    // true when using impersonation token
 }

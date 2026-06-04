@@ -762,6 +762,46 @@ export function getDashboardHTML(): string {
       gap: 12px;
     }
 
+    /* ========== 模拟登录提示条 ========== */
+    .impersonation-banner {
+      position: fixed;
+      top: 0;
+      left: 280px;
+      right: 0;
+      background: linear-gradient(135deg, oklch(55% 0.18 42 / 0.25), oklch(48% 0.14 35 / 0.25));
+      border-bottom: 1px solid oklch(55% 0.18 42 / 0.3);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+    }
+    .impersonation-banner.hidden { display: none; }
+    .impersonation-banner-text {
+      font-size: 0.8rem;
+      color: var(--warning);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .impersonation-banner-btn {
+      padding: 6px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+    .impersonation-banner-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+    }
+
     /* ========== 响应式 ========== */
     @media (max-width: 1200px) {
       .stats-grid {
@@ -839,6 +879,15 @@ export function getDashboardHTML(): string {
         </div>
       </div>
     </nav>
+    <div class="impersonation-banner hidden" id="impersonation-banner">
+      <div class="impersonation-banner-text">
+        <span class="fas fa-user-secret"></span>
+        正在以管理员身份模拟登录此租户 · 令牌24小时后自动过期
+      </div>
+      <button class="impersonation-banner-btn" onclick="exitImpersonation()">
+        <span class="fas fa-arrow-left"></span> 返回管理员后台
+      </button>
+    </div>
     <main class="main" id="main-content"></main>
   </div>
   <div id="toast-container"></div>
@@ -846,6 +895,23 @@ export function getDashboardHTML(): string {
   <script>
     const API_BASE = '/v1';
     const API_KEY = localStorage.getItem('teaven_api_key') || '';
+
+    // 检测模拟登录并显示提示条
+    var isImpersonated = API_KEY.startsWith('imp_');
+    if (isImpersonated) {
+      document.getElementById('impersonation-banner').classList.remove('hidden');
+      document.querySelector('.main').style.paddingTop = '56px';
+    }
+
+    function exitImpersonation() {
+      var adminKey = localStorage.getItem('teaven_super_admin_key_backup');
+      if (adminKey) {
+        localStorage.setItem('teaven_admin_key', adminKey);
+        localStorage.removeItem('teaven_super_admin_key_backup');
+      }
+      localStorage.removeItem('teaven_api_key');
+      window.location.href = '/admin';
+    }
 
     function esc(s) {
       if (!s) return '';
@@ -1247,7 +1313,7 @@ export function getDashboardHTML(): string {
         '<div class="modal-title">预览模板: ' + esc(code) + '</div>' +
         '<div class="form-group">' +
           '<label class="form-label">测试变量 (JSON)</label>' +
-          '<input class="form-input" id="pv-vars" placeholder=\'{"code":"123456"}\' value="{}">' +
+          '<input class="form-input" id="pv-vars" placeholder=\\'{"code":"123456"}\\' value="{}">' +
         '</div>' +
         '<div id="pv-result" style="margin: 20px 0;"></div>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +

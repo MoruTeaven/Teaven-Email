@@ -8,6 +8,7 @@ declare global {
     R2: R2Bucket;
     ENVIRONMENT: string;
     JWT_SECRET: string;
+    IMPERSONATION_SECRET: string;
   }
 }
 

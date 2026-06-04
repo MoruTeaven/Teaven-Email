@@ -18,6 +18,7 @@ bucket_name = "teaven-email"
 [vars]
 ENVIRONMENT = "production"
 JWT_SECRET = "d83fa2e1c4b97f6a82d5e3c1f9470b2a6e8d4c5f1a3b7e9d2c6f8a4b0e1d3c5f"
+IMPERSONATION_SECRET = "f7e3a1b9c5d2e8f4a6b0c3d7e1f5a9b2c4d6e8f0a3b5c7d9e1f4a6b8c0d2e5"
 
 [observability]
 enabled = true
