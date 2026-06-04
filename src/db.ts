@@ -281,6 +281,32 @@ export function getDB(db: D1Database) {
       ).bind(id, userId).run();
     },
 
+    // 超管用：获取所有分类路由（含用户、通道、账号信息）
+    async getAllCategoryRoutesAdmin(): Promise<(CategoryRoute & { user_name: string; user_email: string; provider_name: string; account_email: string | null })[]> {
+      const result = await db.prepare(
+        `SELECT cr.*,
+                u.name as user_name, u.email as user_email,
+                p.name as provider_name,
+                a.email as account_email
+         FROM category_routes cr
+         JOIN users u ON cr.user_id = u.id
+         JOIN providers p ON cr.provider_id = p.id
+         LEFT JOIN accounts a ON cr.account_id = a.id
+         ORDER BY cr.user_id, cr.priority DESC`
+      ).all();
+      return result.results as any;
+    },
+
+    // 超管用：按 ID 删除分类路由（不校验 user_id）
+    async deleteCategoryRouteById(id: string): Promise<void> {
+      await db.prepare('DELETE FROM category_routes WHERE id = ?').bind(id).run();
+    },
+
+    // 超管用：查询分类路由是否存在
+    async getCategoryRouteById(id: string): Promise<CategoryRoute | null> {
+      return db.prepare('SELECT * FROM category_routes WHERE id = ?').bind(id).first<CategoryRoute>();
+    },
+
     // ============ Mail Logs ============
     async createMailLog(log: Omit<MailLog, 'created_at'>): Promise<void> {
       await db.prepare(

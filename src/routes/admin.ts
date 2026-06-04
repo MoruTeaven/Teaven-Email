@@ -285,6 +285,88 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true });
 });
 
+// ========== 分类路由管理（超管统一管理，租户只读） ==========
+
+// GET /v1/admin/routes - 获取所有分类路由（含用户、通道、账号信息）
+adminRouter.get('/routes', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+  const routes = await db.getAllCategoryRoutesAdmin();
+  return c.json({ success: true, data: routes });
+});
+
+// POST /v1/admin/routes - 为指定租户创建分类路由
+adminRouter.post('/routes', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+
+  let body: {
+    user_id: string;
+    category: string;
+    provider_id: string;
+    account_id?: string;
+    priority?: number;
+  };
+  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  if (!body.user_id || !body.category || !body.provider_id) {
+    return c.json({ success: false, error: 'user_id, category and provider_id are required' }, 400);
+  }
+
+  if (!['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'].includes(body.category)) {
+    return c.json({ success: false, error: 'category must be VERIFY, NOTIFY, MARKETING, or SYSTEM' }, 400);
+  }
+
+  // 验证用户存在
+  const user = await db.getUserById(body.user_id);
+  if (!user) {
+    return c.json({ success: false, error: 'User not found' }, 404);
+  }
+
+  // 验证 provider 存在
+  const provider = await db.getProviderById(body.provider_id);
+  if (!provider) {
+    return c.json({ success: false, error: 'Provider not found' }, 404);
+  }
+
+  // 如果指定了 account_id，验证其存在且属于该 provider
+  if (body.account_id) {
+    const account = await db.getAccountById(body.account_id);
+    if (!account) {
+      return c.json({ success: false, error: 'Account not found' }, 404);
+    }
+    if (account.provider_id !== body.provider_id) {
+      return c.json({ success: false, error: 'Account does not belong to the specified provider' }, 400);
+    }
+  }
+
+  const route = {
+    id: crypto.randomUUID(),
+    user_id: body.user_id,
+    category: body.category,
+    provider_id: body.provider_id,
+    account_id: body.account_id || null,
+    priority: body.priority || 0,
+    enabled: 1,
+  };
+
+  await db.createCategoryRoute(route);
+
+  return c.json({ success: true, data: route }, 201);
+});
+
+// DELETE /v1/admin/routes/:id - 删除分类路由
+adminRouter.delete('/routes/:id', superAdminMiddleware(), async (c) => {
+  const db = getDB(c.env.DB);
+  const id = c.req.param('id');
+
+  const existing = await db.getCategoryRouteById(id);
+  if (!existing) {
+    return c.json({ success: false, error: 'Route not found' }, 404);
+  }
+
+  await db.deleteCategoryRouteById(id);
+  return c.json({ success: true, message: 'Route deleted' });
+});
+
 // ========== 跨租户统计 ==========
 
 // POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置

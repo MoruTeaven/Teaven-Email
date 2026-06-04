@@ -894,6 +894,15 @@ export function getDashboardHTML(): string {
 
   <script>
     const API_BASE = '/v1';
+    // 支持通过 URL 参数传递模拟登录令牌（新窗口打开方式）
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var impToken = params.get('imp_token');
+      if (impToken) {
+        localStorage.setItem('teaven_api_key', impToken);
+        window.history.replaceState({}, '', '/dashboard');
+      }
+    })();
     const API_KEY = localStorage.getItem('teaven_api_key') || '';
 
     // 检测模拟登录并显示提示条
@@ -1338,7 +1347,7 @@ export function getDashboardHTML(): string {
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
-    // 发送通道
+    // 发送通道（只读 + 分类路由只读展示）
     async function renderProviders(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
       var pResp = await api('/providers');
@@ -1352,135 +1361,52 @@ export function getDashboardHTML(): string {
           <p class="page-subtitle">MAIL DELIVERY PROVIDERS CONFIGURATION</p>
         </div>
 
-        <div class="tabs">
-          <button class="tab active" onclick="switchProviderTab('providers')">发送通道列表</button>
-          <button class="tab" onclick="switchProviderTab('routes')">分类路由</button>
-        </div>
-
-        <div id="provider-tab-providers">
-          <div class="card">
-            \${providers.length === 0 ? \`
-              <div class="empty-state">
-                <div class="empty-icon"><span class="fas fa-plug"></span></div>
-                <div class="empty-title">暂无发送通道</div>
-                <div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div>
-              </div>
-            \` : \`
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-                \${providers.map(function(p) {
-                  var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
-                  var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
-                  return '<div style="background: var(--bg-base); border-radius: var(--radius-md); padding: 20px;">' +
-                    '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">' +
-                      '<div style="font-weight: 600; font-size: 1.05rem;">' + esc(p.name) + '</div>' +
-                      '<span class="badge ' + (p.enabled ? 'badge-success' : 'badge-muted') + '">' + (p.enabled ? '启用' : '禁用') + '</span>' +
-                    '</div>' +
-                    '<div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">' + esc(configInfo) + '</div>' +
-                    '<span class="badge badge-info">' + esc(p.type) + '</span>' +
-                  '</div>';
-                }).join('')}
-              </div>
-            \`}
-          </div>
-        </div>
-
-        <div id="provider-tab-routes" style="display: none;">
-          <div class="toolbar">
-            <div class="toolbar-left"></div>
-            <div class="toolbar-right">
-              <button class="btn btn-primary" onclick="showRouteModal()">
-                <span class="fas fa-plus"></span>
-                添加路由规则
-              </button>
+        <div class="card">
+          \${providers.length === 0 ? \`
+            <div class="empty-state">
+              <div class="empty-icon"><span class="fas fa-plug"></span></div>
+              <div class="empty-title">暂无发送通道</div>
+              <div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div>
             </div>
-          </div>
-          <div class="card">
-            \${routes.length === 0 ? \`
-              <div class="empty-state">
-                <div class="empty-icon"><span class="fas fa-code-branch"></span></div>
-                <div class="empty-title">暂无路由规则</div>
-                <div class="empty-desc">配置不同邮件分类使用不同的发送通道发送</div>
-              </div>
-            \` : \`
+          \` : \`
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+              \${providers.map(function(p) {
+                var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
+                var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
+                return '<div style="background: var(--bg-base); border-radius: var(--radius-md); padding: 20px;">' +
+                  '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">' +
+                    '<div style="font-weight: 600; font-size: 1.05rem;">' + esc(p.name) + '</div>' +
+                    '<span class="badge ' + (p.enabled ? 'badge-success' : 'badge-muted') + '">' + (p.enabled ? '启用' : '禁用') + '</span>' +
+                  '</div>' +
+                  '<div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">' + esc(configInfo) + '</div>' +
+                  '<span class="badge badge-info">' + esc(p.type) + '</span>' +
+                '</div>';
+              }).join('')}
+            </div>
+          \`}
+        </div>
+
+        \${routes.length > 0 ? \`
+          <div style="margin-top: 32px;">
+            <div class="page-header" style="margin-bottom: 16px;">
+              <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">分类路由</h2>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin: 4px 0 0;">由管理员统一配置，你当前生效的路由规则</p>
+            </div>
+            <div class="card">
               <div class="list-card">
                 \${routes.map(function(r) {
                   return '<div class="list-item">' +
                     '<div class="list-item-info">' +
                       '<div class="list-item-title"><span class="badge badge-info">' + esc(r.category) + '</span></div>' +
-                      '<div class="list-item-subtitle">发送通道: ' + esc(r.provider_id) + ' · 优先级: ' + r.priority + '</div>' +
-                    '</div>' +
-                    '<div class="list-item-actions">' +
-                      '<button class="btn btn-sm btn-danger" data-rid="' + esc(r.id) + '" onclick="deleteRoute(this.dataset.rid)">删除</button>' +
+                      '<div class="list-item-subtitle">通道: ' + esc(r.provider_id) + (r.account_id ? ' · 账号: ' + esc(r.account_id) : ' · 自动选择账号') + ' · 优先级: ' + r.priority + '</div>' +
                     '</div>' +
                   '</div>';
                 }).join('')}
               </div>
-            \`}
+            </div>
           </div>
-        </div>
+        \` : ''}
       \`;
-    }
-
-    function switchProviderTab(tab) {
-      ['providers', 'routes'].forEach(function(t) {
-        document.getElementById('provider-tab-' + t).style.display = t === tab ? 'block' : 'none';
-      });
-      document.querySelectorAll('.tab').forEach(function(b, i) {
-        b.classList.toggle('active', ['providers', 'routes'][i] === tab);
-      });
-    }
-
-    function showRouteModal() {
-      var overlay = document.createElement('div');
-      overlay.className = 'modal-overlay';
-      overlay.innerHTML = '<div class="modal">' +
-        '<div class="modal-title">添加分类路由</div>' +
-        '<div class="form-group">' +
-          '<label class="form-label">分类 *</label>' +
-          '<select class="form-select" id="rt-category">' +
-            '<option value="VERIFY">VERIFY</option>' +
-            '<option value="NOTIFY">NOTIFY</option>' +
-            '<option value="MARKETING">MARKETING</option>' +
-            '<option value="SYSTEM">SYSTEM</option>' +
-          '</select>' +
-        '</div>' +
-        '<div class="form-group">' +
-          '<label class="form-label">发送通道 ID *</label>' +
-          '<input class="form-input" id="rt-provider" placeholder="发送通道 ID">' +
-        '</div>' +
-        '<div class="form-group">' +
-          '<label class="form-label">账号 ID（可选）</label>' +
-          '<input class="form-input" id="rt-account" placeholder="留空则自动选择">' +
-        '</div>' +
-        '<div class="form-group">' +
-          '<label class="form-label">优先级</label>' +
-          '<input class="form-input" id="rt-priority" type="number" value="0">' +
-        '</div>' +
-        '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
-          '<button class="btn btn-primary" id="rt-save-btn">创建</button>' +
-        '</div>' +
-      '</div>';
-      document.body.appendChild(overlay);
-
-      overlay.querySelector('#rt-save-btn').addEventListener('click', async function() {
-        var category = overlay.querySelector('#rt-category').value;
-        var provider_id = overlay.querySelector('#rt-provider').value.trim();
-        var account_id = overlay.querySelector('#rt-account').value.trim() || null;
-        var priority = parseInt(overlay.querySelector('#rt-priority').value || '0');
-        if (!category || !provider_id) { toast('请填写必填字段', 'error'); return; }
-        var resp = await api('/providers/routes', { method: 'POST', body: JSON.stringify({ category: category, provider_id: provider_id, account_id: account_id, priority: priority }) });
-        if (resp.success) { overlay.remove(); renderPage('providers'); toast('路由创建成功'); }
-        else toast(resp.error, 'error');
-      });
-      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-    }
-
-    async function deleteRoute(id) {
-      if (!confirm('确定删除此路由规则？')) return;
-      await api('/providers/routes/' + id, { method: 'DELETE' });
-      renderPage('providers');
-      toast('路由已删除');
     }
 
     // 发送日志

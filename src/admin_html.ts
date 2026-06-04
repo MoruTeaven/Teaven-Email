@@ -798,6 +798,10 @@ export function getAdminHTML(): string {
           <span class="icon fas fa-envelope"></span>
           发件账号
         </button>
+        <button class="nav-item" data-page="routes">
+          <span class="icon fas fa-code-branch"></span>
+          分类路由
+        </button>
       </div>
       <div class="sidebar-footer">
         <div class="admin-badge">
@@ -860,6 +864,7 @@ export function getAdminHTML(): string {
         case 'tenants': renderTenants(main); break;
         case 'providers': renderProviders(main); break;
         case 'accounts': renderAllAccounts(main); break;
+        case 'routes': renderRoutes(main); break;
       }
     }
 
@@ -1512,6 +1517,181 @@ export function getAdminHTML(): string {
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
+    // ========== 分类路由管理（超管统一配置） ==========
+
+    var _routesData = [];
+
+    async function renderRoutes(main) {
+      var resp = await api('/admin/routes');
+      _routesData = resp.data || [];
+
+      // 同时拉取租户和账号列表用于表单选择
+      var tenantsResp = await api('/admin/tenants');
+      var tenants = tenantsResp.data || [];
+      var accountsResp = await api('/admin/accounts');
+      var accounts = accountsResp.data || [];
+
+      main.innerHTML = \`
+        <div class="page-header">
+          <h1 class="page-title">分类路由</h1>
+          <p class="page-subtitle">CATEGORY ROUTING MANAGEMENT</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left"></div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="showAddRouteModal()">
+              <span class="fas fa-plus"></span>
+              添加路由规则
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          \${_routesData.length === 0 ? \`
+            <div style="text-align: center; padding: 64px 32px;">
+              <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <span class="fas fa-code-branch" style="font-size: 2rem; color: var(--text-muted);"></span>
+              </div>
+              <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无分类路由</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">为租户配置不同邮件分类使用的发送通道和账号</div>
+            </div>
+          \` : \`
+            <div class="list-card">
+              \${_routesData.map(function(r) {
+                return '<div class="list-item">' +
+                  '<div class="list-item-info">' +
+                    '<div class="list-item-title">' +
+                      '<span class="badge badge-info">' + esc(r.category) + '</span>' +
+                      '<span style="margin-left: 8px; font-size: 0.85rem; color: var(--text-secondary);">' + esc(r.user_name) + ' (' + esc(r.user_email) + ')</span>' +
+                    '</div>' +
+                    '<div class="list-item-subtitle">通道: ' + esc(r.provider_name || r.provider_id) +
+                      ' · 账号: ' + (r.account_email || '自动选择') +
+                      ' · 优先级: ' + r.priority + '</div>' +
+                  '</div>' +
+                  '<div class="list-item-actions">' +
+                    '<span class="badge ' + (r.enabled ? 'badge-success' : 'badge-muted') + '">' + (r.enabled ? '启用' : '禁用') + '</span>' +
+                    '<button class="btn btn-sm btn-danger" data-rid="' + esc(r.id) + '" onclick="deleteAdminRoute(this.dataset.rid)">删除</button>' +
+                  '</div>' +
+                '</div>';
+              }).join('')}
+            </div>
+          \`}
+        </div>
+      \`;
+    }
+
+    function showAddRouteModal() {
+      // 并行获取数据
+      Promise.all([
+        api('/admin/tenants'),
+        api('/admin/providers'),
+        api('/admin/accounts')
+      ]).then(function(results) {
+        var tenants = results[0].data || [];
+        var providers = results[1].data || [];
+        var accounts = results[2].data || [];
+
+        var overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = '<div class="modal">' +
+          '<div class="modal-title">添加分类路由</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">租户 *</label>' +
+            '<select class="form-select" id="ar-tenant">' +
+              '<option value="">-- 选择租户 --</option>' +
+              tenants.filter(function(t) { return t.status === 'active'; }).map(function(t) {
+                return '<option value="' + esc(t.id) + '">' + esc(t.name) + ' (' + esc(t.email) + ')</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">分类 *</label>' +
+            '<select class="form-select" id="ar-category">' +
+              '<option value="VERIFY">VERIFY - 验证邮件</option>' +
+              '<option value="NOTIFY">NOTIFY - 通知邮件</option>' +
+              '<option value="MARKETING">MARKETING - 营销邮件</option>' +
+              '<option value="SYSTEM">SYSTEM - 系统邮件</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">发送通道 *</label>' +
+            '<select class="form-select" id="ar-provider" onchange="onRouteProviderChange(this.closest(\\\\'.modal-overlay\\\\'))">' +
+              '<option value="">-- 选择通道 --</option>' +
+              providers.filter(function(p) { return p.enabled; }).map(function(p) {
+                return '<option value="' + esc(p.id) + '">' + esc(p.name) + ' (' + esc(p.type) + ')</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">发件账号（可选）</label>' +
+            '<select class="form-select" id="ar-account">' +
+              '<option value="">-- 自动选择 --</option>' +
+            '</select>' +
+            '<div class="form-hint">留空则由系统自动负载均衡选择，指定后该分类的邮件固定通过此账号发送</div>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label class="form-label">优先级</label>' +
+            '<input class="form-input" id="ar-priority" type="number" value="0" min="0">' +
+            '<div class="form-hint">数值越大优先级越高，同一租户同分类多条规则时取优先级最高的</div>' +
+          '</div>' +
+          '<div class="modal-footer">' +
+            '<button class="btn btn-ghost" onclick="this.closest(\\\\'.modal-overlay\\\\').remove()">取消</button>' +
+            '<button class="btn btn-primary" id="ar-save-btn">创建</button>' +
+          '</div>' +
+        '</div>';
+        document.body.appendChild(overlay);
+
+        // 缓存 accounts 数据用于通道切换时过滤账号
+        overlay._accountsData = accounts;
+        overlay._providersData = providers;
+
+        overlay.querySelector('#ar-save-btn').addEventListener('click', async function() {
+          var user_id = overlay.querySelector('#ar-tenant').value;
+          var category = overlay.querySelector('#ar-category').value;
+          var provider_id = overlay.querySelector('#ar-provider').value;
+          var account_id = overlay.querySelector('#ar-account').value || null;
+          var priority = parseInt(overlay.querySelector('#ar-priority').value || '0');
+
+          if (!user_id || !category || !provider_id) { toast('请填写所有必填字段', 'error'); return; }
+
+          var body = { user_id: user_id, category: category, provider_id: provider_id, priority: priority };
+          if (account_id) body.account_id = account_id;
+
+          var resp = await api('/admin/routes', { method: 'POST', body: JSON.stringify(body) });
+          if (resp.success) { overlay.remove(); renderPage('routes'); toast('路由创建成功'); }
+          else toast(resp.error, 'error');
+        });
+
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      });
+    }
+
+    // 通道切换时过滤可选账号
+    function onRouteProviderChange(overlay) {
+      var providerId = overlay.querySelector('#ar-provider').value;
+      var accounts = overlay._accountsData || [];
+      var acctSelect = overlay.querySelector('#ar-account');
+      acctSelect.innerHTML = '<option value="">-- 自动选择 --</option>';
+
+      if (providerId) {
+        var filtered = accounts.filter(function(a) { return a.provider_id === providerId && a.enabled; });
+        filtered.forEach(function(a) {
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = a.name + ' (' + a.email + ')';
+          acctSelect.appendChild(opt);
+        });
+      }
+    }
+
+    async function deleteAdminRoute(id) {
+      if (!confirm('确定删除此路由规则？此操作不可撤销。')) return;
+      var resp = await api('/admin/routes/' + id, { method: 'DELETE' });
+      if (resp.success) { renderPage('routes'); toast('路由已删除'); }
+      else toast(resp.error, 'error');
+    }
+
     // 创建租户
     function showCreateTenantModal() {
       var overlay = document.createElement('div');
@@ -1598,9 +1778,8 @@ export function getAdminHTML(): string {
 
       overlay.querySelector('#impersonate-switch-btn').addEventListener('click', function() {
         localStorage.setItem('teaven_super_admin_key_backup', origKey);
-        localStorage.setItem('teaven_api_key', resp.data.impersonation_token);
-        localStorage.setItem('teaven_email', resp.data.user.email);
-        window.location.href = '/dashboard';
+        window.open('/dashboard?imp_token=' + encodeURIComponent(resp.data.impersonation_token), '_blank');
+        overlay.remove();
       });
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
