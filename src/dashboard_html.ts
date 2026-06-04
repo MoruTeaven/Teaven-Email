@@ -8,8 +8,9 @@ export function getDashboardHTML(): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teaven Email - 多租户邮件平台</title>
-  <!-- IconPark Icons - 国内CDN -->
-  <link rel="stylesheet" href="https://lf6-fe.byted.org/obj/tds/icons/2.2.0/iconpark.css">
+  <!-- Font Awesome Icons - 国内CDN -->
+  <link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.1.2/css/all.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23f97316'/><text x='16' y='23' text-anchor='middle' font-size='20' font-weight='bold' fill='white'>T</text></svg>">
   <style>
     :root {
       /* 橙色主题色彩系统 - OKLCH */
@@ -808,23 +809,23 @@ export function getDashboardHTML(): string {
       </div>
       <div class="sidebar-nav">
         <button class="nav-item active" data-page="dashboard">
-          <span class="icon iconpark-home"></span>
+          <span class="icon fas fa-house"></span>
           仪表盘
         </button>
         <button class="nav-item" data-page="api-keys">
-          <span class="icon iconpark-key"></span>
+          <span class="icon fas fa-key"></span>
           API Keys
         </button>
         <button class="nav-item" data-page="templates">
-          <span class="icon iconpark-file-text"></span>
+          <span class="icon fas fa-file-lines"></span>
           模板管理
         </button>
         <button class="nav-item" data-page="providers">
-          <span class="icon iconpark-connected"></span>
+          <span class="icon fas fa-plug"></span>
           发送通道
         </button>
         <button class="nav-item" data-page="logs">
-          <span class="icon iconpark-time"></span>
+          <span class="icon fas fa-clock"></span>
           发送日志
         </button>
       </div>
@@ -907,25 +908,25 @@ export function getDashboardHTML(): string {
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon orange"><span class="iconpark-mail"></span></div>
+            <div class="stat-icon orange"><span class="fas fa-envelope"></span></div>
             <div class="stat-label">今日发送</div>
             <div class="stat-value orange">\${d.today.sent}</div>
             <div class="stat-change">封邮件已投递</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon green"><span class="iconpark-check-circle"></span></div>
+            <div class="stat-icon green"><span class="fas fa-circle-check"></span></div>
             <div class="stat-label">送达数量</div>
             <div class="stat-value green">\${d.today.delivered}</div>
             <div class="stat-change">封成功送达</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon red"><span class="iconpark-close-circle"></span></div>
+            <div class="stat-icon red"><span class="fas fa-circle-xmark"></span></div>
             <div class="stat-label">发送失败</div>
             <div class="stat-value red">\${d.today.failed}</div>
             <div class="stat-change">封投递失败</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon yellow"><span class="iconpark-warning"></span></div>
+            <div class="stat-icon yellow"><span class="fas fa-triangle-exclamation"></span></div>
             <div class="stat-label">退信数量</div>
             <div class="stat-value yellow">\${d.today.bounced}</div>
             <div class="stat-change">封被退回</div>
@@ -999,7 +1000,7 @@ export function getDashboardHTML(): string {
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showCreateApiKeyModal()">
-              <span class="iconpark-plus"></span>
+              <span class="fas fa-plus"></span>
               创建 API Key
             </button>
           </div>
@@ -1008,7 +1009,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${keys.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="iconpark-key"></span></div>
+              <div class="empty-icon"><span class="fas fa-key"></span></div>
               <div class="empty-title">暂无 API Key</div>
               <div class="empty-desc">创建你的第一个 API Key 来开始使用邮件服务</div>
             </div>
@@ -1054,7 +1055,7 @@ export function getDashboardHTML(): string {
           '</div>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="ak-create-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -1071,7 +1072,7 @@ export function getDashboardHTML(): string {
           main.insertAdjacentHTML('afterbegin', '<div class="card" style="border-color: var(--success); margin-bottom: 24px;" id="key-reveal">' +
             '<div class="card-header">' +
               '<div class="card-title">API Key 创建成功</div>' +
-              '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(\'key-reveal\').remove()">关闭</button>' +
+              '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(\\'key-reveal\\').remove()">关闭</button>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">请立即复制并安全保存此 Key，关闭后将无法再次查看。</p>' +
             '<div class="code-block"><span class="key-highlight">' + esc(resp.data.api_key) + '</span></div>' +
@@ -1113,7 +1114,7 @@ export function getDashboardHTML(): string {
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showTemplateModal()">
-              <span class="iconpark-plus"></span>
+              <span class="fas fa-plus"></span>
               创建模板
             </button>
           </div>
@@ -1122,7 +1123,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${templates.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="iconpark-file-text"></span></div>
+              <div class="empty-icon"><span class="fas fa-file-lines"></span></div>
               <div class="empty-title">暂无模板</div>
               <div class="empty-desc">创建邮件模板后，通过 API 调用模板编号即可发送邮件</div>
             </div>
@@ -1188,7 +1189,7 @@ export function getDashboardHTML(): string {
         '</div>' +
         (isEdit ? '<div class="form-group"><label class="form-label">更新说明</label><input class="form-input" id="tmpl-changelog" placeholder="如：修改了按钮颜色"></div>' : '') +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="tmpl-save-btn">' + (isEdit ? '更新' : '创建') + '</button>' +
         '</div>' +
       '</div>';
@@ -1250,7 +1251,7 @@ export function getDashboardHTML(): string {
         '</div>' +
         '<div id="pv-result" style="margin: 20px 0;"></div>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">关闭</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">关闭</button>' +
           '<button class="btn btn-primary" id="pv-refresh">刷新预览</button>' +
         '</div>' +
       '</div>';
@@ -1294,7 +1295,7 @@ export function getDashboardHTML(): string {
           <div class="card">
             \${providers.length === 0 ? \`
               <div class="empty-state">
-                <div class="empty-icon"><span class="iconpark-connected"></span></div>
+                <div class="empty-icon"><span class="fas fa-plug"></span></div>
                 <div class="empty-title">暂无发送通道</div>
                 <div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div>
               </div>
@@ -1322,7 +1323,7 @@ export function getDashboardHTML(): string {
             <div class="toolbar-left"></div>
             <div class="toolbar-right">
               <button class="btn btn-primary" onclick="showRouteModal()">
-                <span class="iconpark-plus"></span>
+                <span class="fas fa-plus"></span>
                 添加路由规则
               </button>
             </div>
@@ -1330,7 +1331,7 @@ export function getDashboardHTML(): string {
           <div class="card">
             \${routes.length === 0 ? \`
               <div class="empty-state">
-                <div class="empty-icon"><span class="iconpark-git-branch"></span></div>
+                <div class="empty-icon"><span class="fas fa-code-branch"></span></div>
                 <div class="empty-title">暂无路由规则</div>
                 <div class="empty-desc">配置不同邮件分类使用不同的发送通道发送</div>
               </div>
@@ -1390,7 +1391,7 @@ export function getDashboardHTML(): string {
           '<input class="form-input" id="rt-priority" type="number" value="0">' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="rt-save-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -1431,7 +1432,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${logs.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="iconpark-time"></span></div>
+              <div class="empty-icon"><span class="fas fa-clock"></span></div>
               <div class="empty-title">暂无日志</div>
               <div class="empty-desc">发送邮件后可以在此查看投递状态</div>
             </div>
@@ -1491,7 +1492,7 @@ export function getDashboardHTML(): string {
           '</div>' +
           '<button class="btn btn-primary btn-lg" onclick="doLogin()" style="width: 100%;">登 录</button>' +
           '<div style="text-align: center; margin-top: 24px; color: var(--text-muted);">' +
-            '或 <a href="#" onclick="document.getElementById(\'main-content\').innerHTML=apiKeyFallbackPage(); return false;" style="color: var(--primary); text-decoration: none;">使用 API Key 登录</a>' +
+            '或 <a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=apiKeyFallbackPage(); return false;" style="color: var(--primary); text-decoration: none;">使用 API Key 登录</a>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1500,7 +1501,7 @@ export function getDashboardHTML(): string {
     function apiKeyFallbackPage() {
       return '<div style="max-width: 480px; margin: 100px auto;">' +
         '<div style="text-align: center; margin-bottom: 48px;">' +
-          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="iconpark-key" style="color: var(--primary);"></span></div>' +
+          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-key" style="color: var(--primary);"></span></div>' +
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">API Key 登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">使用 API Key 直接访问</div>' +
         '</div>' +
@@ -1511,7 +1512,7 @@ export function getDashboardHTML(): string {
           '</div>' +
           '<button class="btn btn-primary btn-lg" onclick="saveApiKey()" style="width: 100%;">进 入</button>' +
           '<div style="text-align: center; margin-top: 24px; color: var(--text-muted);">' +
-            '<a href="#" onclick="document.getElementById(\'main-content\').innerHTML=loginPage(); return false;" style="color: var(--primary); text-decoration: none;">返回账号登录</a>' +
+            '<a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=loginPage(); return false;" style="color: var(--primary); text-decoration: none;">返回账号登录</a>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1610,7 +1611,7 @@ export function getDashboardHTML(): string {
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 32px;">' +
-              '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="iconpark-check-circle" style="color: var(--success);"></span></div>' +
+              '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-circle-check" style="color: var(--success);"></span></div>' +
               '<div style="font-size: 1.5rem; font-weight: 600;">初始化成功！</div>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 8px;">账户: <strong>' + esc(resp.data.user.email) + '</strong></p>' +
