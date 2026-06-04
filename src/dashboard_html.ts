@@ -493,25 +493,25 @@ export function getDashboardHTML(): string {
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon orange"><span class="fas fa-envelope"></span></div>
+            <div class="stat-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
             <div class="stat-label">今日发送</div>
             <div class="stat-value orange">\${d.today.sent}</div>
             <div class="stat-change">封邮件已投递</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon green"><span class="fas fa-circle-check"></span></div>
+            <div class="stat-icon green"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
             <div class="stat-label">送达数量</div>
             <div class="stat-value green">\${d.today.delivered}</div>
             <div class="stat-change">封成功送达</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon red"><span class="fas fa-circle-xmark"></span></div>
+            <div class="stat-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></div>
             <div class="stat-label">发送失败</div>
             <div class="stat-value red">\${d.today.failed}</div>
             <div class="stat-change">封投递失败</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon yellow"><span class="fas fa-triangle-exclamation"></span></div>
+            <div class="stat-icon yellow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
             <div class="stat-label">退信数量</div>
             <div class="stat-value yellow">\${d.today.bounced}</div>
             <div class="stat-change">封被退回</div>
@@ -585,7 +585,7 @@ export function getDashboardHTML(): string {
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showCreateApiKeyModal()">
-              <span class="fas fa-plus"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               创建 API Key
             </button>
           </div>
@@ -594,7 +594,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${keys.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="fas fa-key"></span></div>
+              <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
               <div class="empty-title">暂无 API Key</div>
               <div class="empty-desc">创建你的第一个 API Key 来开始使用邮件服务</div>
             </div>
@@ -699,7 +699,7 @@ export function getDashboardHTML(): string {
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showTemplateModal()">
-              <span class="fas fa-plus"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               创建模板
             </button>
           </div>
@@ -708,7 +708,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${templates.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="fas fa-file-lines"></span></div>
+              <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></div>
               <div class="empty-title">暂无模板</div>
               <div class="empty-desc">创建邮件模板后，通过 API 调用模板编号即可发送邮件</div>
             </div>
@@ -874,7 +874,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${providers.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="fas fa-plug"></span></div>
+              <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M9 8V2h6v6"/><path d="M15 8H9"/><path d="M3 17v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/></svg></div>
               <div class="empty-title">暂无发送通道</div>
               <div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div>
             </div>
@@ -934,7 +934,7 @@ export function getDashboardHTML(): string {
         <div class="card">
           \${logs.length === 0 ? \`
             <div class="empty-state">
-              <div class="empty-icon"><span class="fas fa-clock"></span></div>
+              <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
               <div class="empty-title">暂无日志</div>
               <div class="empty-desc">发送邮件后可以在此查看投递状态</div>
             </div>
@@ -1003,7 +1003,7 @@ export function getDashboardHTML(): string {
     function apiKeyFallbackPage() {
       return '<div style="max-width: 480px; margin: 100px auto;">' +
         '<div style="text-align: center; margin-bottom: 48px;">' +
-          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-key" style="color: var(--primary);"></span></div>' +
+          '<div style="font-size: 3rem; margin-bottom: 16px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary)"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>' +
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">API Key 登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">使用 API Key 直接访问</div>' +
         '</div>' +
@@ -1113,7 +1113,7 @@ export function getDashboardHTML(): string {
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 32px;">' +
-              '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-circle-check" style="color: var(--success);"></span></div>' +
+              '<div style="font-size: 3rem; margin-bottom: 16px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--success)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>' +
               '<div style="font-size: 1.5rem; font-weight: 600;">初始化成功！</div>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 8px;">账户: <strong>' + esc(resp.data.user.email) + '</strong></p>' +

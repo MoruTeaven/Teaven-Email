@@ -554,43 +554,43 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-icon orange"><span class="fas fa-users"></span></div>
+            <div class="stat-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
             <div class="stat-label">用户数</div>
             <div class="stat-value orange">\${d.users}</div>
             <div class="stat-change">个活跃用户</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon blue"><span class="fas fa-plug"></span></div>
+            <div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M9 8V2h6v6"/><path d="M15 8H9"/><path d="M3 17v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/></svg></div>
             <div class="stat-label">发送通道</div>
             <div class="stat-value blue">\${d.providers}</div>
             <div class="stat-change">个通道配置</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon purple"><span class="fas fa-envelope"></span></div>
+            <div class="stat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
             <div class="stat-label">发件账号</div>
             <div class="stat-value purple">\${d.accounts}</div>
             <div class="stat-change">个账号</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon orange"><span class="fas fa-file-lines"></span></div>
+            <div class="stat-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></div>
             <div class="stat-label">模板数</div>
             <div class="stat-value orange">\${d.templates}</div>
             <div class="stat-change">个邮件模板</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon green"><span class="fas fa-paper-plane"></span></div>
+            <div <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg></div>
             <div class="stat-label">总邮件数</div>
             <div class="stat-value green">\${d.total_mails}</div>
             <div class="stat-change">封已发送</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon orange"><span class="fas fa-clock"></span></div>
+            <div class="stat-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
             <div class="stat-label">今日发送</div>
             <div class="stat-value orange">\${d.today_sent}</div>
             <div class="stat-change">封今日</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon red"><span class="fas fa-circle-xmark"></span></div>
+            <div class="stat-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></div>
             <div class="stat-label">今日失败</div>
             <div class="stat-value red">\${d.today_failed}</div>
             <div class="stat-change">封失败</div>
@@ -607,7 +607,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
               <div style="font-size: 3rem; font-weight: 800; color: var(--success); margin-bottom: 12px;">
-                <span class="fas fa-circle-check" style="font-size: 3rem;"></span>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
               </div>
               <div style="font-size: 1.1rem; font-weight: 600;">运行正常</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">All Systems Operational</div>
@@ -642,7 +642,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showCreateUserModal()">
-              <span class="fas fa-plus"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               新建用户
             </button>
           </div>
@@ -652,7 +652,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           \${users.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <span class="fas fa-users" style="font-size: 2rem; color: var(--text-muted);"></span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无用户</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">创建第一个用户开始使用平台</div>
@@ -703,7 +703,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showAdminProviderModal()">
-              <span class="fas fa-plus"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               添加发送通道
             </button>
           </div>
@@ -713,7 +713,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           \${providers.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <span class="fas fa-plug" style="font-size: 2rem; color: var(--text-muted);"></span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><path d="M12 22v-5"/><path d="M9 8V2h6v6"/><path d="M15 8H9"/><path d="M3 17v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/></svg>
               </div>
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无发送通道</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">添加发送通道以启用邮件投递</div>
@@ -965,7 +965,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showAddAccountModal()">
-              <span class="fas fa-plus"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               添加发件账号
             </button>
           </div>
@@ -975,7 +975,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           \${accounts.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <span class="fas fa-envelope" style="font-size: 2rem; color: var(--text-muted);"></span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
               </div>
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无发件账号</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">添加发件账号以发送邮件</div>
@@ -990,8 +990,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (a.enabled ? 'badge-success' : 'badge-muted') + '">' + (a.enabled ? '启用' : '禁用') + '</span>' +
-                    '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" onclick="showEditAccountModal(this.dataset.acctid)"><span class="fas fa-edit"></span> 编辑</button>' +
-                    '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" onclick="showTestAccountModal(this.dataset.acctid)"><span class="fas fa-paper-plane"></span> 测试</button>' +
+                    '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" onclick="showEditAccountModal(this.dataset.acctid)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> 编辑</button>' +
+                    '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" onclick="showTestAccountModal(this.dataset.acctid)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg> 测试</button>' +
                     '<button class="btn btn-sm btn-ghost" data-acctid="' + esc(a.id) + '" data-acctenabled="' + (!a.enabled ? 1 : 0) + '" onclick="toggleAccount(this.dataset.acctid, +this.dataset.acctenabled)">' + (a.enabled ? '禁用' : '启用') + '</button>' +
                     '<button class="btn btn-sm btn-danger" data-acctid="' + esc(a.id) + '" onclick="deleteAdminAccount(this.dataset.acctid)">删除</button>' +
                   '</div>' +
@@ -1151,7 +1151,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '</div>' +
         '<div class="modal-footer">' +
           '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
-          '<button class="btn btn-primary" id="at-send-btn"><span class="fas fa-paper-plane"></span> 发送测试</button>' +
+          '<button class="btn btn-primary" id="at-send-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg> 发送测试</button>' +
         '</div>' +
       '</div>';
       document.body.appendChild(overlay);
@@ -1162,7 +1162,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         if (!toEmail) { toast('请输入收件邮箱', 'error'); return; }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="fas fa-spinner fa-spin"></span> 发送中...';
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> 发送中...';
 
         try {
           var resp = await api('/admin/accounts/' + acctId + '/test', { method: 'POST', body: JSON.stringify({ to: toEmail }) });
@@ -1171,7 +1171,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             toast('测试邮件发送成功！请查收 ' + toEmail, 'success');
           } else {
             btn.disabled = false;
-            btn.innerHTML = '<span class="fas fa-paper-plane"></span> 发送测试';
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg> 发送测试';
             toast('发送失败：' + (resp.error || '未知错误'), 'error');
             if (resp.detail) {
               var detail = document.createElement('div');
@@ -1182,7 +1182,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           }
         } catch (e) {
           btn.disabled = false;
-          btn.innerHTML = '<span class="fas fa-paper-plane"></span> 发送测试';
+          btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg> 发送测试';
           toast('请求异常：' + e.message, 'error');
         }
       });
@@ -1213,7 +1213,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
             <button class="btn btn-primary" onclick="showAddRouteModal()">
-              <span class="fas fa-plus"></span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               添加路由规则
             </button>
           </div>
@@ -1223,7 +1223,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           \${_routesData.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <span class="fas fa-code-branch" style="font-size: 2rem; color: var(--text-muted);"></span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
               </div>
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无分类路由</div>
               <div style="font-size: 0.9rem; color: var(--text-muted);">为用户配置不同邮件分类使用的发送通道和账号</div>
@@ -1407,13 +1407,13 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         if (resp.success) {
           overlay.innerHTML = '<div class="modal" style="border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 24px;">' +
-              '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-circle-check" style="color: var(--success);"></span></div>' +
+              '<div style="font-size: 3rem; margin-bottom: 16px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--success);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>' +
               '<div class="modal-title" style="text-align: center;">用户创建成功！</div>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">API Key（仅显示一次）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
-            '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\\'tenants\\');" style="width: 100%;">关闭</button>' +
+            '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\\'users\\');" style="width: 100%;">关闭</button>' +
           '</div>';
           toast('用户创建成功');
         } else {
@@ -1434,13 +1434,13 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal" style="border-color: var(--primary);">' +
         '<div style="text-align: center; margin-bottom: 24px;">' +
-          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-user-secret" style="color: var(--primary);"></span></div>' +
+          '<div style="font-size: 3rem; margin-bottom: 16px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>' +
           '<div class="modal-title" style="text-align: center;">模拟登录</div>' +
         '</div>' +
         '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
         '<p style="color: var(--text-muted); margin-bottom: 12px;">临时令牌（24小时有效，无需管理）：</p>' +
         '<div class="code-block" style="margin-bottom: 12px; font-size: 0.78rem;">' + esc(resp.data.impersonation_token) + '</div>' +
-        '<p style="color: var(--warning); font-size: 0.78rem; margin-bottom: 16px;"><span class="fas fa-info-circle"></span> 令牌24小时后自动过期，无需手动清理。到期后需重新模拟登录。</p>' +
+        '<p style="color: var(--warning); font-size: 0.78rem; margin-bottom: 16px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> 令牌24小时后自动过期，无需手动清理。到期后需重新模拟登录。</p>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
           '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button>' +
@@ -1499,7 +1499,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     function apiKeyFallbackPage() {
       return '<div style="max-width: 480px; margin: 100px auto;">' +
         '<div style="text-align: center; margin-bottom: 48px;">' +
-          '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-key" style="color: var(--primary);"></span></div>' +
+          '<div style="font-size: 3rem; margin-bottom: 16px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>' +
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">API Key 登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">输入超级管理员的 API Key</div>' +
         '</div>' +
@@ -1616,7 +1616,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 32px;">' +
-              '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-circle-check" style="color: var(--success);"></span></div>' +
+              '<div style="font-size: 3rem; margin-bottom: 16px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--success);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>' +
               '<div style="font-size: 1.5rem; font-weight: 600;">初始化成功！</div>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 8px;">账户: <strong>' + esc(resp.data.user.email) + '</strong></p>' +
