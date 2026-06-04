@@ -5,6 +5,9 @@ node_modules/
 dist/
 .mf/
 
+
+agents.md
+
 # Wrangler state (local development)
 .wrangler/
 
@@ -13,6 +16,7 @@ dist/
 .idea/
 *.swp
 *.swo
+.codebuddy/
 
 # OS
 .DS_Store
@@ -27,5 +31,5 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# CodeBuddy
-.codebuddy/
+# Docs
+docs/

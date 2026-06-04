@@ -71,7 +71,7 @@ export function getDB(db: D1Database) {
       ).bind(enabled, id, userId).run();
     },
 
-    // ============ Providers (全局，不绑定用户) ============
+    // ============ 发送通道 (全局，不绑定用户) ============
     async getAllProviders(): Promise<EmailProvider[]> {
       const result = await db.prepare(
         'SELECT * FROM providers ORDER BY priority DESC'

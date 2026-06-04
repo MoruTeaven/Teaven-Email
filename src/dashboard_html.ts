@@ -213,7 +213,7 @@ export function getDashboardHTML(): string {
       <button class="nav-item active" data-page="dashboard">📊 仪表盘</button>
       <button class="nav-item" data-page="api-keys">🔑 API Keys</button>
       <button class="nav-item" data-page="templates">📝 模板管理</button>
-      <button class="nav-item" data-page="providers">📡 Provider 配置</button>
+      <button class="nav-item" data-page="providers">📡 发送通道</button>
       <button class="nav-item" data-page="logs">📋 发送日志</button>
     </nav>
     <main class="main" id="main-content"></main>
@@ -268,7 +268,7 @@ export function getDashboardHTML(): string {
       main.innerHTML='<h2 style="margin-bottom:24px;">仪表盘</h2>'+
         '<div class="stats-grid">'+
           '<div class="stat-card"><div class="stat-label">模板数量</div><div class="stat-value" style="color:var(--primary)">'+d.templates_count+'</div></div>'+
-          '<div class="stat-card"><div class="stat-label">Provider 数量</div><div class="stat-value" style="color:var(--info)">'+d.providers_count+'</div></div>'+
+          '<div class="stat-card"><div class="stat-label">发送通道数量</div><div class="stat-value" style="color:var(--info)">'+d.providers_count+'</div></div>'+
           '<div class="stat-card"><div class="stat-label">发件账号</div><div class="stat-value" style="color:#a855f7">'+d.accounts_count+'</div></div>'+
           '<div class="stat-card"><div class="stat-label">API Keys</div><div class="stat-value" style="color:var(--warning)">'+d.api_keys_count+'</div></div>'+
         '</div>'+
@@ -446,12 +446,12 @@ export function getDashboardHTML(): string {
       var providers=pResp.data||[];
       var routes=rResp.data||[];
 
-      main.innerHTML='<h2 style="margin-bottom:24px;">Provider 配置</h2>'+
-        '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\\'providers\\')">Provider 列表</button><button class="tab" onclick="switchProviderTab(\\'routes\\')">分类路由</button></div>'+
+      main.innerHTML='<h2 style="margin-bottom:24px;">发送通道配置</h2>'+
+        '<div class="tabs"><button class="tab active" onclick="switchProviderTab(\\'providers\\')">发送通道列表</button><button class="tab" onclick="switchProviderTab(\\'routes\\')">分类路由</button></div>'+
         '<div id="provider-tab-providers">'+
           '<div class="card">'+
           (providers.length===0?
-            '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-title">暂无 Provider</div><div class="empty-desc">请联系管理员在后台添加全局 Provider 配置</div></div>'
+            '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-title">暂无发送通道</div><div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div></div>'
           :
             providers.map(function(p){
               var config=typeof p.config==='string'?JSON.parse(p.config):p.config;
@@ -465,9 +465,9 @@ export function getDashboardHTML(): string {
           '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showRouteModal()">+ 添加路由规则</button></div>'+
           '<div class="card">'+
           (routes.length===0?
-            '<div class="empty-state"><div class="empty-icon">🔀</div><div class="empty-title">暂无路由规则</div><div class="empty-desc">配置不同邮件分类使用不同的 Provider 发送</div></div>'
+            '<div class="empty-state"><div class="empty-icon">🔀</div><div class="empty-title">暂无路由规则</div><div class="empty-desc">配置不同邮件分类使用不同的发送通道发送</div></div>'
           :
-            '<div class="table-wrap"><table><thead><tr><th>分类</th><th>Provider</th><th>账号</th><th>优先级</th><th>操作</th></tr></thead><tbody>'+
+            '<div class="table-wrap"><table><thead><tr><th>分类</th><th>发送通道</th><th>账号</th><th>优先级</th><th>操作</th></tr></thead><tbody>'+
             routes.map(function(r){
               return'<tr><td><span class="badge badge-info">'+esc(r.category)+'</span></td><td>'+esc(r.provider_id)+'</td><td>'+(r.account_id?esc(r.account_id):'自动选择')+'</td><td>'+r.priority+'</td><td><button class="btn btn-sm btn-danger" data-rid="'+esc(r.id)+'" onclick="deleteRoute(this.dataset.rid)">删除</button></td></tr>';
             }).join('')+'</tbody></table></div>'
@@ -489,7 +489,7 @@ export function getDashboardHTML(): string {
       overlay.className='modal-overlay';
       overlay.innerHTML='<div class="modal"><div class="modal-title">添加分类路由</div>'+
         '<div class="form-group"><label class="form-label">分类 *</label><select class="form-select" id="rt-category"><option value="VERIFY">VERIFY</option><option value="NOTIFY">NOTIFY</option><option value="MARKETING">MARKETING</option><option value="SYSTEM">SYSTEM</option></select></div>'+
-        '<div class="form-group"><label class="form-label">Provider ID *</label><input class="form-input" id="rt-provider" placeholder="Provider ID"></div>'+
+        '<div class="form-group"><label class="form-label">发送通道 ID *</label><input class="form-input" id="rt-provider" placeholder="发送通道 ID"></div>'+
         '<div class="form-group"><label class="form-label">账号 ID（可选）</label><input class="form-input" id="rt-account" placeholder="留空则自动选择"></div>'+
         '<div class="form-group"><label class="form-label">优先级</label><input class="form-input" id="rt-priority" type="number" value="0"></div>'+
         '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button><button class="btn btn-primary" id="rt-save-btn">创建</button></div></div>';

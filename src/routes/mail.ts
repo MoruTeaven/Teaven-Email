@@ -70,12 +70,12 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   // 查找路由规则
   const route = await db.getCategoryRoute(auth.userId, category);
 
-  // 查找 Provider
+  // 查找发送通道
   let providerId: string | null = route?.provider_id || null;
   let accountId: string | null = route?.account_id || null;
 
   if (!providerId) {
-    // 没有路由规则，使用第一个启用的全局 provider
+    // 没有路由规则，使用第一个启用的全局发送通道
     const providers = await db.getEnabledProviders();
     if (providers.length === 0) {
       return c.json({ success: false, error: 'No enabled email provider found' }, 500);

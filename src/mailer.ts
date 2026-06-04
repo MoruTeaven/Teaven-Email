@@ -160,6 +160,31 @@ async function sendViaApi(config: ApiProviderConfig, params: SendParams): Promis
         });
         break;
 
+      case 'ahasend': {
+        const accountId = config.account_id;
+        if (!accountId) {
+          return { success: false, error: 'AhaSend 缺少 account_id 配置' };
+        }
+        url = `https://api.ahasend.com/v2/accounts/${accountId}/messages`;
+        headers = {
+          'Authorization': `Bearer ${api_key}`,
+          'Content-Type': 'application/json',
+        };
+        body = JSON.stringify({
+          from: {
+            email: params.from,
+            name: params.fromName || '',
+          },
+          recipients: [
+            { email: params.to },
+          ],
+          subject: params.subject,
+          html_content: params.html,
+          text_content: params.text || '',
+        });
+        break;
+      }
+
       default:
         // 通用 API
         url = api_url;
@@ -191,7 +216,7 @@ async function sendViaApi(config: ApiProviderConfig, params: SendParams): Promis
   }
 }
 
-// 根据 Provider 类型分发发送
+// 根据发送通道类型分发发送
 export async function sendEmail(
   provider: EmailProvider,
   params: SendParams

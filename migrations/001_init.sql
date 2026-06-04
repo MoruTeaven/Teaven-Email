@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(api_key_hash);
 
--- Provider 配置表（全局，不绑定用户）
+-- 发送通道配置表（全局，不绑定用户）
 CREATE TABLE IF NOT EXISTS providers (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,

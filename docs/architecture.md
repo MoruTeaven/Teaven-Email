@@ -72,7 +72,11 @@ Worker 的入口文件，负责：
 - `SEND_MAIL` — 发送邮件
 - `READ_LOG` — 查看日志和统计
 - `MANAGE_TEMPLATE` — 模板管理
-- `MANAGE_PROVIDER` — Provider 配置管理
+- `MANAGE_PROVIDER` — 分类路由管理（发送通道和账号本身为全局资源，仅超管可管理）
+
+**角色说明**：
+- **超级管理员**（`is_super_admin=1`）：通过 `/v1/admin/*` 管理全局发送通道、发件账号和所有租户
+- **普通租户**：管理自己的模板、API Key、分类路由，使用全局发送通道和发件账号发送邮件
 
 ### 3. 数据库层 (`db.ts`)
 
@@ -85,6 +89,7 @@ Worker 的入口文件，负责：
 - `updateProvider()` 动态构建 SET 子句，只更新有值的字段
 - `incrementAccountSent()` 使用 `UPDATE ... SET sent_today = sent_today + 1`
 - `upsertDailyStats()` 使用 `INSERT OR REPLACE`
+- **发送通道和 Account 为全局资源**，查询不按 `user_id` 过滤
 
 ### 4. 邮件发送引擎 (`mailer.ts`)
 
@@ -101,10 +106,11 @@ Worker 的入口文件，负责：
 - 需配置 `domain` 和 `dkim_selector`
 
 #### 第三方 API 通道 (`sendViaApi`)
-支持四种服务商：
+支持五种服务商：
 - **SendGrid** — `POST https://api.sendgrid.com/v3/mail/send`
 - **Mailgun** — `POST https://api.mailgun.net/v3/{domain}/messages`
 - **Resend** — `POST https://api.resend.com/emails`
+- **AhaSend** — `POST https://api.ahasend.com/v2/accounts/{account_id}/messages`（需配置 `account_id`）
 - **通用** — 自定义 `api_url`，`POST` 发送 JSON body
 
 **负载均衡** (`selectAccount`)：
@@ -133,7 +139,7 @@ Worker 的入口文件，负责：
 2. 从 `mail_queue` 表查询 `status='queued'` 且 `scheduled_at <= now` 的记录（最多 10 条）
 3. 对每条：
    - 标记 `status='processing'`
-   - 获取 Provider 配置（含 config JSON 反序列化）
+   - 获取发送通道配置（含 config JSON 反序列化）
    - 调用 `sendWithRetry(provider, params, item.max_retries)`
    - 成功 → `status='completed'`，更新 `mail_logs` 状态，`incrementAccountSent()`，`upsertDailyStats()`，触发 webhook
    - 失败 → 递增 `retry_count`，计算下次重试时间（指数退避），未达上限则重置为 `queued`，否则标记 `failed`，触发 webhook
@@ -145,7 +151,7 @@ Worker 的入口文件，负责：
 邮件发送时的路由决策链：
 1. 根据请求中的 `category`（VERIFY/NOTIFY/MARKETING/SYSTEM）查找 `category_routes` 表
 2. 有匹配规则 → 使用指定的 `provider_id` 和 `account_id`
-3. 无匹配规则 → 使用默认 Provider（优先级最高且 enabled）
+3. 无匹配规则 → 使用默认发送通道（优先级最高且 enabled）
 4. 通过 `selectAccount()` 在 Provider 的账号中选择负载均衡的账号
 
 ## 数据流
@@ -163,9 +169,9 @@ Client API Call (POST /v1/mail/send-template)
   ├─ 3. 渲染模板 (renderTemplate + renderSubject)
   │
   ├─ 4. 路由决策
-  │    ├─ 查 category_routes → 获取 provider_id + account_id
-  │    ├─ 或找默认 Provider (getEnabledProviders)
-  │    └─ selectAccount → 负载均衡选账号
+  │    ├─ 查 category_routes（用户维度）→ 获取 provider_id + account_id
+  │    ├─ 或找全局默认发送通道 (getEnabledProviders)
+  │    └─ selectAccount → 从全局账号池负载均衡选账号
   │
   ├─ 5. 记录 mail_logs (status='pending')
   │

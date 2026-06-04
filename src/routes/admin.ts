@@ -146,7 +146,7 @@ adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) =
   }, 201);
 });
 
-// ========== 全局 Provider 管理 ==========
+// ========== 全局发送通道管理 ==========
 
 // GET /v1/admin/providers - 所有全局 Provider
 adminRouter.get('/providers', superAdminMiddleware(), async (c) => {

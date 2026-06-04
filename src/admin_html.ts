@@ -75,7 +75,7 @@ export function getAdminHTML(): string {
     </div>
     <button class="nav-item active" data-page="overview">📊 总览</button>
     <button class="nav-item" data-page="tenants">🏢 租户管理</button>
-    <button class="nav-item" data-page="providers">📡 Provider 管理</button>
+    <button class="nav-item" data-page="providers">📡 发送通道管理</button>
     <button class="nav-item" data-page="accounts">📧 发件账号</button>
   </nav>
   <main class="main" id="main-content"></main>
@@ -126,7 +126,7 @@ async function renderOverview(main){
   main.innerHTML='<h2 style="margin-bottom:24px;">全局总览</h2>'+
     '<div class="stats-grid">'+
       '<div class="stat-card"><div class="stat-label">租户数</div><div class="stat-value" style="color:var(--primary)">'+d.tenants+'</div></div>'+
-      '<div class="stat-card"><div class="stat-label">Provider</div><div class="stat-value" style="color:var(--info)">'+d.providers+'</div></div>'+
+      '<div class="stat-card"><div class="stat-label">发送通道</div><div class="stat-value" style="color:var(--info)">'+d.providers+'</div></div>'+
       '<div class="stat-card"><div class="stat-label">发件账号</div><div class="stat-value" style="color:#a855f7">'+d.accounts+'</div></div>'+
       '<div class="stat-card"><div class="stat-label">模板数</div><div class="stat-value" style="color:var(--warning)">'+d.templates+'</div></div>'+
       '<div class="stat-card"><div class="stat-label">总邮件数</div><div class="stat-value" style="color:var(--success)">'+d.total_mails+'</div></div>'+
@@ -156,21 +156,21 @@ async function renderProviders(main){
   var resp=await api('/admin/providers');
   var providers=resp.data||[];
 
-  main.innerHTML='<h2 style="margin-bottom:24px;">Provider 管理</h2>'+
-    '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAdminProviderModal()">+ 添加 Provider</button></div>'+
+  main.innerHTML='<h2 style="margin-bottom:24px;">发送通道管理</h2>'+
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAdminProviderModal()">+ 添加发送通道</button></div>'+
     '<div class="card"><div class="table-wrap"><table><thead><tr><th>名称</th><th>类型</th><th>优先级</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
     providers.map(function(p){
       var config=typeof p.config==='string'?JSON.parse(p.config):p.config;
       var configInfo=p.type==='smtp'?'SMTP: '+config.host+':'+config.port:(p.type==='api'?'API: '+(config.provider_name||'Generic'):'Cloudflare: '+(config.domain||''));
       return'<tr><td><strong>'+esc(p.name)+'</strong><div style="color:var(--text-muted);font-size:0.8rem;">'+esc(configInfo)+'</div></td><td><span class="badge badge-info">'+esc(p.type)+'</span></td><td>'+p.priority+'</td><td><span class="badge '+(p.enabled?'badge-success':'badge-muted')+'">'+(p.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" data-pid="'+esc(p.id)+'" data-penabled="'+(!p.enabled?1:0)+'" onclick="toggleProvider(this.dataset.pid,+this.dataset.penabled)">'+(p.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-pid="'+esc(p.id)+'" onclick="deleteAdminProvider(this.dataset.pid)">删除</button></td></tr>';
-    }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">暂无 Provider</td></tr>'+
+    }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">暂无发送通道</td></tr>'+
     '</tbody></table></div></div>';
 }
 
 function showAdminProviderModal(){
   var overlay=document.createElement('div');
   overlay.className='modal-overlay';
-  overlay.innerHTML='<div class="modal"><div class="modal-title">添加 Provider</div>'+
+  overlay.innerHTML='<div class="modal"><div class="modal-title">添加发送通道</div>'+
     '<div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="p-name" placeholder="如：SendGrid 生产"></div>'+
     '<div class="form-group"><label class="form-label">类型 *</label><select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\\'.modal-overlay\\'))"><option value="smtp">SMTP</option><option value="api">第三方 API</option><option value="cloudflare_email">Cloudflare Email</option></select></div>'+
     '<div id="p-config-area"></div>'+
@@ -185,7 +185,7 @@ function showAdminProviderModal(){
     var config=getProviderConfig(overlay,type);
     if(!config)return;
     var resp=await api('/admin/providers',{method:'POST',body:JSON.stringify({name:name,type:type,config:config})});
-    if(resp.success){overlay.remove();renderPage('providers');toast('Provider 创建成功')}
+    if(resp.success){overlay.remove();renderPage('providers');toast('发送通道创建成功')}
     else toast(resp.error,'error');
   });
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove()});
@@ -201,12 +201,26 @@ function toggleProviderConfig(overlay){
       '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="pc-pass" type="password" placeholder="••••"></div>'+
       '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>';
   }else if(type==='api'){
-    area.innerHTML='<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="generic">通用</option></select></div>'+
-      '<div class="form-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>'+
+    area.innerHTML='<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(\\'.modal-overlay\\'))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="generic">通用</option></select></div>'+
+      '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>'+
+      '<div class="form-group" id="pc-accountid-group" style="display:none;"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" placeholder="AhaSend Account ID"></div>'+
       '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
   }else{
     area.innerHTML='<div class="form-group"><label class="form-label">域名 *</label><input class="form-input" id="pc-domain" placeholder="example.com"></div>'+
       '<div class="form-group"><label class="form-label">DKIM Selector</label><input class="form-input" id="pc-dkim" placeholder="mailchannels"></div>';
+  }
+}
+
+function toggleApiProviderFields(overlay){
+  var pname=overlay.querySelector('#pc-pname')?overlay.querySelector('#pc-pname').value:'';
+  var urlGroup=overlay.querySelector('#pc-url-group');
+  var accountIdGroup=overlay.querySelector('#pc-accountid-group');
+  if(pname==='ahasend'){
+    if(urlGroup)urlGroup.style.display='none';
+    if(accountIdGroup)accountIdGroup.style.display='block';
+  }else{
+    if(urlGroup)urlGroup.style.display='block';
+    if(accountIdGroup)accountIdGroup.style.display='none';
   }
 }
 
@@ -223,8 +237,12 @@ function getProviderConfig(overlay,type){
     var api_key=overlay.querySelector('#pc-apikey')?overlay.querySelector('#pc-apikey').value.trim():'';
     var provider_name=overlay.querySelector('#pc-pname')?overlay.querySelector('#pc-pname').value:'generic';
     var api_url=overlay.querySelector('#pc-url')?overlay.querySelector('#pc-url').value.trim():'';
+    var account_id=overlay.querySelector('#pc-accountid')?overlay.querySelector('#pc-accountid').value.trim():'';
     if(!api_key){toast('请填写 API Key','error');return null}
-    return{api_key:api_key,provider_name:provider_name,api_url:api_url};
+    if(provider_name==='ahasend'&&!account_id){toast('请填写 AhaSend Account ID','error');return null}
+    var cfg={api_key:api_key,provider_name:provider_name,api_url:api_url};
+    if(account_id)cfg.account_id=account_id;
+    return cfg;
   }else{
     var domain=overlay.querySelector('#pc-domain')?overlay.querySelector('#pc-domain').value.trim():'';
     var dkim_selector=overlay.querySelector('#pc-dkim')?overlay.querySelector('#pc-dkim').value.trim():'mailchannels';
@@ -236,14 +254,14 @@ function getProviderConfig(overlay,type){
 async function toggleProvider(id,enabled){
   await api('/admin/providers/'+id,{method:'PUT',body:JSON.stringify({enabled:enabled?1:0})});
   renderPage('providers');
-  toast('Provider 状态已更新');
+  toast('发送通道状态已更新');
 }
 
 async function deleteAdminProvider(id){
-  if(!confirm('确定删除此 Provider？此操作不可撤销。'))return;
+  if(!confirm('确定删除此发送通道？此操作不可撤销。'))return;
   await api('/admin/providers/'+id,{method:'DELETE'});
   renderPage('providers');
-  toast('Provider 已删除');
+  toast('发送通道已删除');
 }
 
 async function renderAllAccounts(main){
@@ -252,7 +270,7 @@ async function renderAllAccounts(main){
 
     main.innerHTML='<h2 style="margin-bottom:24px;">发件账号管理</h2>'+
     '<div style="display:flex;justify-content:flex-end;margin-bottom:16px;"><button class="btn btn-primary" onclick="showAddAccountModal()">+ 添加发件账号</button></div>'+
-    '<div class="card"><div class="table-wrap"><table><thead><tr><th>账号名</th><th>邮箱</th><th>Provider</th><th>类型</th><th>今日/限额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+    '<div class="card"><div class="table-wrap"><table><thead><tr><th>账号名</th><th>邮箱</th><th>发送通道</th><th>类型</th><th>今日/限额</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
     accounts.map(function(a){
       return'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.email)+'</td><td>'+esc(a.provider_id||'-')+'</td><td><span class="badge badge-info">'+esc(a.provider_name||'-')+'</span></td><td>'+(a.sent_today||0)+' / '+(a.daily_limit||1000)+'</td><td><span class="badge '+(a.enabled?'badge-success':'badge-muted')+'">'+(a.enabled?'启用':'禁用')+'</span></td><td><button class="btn btn-sm btn-ghost" data-acctid="'+esc(a.id)+'" data-acctenabled="'+(!a.enabled?1:0)+'" onclick="toggleAccount(this.dataset.acctid,+this.dataset.acctenabled)">'+(a.enabled?'禁用':'启用')+'</button> <button class="btn btn-sm btn-danger" data-acctid="'+esc(a.id)+'" onclick="deleteAdminAccount(this.dataset.acctid)">删除</button></td></tr>';
     }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">暂无非发件账号</td></tr>'+
@@ -266,7 +284,7 @@ function showAddAccountModal(){
   api('/admin/providers').then(function(resp){
     var providers=resp.data||[];
     overlay.innerHTML='<div class="modal"><div class="modal-title">添加全局发件账号</div>'+
-      '<div class="form-group"><label class="form-label">Provider</label><select class="form-select" id="ac-provider">'+providers.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+esc(p.type)+')</option>'}).join('')+'</select></div>'+
+      '<div class="form-group"><label class="form-label">发送通道</label><select class="form-select" id="ac-provider">'+providers.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+esc(p.type)+')</option>'}).join('')+'</select></div>'+
       '<div class="form-group"><label class="form-label">账号名称</label><input class="form-input" id="ac-name" placeholder="如：通知邮箱"></div>'+
       '<div class="form-group"><label class="form-label">邮箱地址</label><input class="form-input" id="ac-email" placeholder="noreply@example.com"></div>'+
       '<div class="form-group"><label class="form-label">显示名称</label><input class="form-input" id="ac-display" placeholder="Teaven 通知"></div>'+
