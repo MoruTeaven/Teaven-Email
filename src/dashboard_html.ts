@@ -909,25 +909,25 @@ export function getDashboardHTML(): string {
           <div class="stat-card">
             <div class="stat-icon orange"><span class="iconpark-mail"></span></div>
             <div class="stat-label">今日发送</div>
-            <div class="stat-value orange">${d.today.sent}</div>
+            <div class="stat-value orange">\${d.today.sent}</div>
             <div class="stat-change">封邮件已投递</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon green"><span class="iconpark-check-circle"></span></div>
             <div class="stat-label">送达数量</div>
-            <div class="stat-value green">${d.today.delivered}</div>
+            <div class="stat-value green">\${d.today.delivered}</div>
             <div class="stat-change">封成功送达</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon red"><span class="iconpark-close-circle"></span></div>
             <div class="stat-label">发送失败</div>
-            <div class="stat-value red">${d.today.failed}</div>
+            <div class="stat-value red">\${d.today.failed}</div>
             <div class="stat-change">封投递失败</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon yellow"><span class="iconpark-warning"></span></div>
             <div class="stat-label">退信数量</div>
-            <div class="stat-value yellow">${d.today.bounced}</div>
+            <div class="stat-value yellow">\${d.today.bounced}</div>
             <div class="stat-change">封被退回</div>
           </div>
         </div>
@@ -941,19 +941,19 @@ export function getDashboardHTML(): string {
           </div>
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
             <div style="text-align: center; padding: 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2rem; font-weight: 800; color: var(--primary);">${d.templates_count}</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--primary);">\${d.templates_count}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">模板数量</div>
             </div>
             <div style="text-align: center; padding: 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2rem; font-weight: 800; color: var(--info);">${d.providers_count}</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--info);">\${d.providers_count}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">发送通道</div>
             </div>
             <div style="text-align: center; padding: 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2rem; font-weight: 800; color: var(--success);">${d.accounts_count}</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--success);">\${d.accounts_count}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">发件账号</div>
             </div>
             <div style="text-align: center; padding: 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2rem; font-weight: 800; color: var(--warning);">${d.api_keys_count}</div>
+              <div style="font-size: 2rem; font-weight: 800; color: var(--warning);">\${d.api_keys_count}</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">API Keys</div>
             </div>
           </div>
@@ -967,7 +967,7 @@ export function getDashboardHTML(): string {
             </div>
           </div>
           <div class="list-card">
-            ${(d.recent_7_days || []).map(function(s) {
+            \${(d.recent_7_days || []).map(function(s) {
               return '<div class="list-item">' +
                 '<div class="list-item-info">' +
                   '<div class="list-item-title">' + esc(s.date) + '</div>' +
@@ -1006,7 +1006,7 @@ export function getDashboardHTML(): string {
         </div>
 
         <div class="card">
-          ${keys.length === 0 ? `
+          \${keys.length === 0 ? `
             <div class="empty-state">
               <div class="empty-icon"><span class="iconpark-key"></span></div>
               <div class="empty-title">暂无 API Key</div>
@@ -1014,7 +1014,7 @@ export function getDashboardHTML(): string {
             </div>
           ` : `
             <div class="list-card">
-              ${keys.map(function(k) {
+              \${keys.map(function(k) {
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' + esc(k.name) + '</div>' +
@@ -1120,7 +1120,7 @@ export function getDashboardHTML(): string {
         </div>
 
         <div class="card">
-          ${templates.length === 0 ? `
+          \${templates.length === 0 ? `
             <div class="empty-state">
               <div class="empty-icon"><span class="iconpark-file-text"></span></div>
               <div class="empty-title">暂无模板</div>
@@ -1128,7 +1128,7 @@ export function getDashboardHTML(): string {
             </div>
           ` : `
             <div class="list-card">
-              ${templates.map(function(t) {
+              \${templates.map(function(t) {
                 var vars = typeof t.variables === 'string' ? JSON.parse(t.variables) : (t.variables || []);
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
@@ -1292,7 +1292,7 @@ export function getDashboardHTML(): string {
 
         <div id="provider-tab-providers">
           <div class="card">
-            ${providers.length === 0 ? `
+            \${providers.length === 0 ? `
               <div class="empty-state">
                 <div class="empty-icon"><span class="iconpark-connected"></span></div>
                 <div class="empty-title">暂无发送通道</div>
@@ -1300,7 +1300,7 @@ export function getDashboardHTML(): string {
               </div>
             ` : `
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-                ${providers.map(function(p) {
+                \${providers.map(function(p) {
                   var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
                   var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
                   return '<div style="background: var(--bg-base); border-radius: var(--radius-md); padding: 20px;">' +
@@ -1328,7 +1328,7 @@ export function getDashboardHTML(): string {
             </div>
           </div>
           <div class="card">
-            ${routes.length === 0 ? `
+            \${routes.length === 0 ? `
               <div class="empty-state">
                 <div class="empty-icon"><span class="iconpark-git-branch"></span></div>
                 <div class="empty-title">暂无路由规则</div>
@@ -1336,7 +1336,7 @@ export function getDashboardHTML(): string {
               </div>
             ` : `
               <div class="list-card">
-                ${routes.map(function(r) {
+                \${routes.map(function(r) {
                   return '<div class="list-item">' +
                     '<div class="list-item-info">' +
                       '<div class="list-item-title"><span class="badge badge-info">' + esc(r.category) + '</span></div>' +
@@ -1429,7 +1429,7 @@ export function getDashboardHTML(): string {
         </div>
 
         <div class="card">
-          ${logs.length === 0 ? `
+          \${logs.length === 0 ? `
             <div class="empty-state">
               <div class="empty-icon"><span class="iconpark-time"></span></div>
               <div class="empty-title">暂无日志</div>
@@ -1437,7 +1437,7 @@ export function getDashboardHTML(): string {
             </div>
           ` : `
             <div class="list-card">
-              ${logs.map(function(l) {
+              \${logs.map(function(l) {
                 var badgeClass = l.status === 'sent' ? 'badge-success' : l.status === 'failed' ? 'badge-danger' : l.status === 'pending' ? 'badge-warning' : 'badge-muted';
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +

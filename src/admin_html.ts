@@ -876,43 +876,43 @@ export function getAdminHTML(): string {
           <div class="stat-card">
             <div class="stat-icon orange"><span class="iconpark-users"></span></div>
             <div class="stat-label">租户数</div>
-            <div class="stat-value orange">${d.tenants}</div>
+            <div class="stat-value orange">\${d.tenants}</div>
             <div class="stat-change">个活跃租户</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon blue"><span class="iconpark-connected"></span></div>
             <div class="stat-label">发送通道</div>
-            <div class="stat-value blue">${d.providers}</div>
+            <div class="stat-value blue">\${d.providers}</div>
             <div class="stat-change">个通道配置</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon purple"><span class="iconpark-mail"></span></div>
             <div class="stat-label">发件账号</div>
-            <div class="stat-value purple">${d.accounts}</div>
+            <div class="stat-value purple">\${d.accounts}</div>
             <div class="stat-change">个账号</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon orange"><span class="iconpark-file-text"></span></div>
             <div class="stat-label">模板数</div>
-            <div class="stat-value orange">${d.templates}</div>
+            <div class="stat-value orange">\${d.templates}</div>
             <div class="stat-change">个邮件模板</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon green"><span class="iconpark-send"></span></div>
             <div class="stat-label">总邮件数</div>
-            <div class="stat-value green">${d.total_mails}</div>
+            <div class="stat-value green">\${d.total_mails}</div>
             <div class="stat-change">封已发送</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon orange"><span class="iconpark-clock"></span></div>
             <div class="stat-label">今日发送</div>
-            <div class="stat-value orange">${d.today_sent}</div>
+            <div class="stat-value orange">\${d.today_sent}</div>
             <div class="stat-change">封今日</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon red"><span class="iconpark-close-circle"></span></div>
             <div class="stat-label">今日失败</div>
-            <div class="stat-value red">${d.today_failed}</div>
+            <div class="stat-value red">\${d.today_failed}</div>
             <div class="stat-change">封失败</div>
           </div>
         </div>
@@ -933,12 +933,12 @@ export function getAdminHTML(): string {
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">All Systems Operational</div>
             </div>
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">${d.tenants}</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">\${d.tenants}</div>
               <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">活跃租户</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Active Tenants</div>
             </div>
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">${d.today_sent > 0 ? ((d.today_sent - d.today_failed) / d.today_sent * 100).toFixed(1) : 100}%</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">\${d.today_sent > 0 ? ((d.today_sent - d.today_failed) / d.today_sent * 100).toFixed(1) : 100}%</div>
               <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">送达率</div>
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Delivery Rate</div>
             </div>
@@ -969,7 +969,7 @@ export function getAdminHTML(): string {
         </div>
 
         <div class="card">
-          ${tenants.length === 0 ? `
+          \${tenants.length === 0 ? `
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-users" style="font-size: 2rem; color: var(--text-muted);"></span>
@@ -979,7 +979,7 @@ export function getAdminHTML(): string {
             </div>
           ` : `
             <div class="list-card">
-              ${tenants.map(function(t) {
+              \${tenants.map(function(t) {
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' +
@@ -1029,7 +1029,7 @@ export function getAdminHTML(): string {
         </div>
 
         <div class="card">
-          ${providers.length === 0 ? `
+          \${providers.length === 0 ? `
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-connected" style="font-size: 2rem; color: var(--text-muted);"></span>
@@ -1039,7 +1039,7 @@ export function getAdminHTML(): string {
             </div>
           ` : `
             <div class="provider-grid">
-              ${providers.map(function(p) {
+              \${providers.map(function(p) {
                 var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
                 var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
                 return '<div class="provider-card">' +
@@ -1197,7 +1197,7 @@ export function getAdminHTML(): string {
         </div>
 
         <div class="card">
-          ${accounts.length === 0 ? `
+          \${accounts.length === 0 ? `
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-mail" style="font-size: 2rem; color: var(--text-muted);"></span>
@@ -1207,7 +1207,7 @@ export function getAdminHTML(): string {
             </div>
           ` : `
             <div class="list-card">
-              ${accounts.map(function(a) {
+              \${accounts.map(function(a) {
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' + esc(a.name) + '</div>' +
