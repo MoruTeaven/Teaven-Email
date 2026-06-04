@@ -783,7 +783,7 @@
         </button>
         <button class="nav-item" data-page="tenants">
           <span class="icon iconpark-users"></span>
-          租户管理
+          用户管理
         </button>
         <button class="nav-item" data-page="providers">
           <span class="icon iconpark-connected"></span>
@@ -850,7 +850,7 @@
       var main = document.getElementById('main-content');
       switch (page) {
         case 'overview': renderOverview(main); break;
-        case 'tenants': renderTenants(main); break;
+        case 'tenants': renderUsers(main); break;
         case 'providers': renderProviders(main); break;
         case 'accounts': renderAllAccounts(main); break;
       }
@@ -871,9 +871,9 @@
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon orange"><span class="iconpark-users"></span></div>
-            <div class="stat-label">租户数</div>
-            <div class="stat-value orange">${d.tenants}</div>
-            <div class="stat-change">个活跃租户</div>
+            <div class="stat-label">用户数</div>
+            <div class="stat-value orange">${d.users}</div>
+            <div class="stat-change">个活跃用户</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon blue"><span class="iconpark-connected"></span></div>
@@ -929,9 +929,9 @@
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">All Systems Operational</div>
             </div>
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">${d.tenants}</div>
-              <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">活跃租户</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Active Tenants</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">${d.users}</div>
+              <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">活跃用户</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Active Users</div>
             </div>
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
               <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">${d.today_sent > 0 ? ((d.today_sent - d.today_failed) / d.today_sent * 100).toFixed(1) : 100}%</div>
@@ -943,39 +943,39 @@
       `;
     }
 
-    // 租户管理
-    async function renderTenants(main) {
+    // 用户管理
+    async function renderUsers(main) {
       var resp = await api('/admin/tenants');
-      var tenants = resp.data || [];
+      var users = resp.data || [];
 
       main.innerHTML = `
         <div class="page-header">
-          <h1 class="page-title">租户管理</h1>
-          <p class="page-subtitle">TENANT MANAGEMENT</p>
+          <h1 class="page-title">用户管理</h1>
+          <p class="page-subtitle">USER MANAGEMENT</p>
         </div>
 
         <div class="toolbar">
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="showCreateTenantModal()">
+            <button class="btn btn-primary" onclick="showCreateUserModal()">
               <span class="iconpark-plus"></span>
-              新建租户
+              新建用户
             </button>
           </div>
         </div>
 
         <div class="card">
-          ${tenants.length === 0 ? `
+          ${users.length === 0 ? `
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="iconpark-users" style="font-size: 2rem; color: var(--text-muted);"></span>
               </div>
-              <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无租户</div>
-              <div style="font-size: 0.9rem; color: var(--text-muted);">创建第一个租户开始使用平台</div>
+              <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无用户</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">创建第一个用户开始使用平台</div>
             </div>
           ` : `
             <div class="list-card">
-              ${tenants.map(function(t) {
+              ${users.map(function(t) {
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' +
@@ -986,8 +986,8 @@
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (t.status === 'active' ? 'badge-success' : 'badge-danger') + '">' + esc(t.status) + '</span>' +
-                    '<button class="btn btn-sm btn-ghost" data-tid="' + esc(t.id) + '" data-tstatus="' + (t.status === 'active' ? 'disabled' : 'active') + '" onclick="toggleTenant(this.dataset.tid, this.dataset.tstatus)">' + (t.status === 'active' ? '禁用' : '启用') + '</button>' +
-                    '<button class="btn btn-sm btn-secondary" data-tid="' + esc(t.id) + '" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button>' +
+                    '<button class="btn btn-sm btn-ghost" data-tid="' + esc(t.id) + '" data-tstatus="' + (t.status === 'active' ? 'disabled' : 'active') + '" onclick="toggleUser(this.dataset.tid, this.dataset.tstatus)">' + (t.status === 'active' ? '禁用' : '启用') + '</button>' +
+                    '<button class="btn btn-sm btn-secondary" data-tid="' + esc(t.id) + '" onclick="impersonateUser(this.dataset.tid)">模拟登录</button>' +
                   '</div>' +
                 '</div>';
               }).join('')}
@@ -997,10 +997,10 @@
       `;
     }
 
-    async function toggleTenant(id, status) {
+    async function toggleUser(id, status) {
       await api('/admin/tenants/' + id, { method: 'PUT', body: JSON.stringify({ status: status }) });
       renderPage(\'tenants\');
-      toast('租户状态已更新');
+      toast('用户状态已更新');
     }
 
     // 发送通道
@@ -1289,12 +1289,12 @@
       toast('账号已删除');
     }
 
-    // 创建租户
-    function showCreateTenantModal() {
+    // 创建用户
+    function showCreateUserModal() {
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal">' +
-        '<div class="modal-title">新建租户</div>' +
+        '<div class="modal-title">新建用户</div>' +
         '<div class="form-group">' +
           '<label class="form-label">姓名</label>' +
           '<input class="form-input" id="ct-name" placeholder="如：张三">' +
@@ -1333,14 +1333,14 @@
           overlay.innerHTML = '<div class="modal" style="border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 24px;">' +
               '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="iconpark-check-circle" style="color: var(--success);"></span></div>' +
-              '<div class="modal-title" style="text-align: center;">租户创建成功！</div>' +
+              '<div class="modal-title" style="text-align: center;">用户创建成功！</div>' +
             '</div>' +
-            '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
+            '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">API Key（仅显示一次）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
             '<button class="btn btn-primary" onclick="this.closest(\'.modal-overlay\').remove(); renderPage(\'tenants\');" style="width: 100%;">关闭</button>' +
           '</div>';
-          toast('租户创建成功');
+          toast('用户创建成功');
         } else {
           toast(resp.error, 'error');
         }
@@ -1349,7 +1349,7 @@
     }
 
     // 模拟登录
-    async function impersonateTenant(tid) {
+    async function impersonateUser(tid) {
       var resp = await api('/admin/tenants/' + tid + '/impersonate', { method: 'POST' });
       if (!resp.success) { toast(resp.error, 'error'); return; }
 
@@ -1362,10 +1362,10 @@
           '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="iconpark-user" style="color: var(--primary);"></span></div>' +
           '<div class="modal-title" style="text-align: center;">模拟登录</div>' +
         '</div>' +
-        '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
+        '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
         '<p style="color: var(--text-muted); margin-bottom: 12px;">生成的 API Key（仅显示一次）：</p>' +
         '<div class="code-block" style="margin-bottom: 16px;">' + esc(resp.data.api_key.key) + '</div>' +
-        '<p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 16px;">切换后将进入该租户的管理后台，原始超管 Key 已暂存</p>' +
+        '<p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 16px;">切换后将进入该用户的管理后台，原始超管 Key 已暂存</p>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
           '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
           '<button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button>' +

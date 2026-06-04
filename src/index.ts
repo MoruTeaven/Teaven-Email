@@ -23,7 +23,7 @@ app.use('*', cors({
   maxAge: 86400,
 }));
 
-// 租户后台
+// 用户后台
 app.get('/dashboard', async (c) => { return c.html(getDashboardHTML()); });
 
 // 超级管理员后台

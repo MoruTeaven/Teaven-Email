@@ -12,20 +12,20 @@
 
 ## 项目概述
 
-Teaven Email 是一个基于 **Cloudflare Workers** 的**多租户邮件基础设施平台**，为 SaaS 应用提供完整的邮件发送、模板管理、发送通道管理和异步队列处理能力。
+Teaven Email 是一个基于 **Cloudflare Workers** 的**多用户邮件基础设施平台**，为 SaaS 应用提供完整的邮件发送、模板管理、发送通道管理和异步队列处理能力。
 
 ### 核心能力
 
-- **多租户隔离**：每个租户独立管理自己的模板、API Key 和分类路由
-- **全局资源共享**：发送通道和发件账号由超级管理员统一配置，所有租户共享使用
+- **多用户隔离**：每个用户独立管理自己的模板、API Key 和分类路由
+- **全局资源共享**：发送通道和发件账号由超级管理员统一配置，所有用户共享使用
 - **三种发送通道**：SMTP（MailChannels）、Cloudflare Email Routing、第三方 API（SendGrid/Mailgun/Resend/AhaSend）
 - **模板引擎**：基于 Handlebars，支持版本管理、变量提取和模板预览
 - **分类路由调度**：可将不同类别的邮件路由到不同发送通道和发件账号
 - **异步队列**：邮件先入队列，由 Cron 定时批量处理，支持自动重试和指数退避
 - **负载均衡**：发件账号按 `daily_limit` 和 `sent_today` 选择最少使用的账号
 - **Webhook 回调**：邮件状态变更时通知外部系统
-- **每日统计**：按租户按天汇总发送数据
-- **管理后台**：租户后台（`/dashboard`）和超管后台（`/admin`），均为内联 SPA
+- **每日统计**：按用户按天汇总发送数据
+- **管理后台**：用户后台（`/dashboard`）和超管后台（`/admin`），均为内联 SPA
 
 ### 技术栈
 
@@ -58,7 +58,7 @@ Teaven Email/
 │   ├── mailer.ts              # 邮件发送引擎（3 通道）
 │   ├── queue_processor.ts     # 邮件队列处理器
 │   ├── admin_html.ts          # 超管后台 HTML
-│   ├── dashboard_html.ts      # 租户后台 HTML
+│   ├── dashboard_html.ts      # 用户后台 HTML
 │   ├── env.d.ts               # 环境变量类型声明
 │   └── routes/
 │       ├── mail.ts            # 邮件发送路由
@@ -68,7 +68,7 @@ Teaven Email/
 │       ├── webhooks.ts        # Webhook 管理路由
 │       ├── dashboard.ts       # 仪表盘 API
 │       ├── setup.ts           # 初始化/登录
-│       └── admin.ts           # 超管跨租户管理
+│       └── admin.ts           # 超管跨用户管理
 ├── wrangler.toml              # Cloudflare Workers 配置
 ├── package.json
 ├── tsconfig.json

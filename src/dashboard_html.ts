@@ -7,7 +7,7 @@ export function getDashboardHTML(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teaven Email - 多租户邮件平台</title>
+  <title>Teaven Email - 多用户邮件平台</title>
   <!-- Font Awesome Icons - 国内CDN -->
   <link rel="stylesheet" href="https://lib.baomitu.com/font-awesome/6.1.2/css/all.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23f97316'/><text x='16' y='23' text-anchor='middle' font-size='20' font-weight='bold' fill='white'>T</text></svg>">
@@ -882,7 +882,7 @@ export function getDashboardHTML(): string {
     <div class="impersonation-banner hidden" id="impersonation-banner">
       <div class="impersonation-banner-text">
         <span class="fas fa-user-secret"></span>
-        正在以管理员身份模拟登录此租户 · 令牌24小时后自动过期
+        正在以管理员身份模拟登录此用户 · 令牌24小时后自动过期
       </div>
       <button class="impersonation-banner-btn" onclick="exitImpersonation()">
         <span class="fas fa-arrow-left"></span> 返回管理员后台

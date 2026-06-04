@@ -1,6 +1,6 @@
-# Teaven Email - 多租户邮件基础设施平台
+# Teaven Email - 多用户邮件基础设施平台
 
-基于 Cloudflare Workers 的多租户邮件平台，支持多用户、多项目、多发送通道、多模板、多发件账号和分类调度。
+基于 Cloudflare Workers 的多用户邮件平台，支持多用户、多项目、多发送通道、多模板、多发件账号和分类调度。
 
 ## 架构
 
@@ -15,7 +15,7 @@
 │  ├─ /v1/providers          发送通道查看（只读）  │
 │  ├─ /v1/api-keys           API Key 管理          │
 │  ├─ /v1/admin/*            超级管理员面板        │
-│  ├─ /dashboard             租户后台界面          │
+│  ├─ /dashboard             用户后台界面          │
 │  └─ /admin                 超级管理员界面        │
 ├─────────────────────────────────────────────────┤
 │  Core Services                                   │
@@ -37,7 +37,7 @@
 
 ## 权限模型
 
-- **超级管理员**（后台 `/admin`）：管理全局发送通道和发件账号，管理所有租户
+- **超级管理员**（后台 `/admin`）：管理全局发送通道和发件账号，管理所有用户
 - **普通用户**（后台 `/dashboard`）：管理自己的模板、API Key、分类路由，使用管理员配置的全局发送通道和账号发送邮件
 - **发送通道和发件账号均为全局资源**，仅超级管理员可创建/修改/删除，所有用户共享使用
 
@@ -136,9 +136,9 @@ DELETE /v1/providers/routes/:id   # 删除分类路由
 ### 超级管理员（/v1/admin/*）
 
 ```http
-GET    /v1/admin/tenants          # 所有租户
-POST   /v1/admin/tenants          # 新建租户
-PUT    /v1/admin/tenants/:id      # 更新租户状态
+GET    /v1/admin/tenants          # 所有用户
+POST   /v1/admin/tenants          # 新建用户
+PUT    /v1/admin/tenants/:id      # 更新用户状态
 POST   /v1/admin/tenants/:id/impersonate # 模拟登录
 GET    /v1/admin/providers        # 全局发送通道列表
 POST   /v1/admin/providers        # 创建全局发送通道
@@ -226,7 +226,7 @@ src/
 ├── template_engine.ts    # Handlebars 模板引擎
 ├── mailer.ts             # 邮件发送引擎
 ├── queue_processor.ts    # 队列处理器
-├── dashboard_html.ts     # 租户后台界面
+├── dashboard_html.ts     # 用户后台界面
 ├── admin_html.ts         # 超级管理员界面
 ├── env.d.ts              # 环境类型声明
 └── routes/
@@ -242,7 +242,7 @@ src/
 
 ## 后台管理
 
-### 租户后台 `/dashboard`
+### 用户后台 `/dashboard`
 - 仪表盘概览
 - API Key 管理
 - 模板创建/编辑/预览
@@ -252,7 +252,7 @@ src/
 
 ### 超级管理员后台 `/admin`
 - 全局统计概览
-- 租户管理（创建/禁用/模拟登录）
+- 用户管理（创建/禁用/模拟登录）
 - **发送通道管理**（SMTP/API/Cloudflare Email 的创建/删除/启停）
 - **发件账号管理**（全局账号的创建/删除/启停）
 

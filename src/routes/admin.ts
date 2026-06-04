@@ -1,4 +1,4 @@
-// Teaven Email - 超级管理员路由（跨租户管理）
+// Teaven Email - 超级管理员路由（用户管理）
 import { Hono } from 'hono';
 import { superAdminMiddleware, generateApiKey, generateImpersonationToken } from '../auth';
 import { getDB } from '../db';
@@ -7,9 +7,9 @@ import type { Permission } from '../types';
 
 const adminRouter = new Hono<{ Bindings: Env }>();
 
-// ========== 跨租户数据查询 ==========
+// ========== 用户数据查询 ==========
 
-// GET /v1/admin/tenants - 所有租户
+// GET /v1/admin/tenants - 所有用户
 adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT u.id, u.name, u.email, u.status, u.is_super_admin, u.created_at,
@@ -21,15 +21,15 @@ adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, data: rows.results });
 });
 
-// GET /v1/admin/tenants/:id - 租户详情
+// GET /v1/admin/tenants/:id - 用户详情
 adminRouter.get('/tenants/:id', superAdminMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
-  if (!user) return c.json({ success: false, error: 'Tenant not found' }, 404);
+  if (!user) return c.json({ success: false, error: 'User not found' }, 404);
   return c.json({ success: true, data: user });
 });
 
-// PUT /v1/admin/tenants/:id - 更新租户状态
+// PUT /v1/admin/tenants/:id - 更新用户状态
 adminRouter.put('/tenants/:id', superAdminMiddleware(), async (c) => {
   const id = c.req.param('id');
   let body: { status?: string; is_super_admin?: number };
@@ -45,7 +45,7 @@ adminRouter.put('/tenants/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true });
 });
 
-// POST /v1/admin/tenants - 超管直接新建租户
+// POST /v1/admin/tenants - 超管直接新建用户
 adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
 
@@ -110,17 +110,17 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
   }, 201);
 });
 
-// POST /v1/admin/tenants/:id/impersonate - 模拟登录任意租户（返回签名临时令牌，24h有效） 
+// POST /v1/admin/tenants/:id/impersonate - 模拟登录任意用户（返回签名临时令牌，24h有效） 
 adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
   const id = c.req.param('id');
 
   const user = await db.getUserById(id);
   if (!user) {
-    return c.json({ success: false, error: 'Tenant not found' }, 404);
+    return c.json({ success: false, error: 'User not found' }, 404);
   }
   if (user.status !== 'active') {
-    return c.json({ success: false, error: 'Tenant is not active' }, 400);
+    return c.json({ success: false, error: 'User is not active' }, 400);
   }
 
   const secret = c.env.IMPERSONATION_SECRET || '';
@@ -199,7 +199,7 @@ adminRouter.delete('/providers/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, message: 'Provider deleted' });
 });
 
-// ========== 跨租户发件账号管理 ==========
+// ========== 发件账号管理 ==========
 
 // GET /v1/admin/accounts - 所有全局发件账号（含通道名称）
 adminRouter.get('/accounts', superAdminMiddleware(), async (c) => {
@@ -285,7 +285,7 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true });
 });
 
-// ========== 分类路由管理（超管统一管理，租户只读） ==========
+// ========== 分类路由管理（超管统一管理，用户只读） ==========
 
 // GET /v1/admin/routes - 获取所有分类路由（含用户、通道、账号信息）
 adminRouter.get('/routes', superAdminMiddleware(), async (c) => {
@@ -294,7 +294,7 @@ adminRouter.get('/routes', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, data: routes });
 });
 
-// POST /v1/admin/routes - 为指定租户创建分类路由
+// POST /v1/admin/routes - 为指定用户创建分类路由
 adminRouter.post('/routes', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
 
@@ -367,7 +367,7 @@ adminRouter.delete('/routes/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, message: 'Route deleted' });
 });
 
-// ========== 跨租户统计 ==========
+// ========== 全局统计 ==========
 
 // POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置
 adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
@@ -418,11 +418,11 @@ adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
   return c.json({ success: false, error: result.error || '发送失败', detail: result.providerResponse });
 });
 
-// ========== 跨租户统计 ==========
+// ========== 全局统计 ==========
 
 // GET /v1/admin/stats - 全局统计
 adminRouter.get('/stats', superAdminMiddleware(), async (c) => {
-  const [tenantCount, providerCount, accountCount, templateCount, mailCount] = await Promise.all([
+  const [userCount, providerCount, accountCount, templateCount, mailCount] = await Promise.all([
     c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE status != 'deleted'").first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM providers').first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM accounts').first<{ c: number }>(),
@@ -441,7 +441,7 @@ adminRouter.get('/stats', superAdminMiddleware(), async (c) => {
   return c.json({
     success: true,
     data: {
-      tenants: tenantCount?.c || 0,
+      users: userCount?.c || 0,
       providers: providerCount?.c || 0,
       accounts: accountCount?.c || 0,
       templates: templateCount?.c || 0,

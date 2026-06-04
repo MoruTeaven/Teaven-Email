@@ -788,7 +788,7 @@ export function getAdminHTML(): string {
         </button>
         <button class="nav-item" data-page="tenants">
           <span class="icon fas fa-users"></span>
-          租户管理
+          用户管理
         </button>
         <button class="nav-item" data-page="providers">
           <span class="icon fas fa-plug"></span>
@@ -861,7 +861,7 @@ export function getAdminHTML(): string {
       var main = document.getElementById('main-content');
       switch (page) {
         case 'overview': renderOverview(main); break;
-        case 'tenants': renderTenants(main); break;
+        case 'tenants': renderUsers(main); break;
         case 'providers': renderProviders(main); break;
         case 'accounts': renderAllAccounts(main); break;
         case 'routes': renderRoutes(main); break;
@@ -883,9 +883,9 @@ export function getAdminHTML(): string {
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon orange"><span class="fas fa-users"></span></div>
-            <div class="stat-label">租户数</div>
-            <div class="stat-value orange">\${d.tenants}</div>
-            <div class="stat-change">个活跃租户</div>
+            <div class="stat-label">用户数</div>
+            <div class="stat-value orange">\${d.users}</div>
+            <div class="stat-change">个活跃用户</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon blue"><span class="fas fa-plug"></span></div>
@@ -941,9 +941,9 @@ export function getAdminHTML(): string {
               <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">All Systems Operational</div>
             </div>
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
-              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">\${d.tenants}</div>
-              <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">活跃租户</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Active Tenants</div>
+              <div style="font-size: 2.5rem; font-weight: 800; color: var(--primary);">\${d.users}</div>
+              <div style="font-size: 1.1rem; font-weight: 600; margin-top: 8px;">活跃用户</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Active Users</div>
             </div>
             <div style="text-align: center; padding: 32px 24px; background: var(--bg-base); border-radius: var(--radius-md);">
               <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">\${d.today_sent > 0 ? ((d.today_sent - d.today_failed) / d.today_sent * 100).toFixed(1) : 100}%</div>
@@ -955,39 +955,39 @@ export function getAdminHTML(): string {
       \`;
     }
 
-    // 租户管理
-    async function renderTenants(main) {
+    // 用户管理
+    async function renderUsers(main) {
       var resp = await api('/admin/tenants');
-      var tenants = resp.data || [];
+      var users = resp.data || [];
 
       main.innerHTML = \`
         <div class="page-header">
-          <h1 class="page-title">租户管理</h1>
-          <p class="page-subtitle">TENANT MANAGEMENT</p>
+          <h1 class="page-title">用户管理</h1>
+          <p class="page-subtitle">USER MANAGEMENT</p>
         </div>
 
         <div class="toolbar">
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="showCreateTenantModal()">
+            <button class="btn btn-primary" onclick="showCreateUserModal()">
               <span class="fas fa-plus"></span>
-              新建租户
+              新建用户
             </button>
           </div>
         </div>
 
         <div class="card">
-          \${tenants.length === 0 ? \`
+          \${users.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span class="fas fa-users" style="font-size: 2rem; color: var(--text-muted);"></span>
               </div>
-              <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无租户</div>
-              <div style="font-size: 0.9rem; color: var(--text-muted);">创建第一个租户开始使用平台</div>
+              <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无用户</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">创建第一个用户开始使用平台</div>
             </div>
           \` : \`
             <div class="list-card">
-              \${tenants.map(function(t) {
+              \${users.map(function(t) {
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
                     '<div class="list-item-title">' +
@@ -998,8 +998,8 @@ export function getAdminHTML(): string {
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (t.status === 'active' ? 'badge-success' : 'badge-danger') + '">' + esc(t.status) + '</span>' +
-                    '<button class="btn btn-sm btn-ghost" data-tid="' + esc(t.id) + '" data-tstatus="' + (t.status === 'active' ? 'disabled' : 'active') + '" onclick="toggleTenant(this.dataset.tid, this.dataset.tstatus)">' + (t.status === 'active' ? '禁用' : '启用') + '</button>' +
-                    '<button class="btn btn-sm btn-secondary" data-tid="' + esc(t.id) + '" onclick="impersonateTenant(this.dataset.tid)">模拟登录</button>' +
+                    '<button class="btn btn-sm btn-ghost" data-tid="' + esc(t.id) + '" data-tstatus="' + (t.status === 'active' ? 'disabled' : 'active') + '" onclick="toggleUser(this.dataset.tid, this.dataset.tstatus)">' + (t.status === 'active' ? '禁用' : '启用') + '</button>' +
+                    '<button class="btn btn-sm btn-secondary" data-tid="' + esc(t.id) + '" onclick="impersonateUser(this.dataset.tid)">模拟登录</button>' +
                   '</div>' +
                 '</div>';
               }).join('')}
@@ -1009,10 +1009,10 @@ export function getAdminHTML(): string {
       \`;
     }
 
-    async function toggleTenant(id, status) {
+    async function toggleUser(id, status) {
       await api('/admin/tenants/' + id, { method: 'PUT', body: JSON.stringify({ status: status }) });
       renderPage('tenants');
-      toast('租户状态已更新');
+      toast('用户状态已更新');
     }
 
     // 发送通道
@@ -1525,9 +1525,9 @@ export function getAdminHTML(): string {
       var resp = await api('/admin/routes');
       _routesData = resp.data || [];
 
-      // 同时拉取租户和账号列表用于表单选择
-      var tenantsResp = await api('/admin/tenants');
-      var tenants = tenantsResp.data || [];
+      // 同时拉取用户和账号列表用于表单选择
+      var usersResp = await api('/admin/tenants');
+      var users = usersResp.data || [];
       var accountsResp = await api('/admin/accounts');
       var accounts = accountsResp.data || [];
 
@@ -1554,7 +1554,7 @@ export function getAdminHTML(): string {
                 <span class="fas fa-code-branch" style="font-size: 2rem; color: var(--text-muted);"></span>
               </div>
               <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 8px;">暂无分类路由</div>
-              <div style="font-size: 0.9rem; color: var(--text-muted);">为租户配置不同邮件分类使用的发送通道和账号</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">为用户配置不同邮件分类使用的发送通道和账号</div>
             </div>
           \` : \`
             <div class="list-card">
@@ -1588,7 +1588,7 @@ export function getAdminHTML(): string {
         api('/admin/providers'),
         api('/admin/accounts')
       ]).then(function(results) {
-        var tenants = results[0].data || [];
+        var users = results[0].data || [];
         var providers = results[1].data || [];
         var accounts = results[2].data || [];
 
@@ -1597,10 +1597,10 @@ export function getAdminHTML(): string {
         overlay.innerHTML = '<div class="modal">' +
           '<div class="modal-title">添加分类路由</div>' +
           '<div class="form-group">' +
-            '<label class="form-label">租户 *</label>' +
+            '<label class="form-label">用户 *</label>' +
             '<select class="form-select" id="ar-tenant">' +
-              '<option value="">-- 选择租户 --</option>' +
-              tenants.filter(function(t) { return t.status === 'active'; }).map(function(t) {
+              '<option value="">-- 选择用户 --</option>' +
+              users.filter(function(t) { return t.status === 'active'; }).map(function(t) {
                 return '<option value="' + esc(t.id) + '">' + esc(t.name) + ' (' + esc(t.email) + ')</option>';
               }).join('') +
             '</select>' +
@@ -1633,7 +1633,7 @@ export function getAdminHTML(): string {
           '<div class="form-group">' +
             '<label class="form-label">优先级</label>' +
             '<input class="form-input" id="ar-priority" type="number" value="0" min="0">' +
-            '<div class="form-hint">数值越大优先级越高，同一租户同分类多条规则时取优先级最高的</div>' +
+            '<div class="form-hint">数值越大优先级越高，同一用户同分类多条规则时取优先级最高的</div>' +
           '</div>' +
           '<div class="modal-footer">' +
             '<button class="btn btn-ghost" onclick="this.closest(\\\\'.modal-overlay\\\\').remove()">取消</button>' +
@@ -1692,12 +1692,12 @@ export function getAdminHTML(): string {
       else toast(resp.error, 'error');
     }
 
-    // 创建租户
-    function showCreateTenantModal() {
+    // 创建用户
+    function showCreateUserModal() {
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal">' +
-        '<div class="modal-title">新建租户</div>' +
+        '<div class="modal-title">新建用户</div>' +
         '<div class="form-group">' +
           '<label class="form-label">姓名</label>' +
           '<input class="form-input" id="ct-name" placeholder="如：张三">' +
@@ -1736,14 +1736,14 @@ export function getAdminHTML(): string {
           overlay.innerHTML = '<div class="modal" style="border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 24px;">' +
               '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-circle-check" style="color: var(--success);"></span></div>' +
-              '<div class="modal-title" style="text-align: center;">租户创建成功！</div>' +
+              '<div class="modal-title" style="text-align: center;">用户创建成功！</div>' +
             '</div>' +
-            '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
+            '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">API Key（仅显示一次）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
             '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\\'tenants\\');" style="width: 100%;">关闭</button>' +
           '</div>';
-          toast('租户创建成功');
+          toast('用户创建成功');
         } else {
           toast(resp.error, 'error');
         }
@@ -1752,7 +1752,7 @@ export function getAdminHTML(): string {
     }
 
     // 模拟登录（使用签名临时令牌，24h有效，不创建永久API Key）
-    async function impersonateTenant(tid) {
+    async function impersonateUser(tid) {
       var resp = await api('/admin/tenants/' + tid + '/impersonate', { method: 'POST' });
       if (!resp.success) { toast(resp.error, 'error'); return; }
 
@@ -1765,7 +1765,7 @@ export function getAdminHTML(): string {
           '<div style="font-size: 3rem; margin-bottom: 16px;"><span class="fas fa-user-secret" style="color: var(--primary);"></span></div>' +
           '<div class="modal-title" style="text-align: center;">模拟登录</div>' +
         '</div>' +
-        '<p style="color: var(--text-muted); margin-bottom: 8px;">租户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
+        '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
         '<p style="color: var(--text-muted); margin-bottom: 12px;">临时令牌（24小时有效，无需管理）：</p>' +
         '<div class="code-block" style="margin-bottom: 12px; font-size: 0.78rem;">' + esc(resp.data.impersonation_token) + '</div>' +
         '<p style="color: var(--warning); font-size: 0.78rem; margin-bottom: 16px;"><span class="fas fa-info-circle"></span> 令牌24小时后自动过期，无需手动清理。到期后需重新模拟登录。</p>' +
