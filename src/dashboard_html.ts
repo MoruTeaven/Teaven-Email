@@ -1037,27 +1037,21 @@ export function getDashboardHTML(): string {
         body: JSON.stringify({ email: email, password: password })
       }).then(function(r) { return r.json(); }).then(function(resp) {
         if (resp.success) {
-          var keys = resp.data.api_keys;
-          var activeKey = keys.filter(function(k) { return k.enabled; })[0];
-          if (activeKey) {
-            fetch(API_BASE + '/setup/key-from-password', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: email, password: password, name: 'Dashboard Login' })
-            }).then(function(r2) { return r2.json(); }).then(function(resp2) {
-              if (resp2.success) {
-                localStorage.setItem('teaven_api_key', resp2.data.api_key.key);
-                location.reload();
-              } else {
-                toast('请使用 API Key 登录', 'error');
-                document.getElementById('main-content').innerHTML = apiKeyFallbackPage();
-              }
-            });
-          } else {
-            toast('没有可用的 API Key', 'error');
-            btn.disabled = false;
-            btn.textContent = '登 录';
-          }
+          // 登录成功后，始终调用 key-from-password 获取/创建 API Key
+          fetch(API_BASE + '/setup/key-from-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password, name: 'Dashboard Login' })
+          }).then(function(r2) { return r2.json(); }).then(function(resp2) {
+            if (resp2.success) {
+              localStorage.setItem('teaven_api_key', resp2.data.api_key.key);
+              location.reload();
+            } else {
+              toast('获取 API Key 失败: ' + (resp2.error || '未知错误'), 'error');
+              btn.disabled = false;
+              btn.textContent = '登 录';
+            }
+          });
         } else {
           toast(resp.error, 'error');
           btn.disabled = false;

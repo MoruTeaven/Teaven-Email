@@ -146,17 +146,8 @@ setupRouter.post('/login', async (c) => {
     return c.json({ success: false, error: 'Invalid email or password' }, 401);
   }
 
-  // 获取用户的 API Keys
+  // 获取用户的 API Keys（可能为空或全部禁用，前端会自动调用 /key-from-password 创建新 Key）
   const apiKeys = await db.getApiKeysByUser(user.id);
-  if (apiKeys.length === 0) {
-    return c.json({ success: false, error: 'No API keys found. Contact administrator.' }, 404);
-  }
-
-  // 返回第一个启用的 key
-  const activeKey = apiKeys.find(k => k.enabled === 1);
-  if (!activeKey) {
-    return c.json({ success: false, error: 'No active API keys. Contact administrator.' }, 404);
-  }
 
   return c.json({
     success: true,
