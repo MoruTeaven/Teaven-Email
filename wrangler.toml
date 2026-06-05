@@ -1,6 +1,7 @@
 name = "teaven-email"
 main = "src/index.ts"
 compatibility_date = "2025-06-03"
+compatibility_flags = ["unsafe_eval"]
 
 [[d1_databases]]
 binding = "DB"
