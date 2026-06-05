@@ -74,8 +74,10 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
 
       processed++;
     } else {
+      // 检查是否达到最大重试次数
+      // 注意：item.retry_count 是处理前的重试次数，本次失败后需 +1
       if (item.retry_count >= item.max_retries - 1) {
-        // 达到最大重试次数
+        // 达到最大重试次数 → 永久失败
         await db.updateQueueItemStatus(item.id, 'failed', result.error);
         await db.updateMailLogStatus(item.mail_log_id, 'failed', result.providerResponse, result.error);
 
@@ -84,7 +86,9 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
 
         await triggerWebhooks(env, item.user_id, 'failed', item);
       } else {
-        await db.updateQueueItemStatus(item.id, 'failed', result.error);
+        // 未达最大重试 → 回到 queued，设置延迟重试
+        await db.updateQueueItemStatus(item.id, 'queued', result.error, true);
+        await db.updateMailLogStatus(item.mail_log_id, 'pending', result.providerResponse, result.error);
       }
       failed++;
     }

@@ -66,10 +66,10 @@ app.onError((err, c) => {
   }, 500);
 });
 
-// Cron 触发器 - 处理邮件队列
+// Cron 触发器 - 处理邮件队列（每分钟执行一次）
 // 在 wrangler.toml 中配置：
 // [triggers]
-// crons = ["*/30 * * * *"]
+// crons = ["* * * * *"]
 app.get('/__internal/process-queue', async (c) => {
   const result = await processQueue(c.env);
   return c.json({ success: true, data: result });
@@ -89,7 +89,7 @@ export default {
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     switch (event.cron) {
-      case '*/30 * * * *':
+      case '* * * * *':
         ctx.waitUntil(processQueue(env));
         ctx.waitUntil(cleanupExpiredKeys(env));
         break;

@@ -373,13 +373,27 @@ export function getDB(db: D1Database) {
       return result.results;
     },
 
-    async updateQueueItemStatus(id: string, status: string, errorMessage?: string): Promise<void> {
+    async updateQueueItemStatus(id: string, status: string, errorMessage?: string, retry?: boolean): Promise<void> {
       const fields = ['status = ?'];
       const values: unknown[] = [status];
-      if (status === 'failed') {
+
+      if (retry) {
+        // 临时失败，等待重试：递增 retry_count，设置下次重试时间，状态回到 queued
         fields.push('retry_count = retry_count + 1');
-        fields.push(`next_retry_at = datetime('now', '+' || (retry_count + 1) * 5 || ' seconds')`);
+        fields.push(`next_retry_at = datetime('now', '+' || (retry_count + 1) * 30 || ' seconds')`);
+        if (errorMessage) {
+          fields.push('error_message = ?');
+          values.push(errorMessage);
+        }
+      } else if (status === 'failed') {
+        // 永久失败，记录错误
+        fields.push('retry_count = retry_count + 1');
+        if (errorMessage) {
+          fields.push('error_message = ?');
+          values.push(errorMessage);
+        }
       }
+
       values.push(id);
       await db.prepare(
         `UPDATE mail_queue SET ${fields.join(', ')} WHERE id = ?`

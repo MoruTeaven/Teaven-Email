@@ -4,6 +4,7 @@ import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
 import { renderTemplate, renderSubject, validateVariables, htmlToText } from '../template_engine';
 import { sendWithRetry, selectAccount } from '../mailer';
+import { processQueue } from '../queue_processor';
 import type { SendTemplateRequest, SendMailRequest, MailLog, MailQueueItem } from '../types';
 
 const mailRouter = new Hono<{ Bindings: Env }>();
@@ -134,6 +135,9 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   };
   await db.createQueueItem(queueItem);
 
+  // 即时触发队列处理（不等待完成，后台执行）
+  c.executionCtx.waitUntil(processQueue(c.env));
+
   return c.json({
     success: true,
     data: {
@@ -234,6 +238,9 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     max_retries: 3,
   };
   await db.createQueueItem(queueItem);
+
+  // 即时触发队列处理（不等待完成，后台执行）
+  c.executionCtx.waitUntil(processQueue(c.env));
 
   return c.json({
     success: true,
