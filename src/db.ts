@@ -2,7 +2,8 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type {
   User, ApiKey, EmailProvider, Account, Template,
-  TemplateVersion, MailLog, MailQueueItem, Webhook
+  TemplateVersion, MailLog, MailQueueItem, Webhook,
+  VerificationCode
 } from './types';
 
 export function getDB(db: D1Database) {
@@ -438,6 +439,50 @@ export function getDB(db: D1Database) {
         `SELECT * FROM daily_stats WHERE user_id = ? AND date >= date('now', ?) ORDER BY date DESC`
       ).bind(userId, `-${days} days`).all();
       return result.results;
+    },
+
+    // ============ Verification Codes ============
+    async createVerificationCode(vc: Omit<VerificationCode, 'created_at'>): Promise<void> {
+      await db.prepare(
+        `INSERT INTO verification_codes (id, email, code, scene_type, user_id, expires_at, used, attempts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(vc.id, vc.email, vc.code, vc.scene_type, vc.user_id, vc.expires_at, vc.used, vc.attempts).run();
+    },
+
+    async getLatestCode(email: string, scene_type: string): Promise<VerificationCode | null> {
+      return db.prepare(
+        `SELECT * FROM verification_codes
+         WHERE email = ? AND scene_type = ? AND used = 0
+         ORDER BY created_at DESC LIMIT 1`
+      ).bind(email, scene_type).first<VerificationCode>();
+    },
+
+    async markCodeUsed(id: string): Promise<void> {
+      await db.prepare(
+        `UPDATE verification_codes SET used = 1 WHERE id = ?`
+      ).bind(id).run();
+    },
+
+    async incrementCodeAttempts(id: string): Promise<void> {
+      await db.prepare(
+        `UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ?`
+      ).bind(id).run();
+    },
+
+    async deleteUsedCodes(email: string, scene_type: string): Promise<void> {
+      // 标记同一 email + scene_type 下所有未使用的旧码为已使用（保证只有最新码有效）
+      await db.prepare(
+        `UPDATE verification_codes SET used = 1
+         WHERE email = ? AND scene_type = ? AND used = 0
+         AND id != (SELECT id FROM verification_codes WHERE email = ? AND scene_type = ? ORDER BY created_at DESC LIMIT 1)`
+      ).bind(email, scene_type, email, scene_type).run();
+    },
+
+    async cleanupExpiredCodes(): Promise<number> {
+      const result = await db.prepare(
+        `DELETE FROM verification_codes WHERE expires_at <= datetime('now') OR used = 1`
+      ).run();
+      return result.meta?.changes ?? 0;
     },
   };
 }

@@ -9,6 +9,7 @@ import webhookRouter from './routes/webhooks';
 import dashboardRouter from './routes/dashboard';
 import setupRouter from './routes/setup';
 import adminRouter from './routes/admin';
+import verificationRouter from './routes/verification';
 import { processQueue } from './queue_processor';
 import { getDB } from './db';
 import { getDashboardHTML } from './dashboard_html';
@@ -52,6 +53,7 @@ v1.route('/webhooks', webhookRouter);
 v1.route('/dashboard', dashboardRouter);
 v1.route('/setup', setupRouter);
 v1.route('/admin', adminRouter);
+v1.route('/verification', verificationRouter);
 
 // 注册 v1 路由组
 app.route('/v1', v1);
@@ -92,6 +94,7 @@ export default {
       case '* * * * *':
         ctx.waitUntil(processQueue(env));
         ctx.waitUntil(cleanupExpiredKeys(env));
+        ctx.waitUntil(cleanupExpiredCodes(env));
         break;
     }
   },
@@ -106,5 +109,17 @@ async function cleanupExpiredKeys(env: Env): Promise<void> {
     }
   } catch (err) {
     console.error('Failed to cleanup expired keys:', err);
+  }
+}
+
+async function cleanupExpiredCodes(env: Env): Promise<void> {
+  try {
+    const db = getDB(env.DB);
+    const count = await db.cleanupExpiredCodes();
+    if (count > 0) {
+      console.log(`Cleaned up ${count} expired/used verification codes`);
+    }
+  } catch (err) {
+    console.error('Failed to cleanup expired codes:', err);
   }
 }

@@ -213,3 +213,32 @@ export interface AuthContext {
   permissions: Permission[];
   impersonated?: boolean;    // true when using impersonation token
 }
+
+// ============ 验证码 ============
+
+export interface VerificationCode {
+  id: string;
+  email: string;
+  code: string;
+  scene_type: string;
+  user_id: string;
+  expires_at: string;
+  used: number;
+  attempts: number;
+  created_at: string;
+}
+
+export interface SendCodeRequest {
+  template: string;       // 模板 code（模板变量必须包含 {{code}}）
+  to: string;             // 收件邮箱
+  scene_type: string;     // 用户自定义场景字符串
+  variables?: Record<string, string>;  // 额外模板变量（code 会自动注入）
+  expire_minutes?: number; // 验证码有效期（默认 10 分钟）
+  code_length?: number;    // 验证码长度（默认 6 位数字）
+}
+
+export interface VerifyCodeRequest {
+  email: string;          // 待验证邮箱
+  code: string;           // 用户输入的验证码
+  scene_type: string;     // 场景类型
+}

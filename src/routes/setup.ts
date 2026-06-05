@@ -246,10 +246,12 @@ async function ensureTables(db: D1Database): Promise<void> {
     `CREATE TABLE IF NOT EXISTS mail_queue (id TEXT PRIMARY KEY, mail_log_id TEXT NOT NULL REFERENCES mail_logs(id), user_id TEXT NOT NULL REFERENCES users(id), provider_id TEXT NOT NULL, account_id TEXT, to_email TEXT NOT NULL, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, category TEXT, priority INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','processing','completed','failed')), scheduled_at TEXT, next_retry_at TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS daily_stats (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), date TEXT NOT NULL, total_sent INTEGER DEFAULT 0, total_delivered INTEGER DEFAULT 0, total_failed INTEGER DEFAULT 0, total_bounced INTEGER DEFAULT 0, total_spam INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, url TEXT NOT NULL, events TEXT NOT NULL DEFAULT '["sent","failed","bounced"]', secret TEXT, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS verification_codes (id TEXT PRIMARY KEY, email TEXT NOT NULL, code TEXT NOT NULL, scene_type TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_code_version ON templates(user_id, template_code, version)`,
     `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(api_key_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_mail_queue_status ON mail_queue(status)`,
     `CREATE INDEX IF NOT EXISTS idx_daily_stats_user_date ON daily_stats(user_id, date)`,
+    `CREATE INDEX IF NOT EXISTS idx_verification_codes_email_scene ON verification_codes(email, scene_type)`,
   ];
 
   for (const sql of tables) {
