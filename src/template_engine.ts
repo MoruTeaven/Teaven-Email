@@ -1,22 +1,61 @@
-// Teaven Email - 模板引擎 (Handlebars)
-import Handlebars from 'handlebars';
+// Teaven Email - 模板引擎 (零依赖，兼容 Cloudflare Workers CSP)
+// 不使用任何依赖 new Function() 的库，纯字符串替换
 
-// 注册内置 helpers
-Handlebars.registerHelper('uppercase', (str: string) => {
-  return typeof str === 'string' ? str.toUpperCase() : str;
-});
+// 内置 helper 函数（与之前 Handlebars 注册的 helpers 行为一致）
+const builtinHelpers: Record<string, (...args: string[]) => string> = {
+  uppercase: (str: string) => (typeof str === 'string' ? str.toUpperCase() : str),
+  lowercase: (str: string) => (typeof str === 'string' ? str.toLowerCase() : str),
+  date: () => new Date().toISOString(),
+  currentYear: () => new Date().getFullYear().toString(),
+};
 
-Handlebars.registerHelper('lowercase', (str: string) => {
-  return typeof str === 'string' ? str.toLowerCase() : str;
-});
+/**
+ * 解析模板中的 {{...}} 表达式并替换
+ * 支持：
+ *   {{varName}}            — 简单变量替换
+ *   {{uppercase varName}}  — 调用内置 helper
+ *   {{currentYear}}        — 无参 helper
+ *
+ * 不依赖 eval/new Function，完全兼容 Cloudflare Workers。
+ */
+function substitute(input: string, variables: Record<string, string>): string {
+  // 匹配所有 {{...}} 占位符
+  return input.replace(/\{\{(.+?)\}\}/g, (_full: string, inner: string) => {
+    const expr = inner.trim();
 
-Handlebars.registerHelper('date', (format: string) => {
-  return new Date().toISOString();
-});
+    // 空表达式 → 原样保留
+    if (!expr) return _full;
 
-Handlebars.registerHelper('currentYear', () => {
-  return new Date().getFullYear().toString();
-});
+    // 检查是否是 helper 调用：helperName varName 或 helperName
+    const spaceIdx = expr.indexOf(' ');
+    if (spaceIdx > 0) {
+      const helperName = expr.substring(0, spaceIdx);
+      const arg = expr.substring(spaceIdx + 1).trim();
+      const helper = builtinHelpers[helperName];
+      if (helper) {
+        // 如果参数是变量名，从 variables 中取值
+        const value = variables[arg] ?? arg;
+        return helper(value);
+      }
+      // 未知 helper，原样保留
+      return _full;
+    }
+
+    // 无参 helper
+    const helper = builtinHelpers[expr];
+    if (helper) {
+      return helper();
+    }
+
+    // 普通变量替换
+    if (expr in variables) {
+      return variables[expr];
+    }
+
+    // 未匹配：保持原样
+    return _full;
+  });
+}
 
 // 模板渲染
 export function renderTemplate(
@@ -25,11 +64,7 @@ export function renderTemplate(
   options?: { strict?: boolean }
 ): { html: string; error?: string } {
   try {
-    const template = Handlebars.compile(html, {
-      noEscape: true,
-      strict: options?.strict ?? false,
-    });
-    const rendered = template(variables);
+    const rendered = substitute(html, variables);
     return { html: rendered };
   } catch (error) {
     return {
@@ -45,8 +80,7 @@ export function renderSubject(
   variables: Record<string, string>
 ): { subject: string; error?: string } {
   try {
-    const template = Handlebars.compile(subject, { noEscape: true });
-    return { subject: template(variables) };
+    return { subject: substitute(subject, variables) };
   } catch (error) {
     return {
       subject,
@@ -55,7 +89,7 @@ export function renderSubject(
   }
 }
 
-// 提取模板中的变量名
+// 提取模板中的变量名（只匹配 {{varName}}，不匹配 helper 调用）
 export function extractVariables(html: string, subject: string): string[] {
   const varRegex = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
   const variables = new Set<string>();
