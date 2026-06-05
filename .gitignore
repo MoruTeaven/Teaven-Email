@@ -17,6 +17,7 @@ agents.md
 *.swp
 *.swo
 .codebuddy/
+.workbuddy/
 
 # OS
 .DS_Store

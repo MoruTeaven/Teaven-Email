@@ -206,14 +206,15 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:1000;padding:24px;animation:fadeIn .2s}
-.modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:85vh;overflow-y:auto;animation:slideUp .25s}
+.modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:85vh;overflow-y:auto;animation:slideUp .25s;padding:28px}
 .modal-lg{max-width:720px}
-.modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal>.modal-title{margin:-28px -28px 0;padding:24px 28px;border-bottom:1px solid var(--border);font-size:1rem;font-weight:600}
+.modal-header{padding:24px 28px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .modal-title{font-size:1rem;font-weight:600}
-.modal-close{width:26px;height:26px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.modal-close{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .modal-close:hover{color:var(--danger);border-color:var(--danger)}
-.modal-body{padding:22px}
-.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.modal-body{padding:28px}
+.modal-footer{margin:0 -28px -28px;padding:20px 28px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
 
 /* Toast */
 .toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}
@@ -788,7 +789,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '</div>' +
         '<div class="form-group">' +
           '<label class="form-label">类型 *</label>' +
-          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\\'.modal-overlay\\'))">' +
+          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(&#39;.modal-overlay&#39;))">' +
             '<option value="smtp">SMTP</option>' +
             '<option value="api">第三方 API</option>' +
             '<option value="cloudflare_email">Cloudflare Email</option>' +
@@ -796,7 +797,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '</div>' +
         '<div id="p-config-area"></div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="p-save-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -833,7 +834,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '</div>' +
         '<div class="form-group">' +
           '<label class="form-label">类型 *</label>' +
-          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(\\'.modal-overlay\\'))">' +
+          '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(&#39;.modal-overlay&#39;))">' +
             '<option value="smtp"' + (p.type === 'smtp' ? ' selected' : '') + '>SMTP</option>' +
             '<option value="api"' + (p.type === 'api' ? ' selected' : '') + '>第三方 API</option>' +
             '<option value="cloudflare_email"' + (p.type === 'cloudflare_email' ? ' selected' : '') + '>Cloudflare Email</option>' +
@@ -841,7 +842,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '</div>' +
         '<div id="p-config-area"></div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="p-save-btn">保存修改</button>' +
         '</div>' +
       '</div>';
@@ -856,7 +857,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div class="form-group"><label class="form-label">Password</label><input class="form-input" id="pc-pass" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的密码出于安全原因不显示，留空则保持原密码不变</div></div>' +
           '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls"' + (config.encryption === 'tls' ? ' selected' : '') + '>TLS</option><option value="ssl"' + (config.encryption === 'ssl' ? ' selected' : '') + '>SSL</option><option value="none"' + (config.encryption === 'none' ? ' selected' : '') + '>None</option></select></div>';
       } else if (p.type === 'api') {
-        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(\\'.modal-overlay\\'))"><option value="sendgrid"' + (config.provider_name === 'sendgrid' ? ' selected' : '') + '>SendGrid</option><option value="mailgun"' + (config.provider_name === 'mailgun' ? ' selected' : '') + '>Mailgun</option><option value="resend"' + (config.provider_name === 'resend' ? ' selected' : '') + '>Resend</option><option value="ahasend"' + (config.provider_name === 'ahasend' ? ' selected' : '') + '>AhaSend</option><option value="generic"' + (config.provider_name === 'generic' || !config.provider_name ? ' selected' : '') + '>通用</option></select></div>' +
+        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(&#39;.modal-overlay&#39;))"><option value="sendgrid"' + (config.provider_name === 'sendgrid' ? ' selected' : '') + '>SendGrid</option><option value="mailgun"' + (config.provider_name === 'mailgun' ? ' selected' : '') + '>Mailgun</option><option value="resend"' + (config.provider_name === 'resend' ? ' selected' : '') + '>Resend</option><option value="ahasend"' + (config.provider_name === 'ahasend' ? ' selected' : '') + '>AhaSend</option><option value="generic"' + (config.provider_name === 'generic' || !config.provider_name ? ' selected' : '') + '>通用</option></select></div>' +
           '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" value="' + esc(config.api_url || '') + '" placeholder="https://api.example.com/send"></div>' +
           '<div class="form-group" id="pc-accountid-group" style="display: ' + (config.provider_name === 'ahasend' ? 'block' : 'none') + ';"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" value="' + esc(config.account_id || '') + '" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="pc-apikey" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的 API Key 出于安全原因不显示，留空则保持原 Key 不变</div></div>';
@@ -915,7 +916,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="pc-pass" type="password" placeholder="••••"></div>' +
           '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>';
       } else if (type === 'api') {
-        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(\\'.modal-overlay\\'))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="generic">通用</option></select></div>' +
+        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(&#39;.modal-overlay&#39;))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="generic">通用</option></select></div>' +
           '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>' +
           '<div class="form-group" id="pc-accountid-group" style="display: none;"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
@@ -1086,7 +1087,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<div class="form-hint">选择该账号可用于哪些分类邮件的发送，可多选。留空则不参与自动路由。</div>' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+            '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
             '<button class="btn btn-primary" id="ac-save-btn">创建</button>' +
           '</div>' +
         '</div>';
@@ -1178,7 +1179,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<div class="form-hint">留空则不参与自动路由，所有用户均可使用配置了分类的账号发送对应分类的邮件。</div>' +
           '</div>' +
           '<div class="modal-footer">' +
-            '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+            '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
             '<button class="btn btn-primary" id="ae-save-btn">保存修改</button>' +
           '</div>' +
         '</div>';
@@ -1224,7 +1225,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div style="margin-top: 6px; font-size: 0.78rem; color: var(--text-muted);">默认发给自己，可修改为其他邮箱</div>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="at-send-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg> 发送测试</button>' +
         '</div>' +
       '</div>';
@@ -1289,7 +1290,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '</label>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="ct-save-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -1313,7 +1314,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             '<p style="color: var(--text-muted); margin-bottom: 8px;">用户: <strong>' + esc(resp.data.user.name) + '</strong> (' + esc(resp.data.user.email) + ')</p>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">API Key（仅显示一次）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
-            '<button class="btn btn-primary" onclick="this.closest(\\'.modal-overlay\\').remove(); renderPage(\\'users\\');" style="width: 100%;">关闭</button>' +
+            '<button class="btn btn-primary" onclick="this.closest(&#39;.modal-overlay&#39;).remove(); renderPage(&#39;users&#39;);" style="width: 100%;">关闭</button>' +
           '</div>';
           toast('用户创建成功');
         } else {
@@ -1342,7 +1343,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '<div class="code-block" style="margin-bottom: 12px; font-size: 0.78rem;">' + esc(resp.data.impersonation_token) + '</div>' +
         '<p style="color: var(--warning); font-size: 0.78rem; margin-bottom: 16px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> 令牌24小时后自动过期，无需手动清理。到期后需重新模拟登录。</p>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="impersonate-switch-btn">以此身份登录</button>' +
         '</div>' +
       '</div>';
@@ -1393,7 +1394,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '</div>' +
           '<button class="btn btn-primary btn-lg" onclick="doLogin()" style="width: 100%;">登 录</button>' +
           '<div style="text-align: center; margin-top: 24px; color: var(--text-muted);">' +
-            '或 <a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=apiKeyFallbackPage(); return false;" style="color: var(--primary); text-decoration: none;">使用 API Key 登录</a>' +
+            '或 <a href="#" onclick="document.getElementById(&#39;main-content&#39;).innerHTML=apiKeyFallbackPage(); return false;" style="color: var(--primary); text-decoration: none;">使用 API Key 登录</a>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1413,7 +1414,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '</div>' +
           '<button class="btn btn-primary btn-lg" onclick="saveApiKey()" style="width: 100%;">进 入</button>' +
           '<div style="text-align: center; margin-top: 24px; color: var(--text-muted);">' +
-            '<a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=loginPage(); return false;" style="color: var(--primary); text-decoration: none;">返回账号登录</a>' +
+            '<a href="#" onclick="document.getElementById(&#39;main-content&#39;).innerHTML=loginPage(); return false;" style="color: var(--primary); text-decoration: none;">返回账号登录</a>' +
           '</div>' +
         '</div>' +
       '</div>';

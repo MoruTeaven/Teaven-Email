@@ -181,13 +181,14 @@ export function getDashboardHTML(): string {
 
     /* Modal */
     .modal-overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:1000;padding:24px;animation:fadeIn .2s}
-    .modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:85vh;overflow-y:auto;animation:slideUp .25s}
-    .modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:85vh;overflow-y:auto;animation:slideUp .25s;padding:28px}
+    .modal>.modal-title{margin:-28px -28px 0;padding:24px 28px;border-bottom:1px solid var(--border);font-size:1rem;font-weight:600}
+    .modal-header{padding:24px 28px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
     .modal-title{font-size:1rem;font-weight:600}
-    .modal-close{width:26px;height:26px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .modal-close{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
     .modal-close:hover{color:var(--danger);border-color:var(--danger)}
-    .modal-body{padding:22px}
-    .modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+    .modal-body{padding:28px}
+    .modal-footer{margin:0 -28px -28px;padding:20px 28px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
 
     /* Toast */
     .toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}
@@ -660,7 +661,7 @@ export function getDashboardHTML(): string {
           '</div>' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="ak-create-btn">创建</button>' +
         '</div>' +
       '</div>';
@@ -677,7 +678,7 @@ export function getDashboardHTML(): string {
           main.insertAdjacentHTML('afterbegin', '<div class="card" style="border-color: var(--success); margin-bottom: 24px;" id="key-reveal">' +
             '<div class="card-header">' +
               '<div class="card-title">API Key 创建成功</div>' +
-              '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(\\'key-reveal\\').remove()">关闭</button>' +
+              '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(&#39;key-reveal&#39;).remove()">关闭</button>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 12px;">请保存此 Key。后续可在 API Keys 列表中验证密码后重新查看。</p>' +
             '<div class="code-block"><span class="key-highlight">' + esc(resp.data.api_key) + '</span></div>' +
@@ -714,7 +715,7 @@ export function getDashboardHTML(): string {
           '<input class="form-input" id="reveal-pwd" type="password" placeholder="输入登录密码">' +
         '</div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="reveal-submit">查看</button>' +
         '</div>' +
       '</div>';
@@ -734,7 +735,7 @@ export function getDashboardHTML(): string {
             '<p style="color: var(--text-muted); margin-bottom: 12px; font-size: 0.85rem;">请安全保存，不要分享给他人。</p>' +
             '<div class="code-block" style="font-size: 0.78rem; word-break: break-all; margin-bottom: 16px;">' + esc(resp.data.api_key) + '</div>' +
             '<div class="modal-footer">' +
-              '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">关闭</button>' +
+              '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">关闭</button>' +
               '<button class="btn btn-primary" id="copy-key-btn" data-key="' + esc(resp.data.api_key) + '">复制到剪贴板</button>' +
             '</div>' +
           '</div>';
@@ -852,7 +853,7 @@ export function getDashboardHTML(): string {
         '</div>' +
         (isEdit ? '<div class="form-group"><label class="form-label">更新说明</label><input class="form-input" id="tmpl-changelog" placeholder="如：修改了按钮颜色"></div>' : '') +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="tmpl-save-btn">' + (isEdit ? '更新' : '创建') + '</button>' +
         '</div>' +
       '</div>';
@@ -910,11 +911,11 @@ export function getDashboardHTML(): string {
         '<div class="modal-title">预览模板: ' + esc(code) + '</div>' +
         '<div class="form-group">' +
           '<label class="form-label">测试变量 (JSON)</label>' +
-          '<input class="form-input" id="pv-vars" placeholder=\\'{"code":"123456"}\\' value="{}">' +
+          '<input class="form-input" id="pv-vars" placeholder='{"code":"123456"}' value="{}">' +
         '</div>' +
         '<div id="pv-result" style="margin: 20px 0;"></div>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\\'.modal-overlay\\').remove()">关闭</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">关闭</button>' +
           '<button class="btn btn-primary" id="pv-refresh">刷新预览</button>' +
         '</div>' +
       '</div>';
@@ -962,7 +963,7 @@ export function getDashboardHTML(): string {
         '</div>' : '<div class="form-group"><div class="form-hint">此模板没有变量，可直接发送</div></div>') +
         '<div id="ts-result" style="display: none; margin: 16px 0; padding: 12px 16px; border-radius: 8px; font-size: 13px;"></div>' +
         '<div class="modal-footer">' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">取消</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
           '<button class="btn btn-primary" id="ts-send-btn"><span id="ts-send-text">发送测试邮件</span></button>' +
         '</div>' +
       '</div>';
@@ -1137,7 +1138,7 @@ export function getDashboardHTML(): string {
           '</div>' +
           '<button class="btn btn-primary btn-lg" onclick="doLogin()" style="width: 100%;">登 录</button>' +
           '<div style="text-align: center; margin-top: 24px; color: var(--text-muted);">' +
-            '或 <a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=apiKeyFallbackPage(); return false;" style="color: var(--primary); text-decoration: none;">使用 API Key 登录</a>' +
+            '或 <a href="#" onclick="document.getElementById(&#39;main-content&#39;).innerHTML=apiKeyFallbackPage(); return false;" style="color: var(--primary); text-decoration: none;">使用 API Key 登录</a>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1157,7 +1158,7 @@ export function getDashboardHTML(): string {
           '</div>' +
           '<button class="btn btn-primary btn-lg" onclick="saveApiKey()" style="width: 100%;">进 入</button>' +
           '<div style="text-align: center; margin-top: 24px; color: var(--text-muted);">' +
-            '<a href="#" onclick="document.getElementById(\\'main-content\\').innerHTML=loginPage(); return false;" style="color: var(--primary); text-decoration: none;">返回账号登录</a>' +
+            '<a href="#" onclick="document.getElementById(&#39;main-content&#39;).innerHTML=loginPage(); return false;" style="color: var(--primary); text-decoration: none;">返回账号登录</a>' +
           '</div>' +
         '</div>' +
       '</div>';
