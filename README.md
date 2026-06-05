@@ -14,13 +14,14 @@
 │  ├─ /v1/templates          模板管理              │
 │  ├─ /v1/providers          发送通道查看（只读）  │
 │  ├─ /v1/api-keys           API Key 管理          │
+│  ├─ /v1/verification       验证码生成/校验       │
 │  ├─ /v1/admin/*            超级管理员面板        │
 │  ├─ /dashboard             用户后台界面          │
 │  └─ /admin                 超级管理员界面        │
 ├─────────────────────────────────────────────────┤
 │  Core Services                                   │
 │  ├─ Auth (API Key)         认证中间件             │
-│  ├─ Template Engine (Handlebars) 模板渲染        │
+│  ├─ Template Engine         模板渲染            │
 │  ├─ Mailer (3 channels)    邮件发送引擎           │
 │  │   ├─ SMTP                                    │
 │  │   ├─ Cloudflare Email                        │
@@ -48,7 +49,7 @@
 - **数据库**: Cloudflare D1 (SQLite)
 - **缓存**: Cloudflare KV
 - **存储**: Cloudflare R2
-- **模板引擎**: Handlebars
+- **模板引擎**: 自定义零依赖引擎（`{{variable}}` 语法）
 - **语言**: TypeScript
 
 ## 部署
@@ -80,6 +81,51 @@ npm run deploy
 ```http
 Authorization: Bearer sk_xxxxxx
 ```
+
+### 验证码生成与校验
+
+验证码生成接口会通过模板发信并自动注入 `{{code}}` 变量，校验接口用邮箱+验证码+场景进行比对。
+
+```http
+POST   /v1/verification/send    # 生成验证码并发信（需 SEND_MAIL 权限）
+POST   /v1/verification/verify  # 校验验证码（无需认证）
+```
+
+**send 请求体**：
+
+```json
+{
+  "template": "VERIFY_CODE",
+  "to": "user@example.com",
+  "scene_type": "login",
+  "variables": { "app_name": "MyApp" },
+  "expire_minutes": 10,
+  "code_length": 6
+}
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `template` | string | ✅ | 模板 code，模板变量必须含 `{{code}}` |
+| `to` | string | ✅ | 收件邮箱 |
+| `scene_type` | string | ✅ | 用户自定义场景，如 `"login"` / `"register"` |
+| `variables` | object | ❌ | 额外模板变量，`code` 自动注入无需手动传 |
+| `expire_minutes` | number | ❌ | 有效期分钟数，默认 10，范围 1-60 |
+| `code_length` | number | ❌ | 验证码位数，默认 6，范围 4-10 |
+
+**verify 请求体**：
+
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "scene_type": "login"
+}
+```
+
+响应 `{ "success": true, "data": { "valid": true } }` 或 `valid: false`。
+
+**防护**：单条验证码最多尝试 5 次，超过自动废弃。同邮箱+场景 5 分钟内最多发送 3 次。
 
 ### 邮件发送
 
@@ -223,7 +269,7 @@ src/
 ├── types.ts              # 类型定义
 ├── db.ts                 # 数据库访问层
 ├── auth.ts               # API Key 认证
-├── template_engine.ts    # Handlebars 模板引擎
+├── template_engine.ts    # 自定义零依赖模板引擎 ({{var}} 语法)
 ├── mailer.ts             # 邮件发送引擎
 ├── queue_processor.ts    # 队列处理器
 ├── dashboard_html.ts     # 用户后台界面
@@ -236,6 +282,7 @@ src/
     ├── providers.ts      # 发送通道路由（用户只读 + 分类路由）
     ├── api_keys.ts       # API Key 管理路由
     ├── webhooks.ts       # Webhook 路由
+    ├── verification.ts   # 验证码生成/校验路由
     ├── dashboard.ts      # 仪表盘路由
     └── setup.ts          # 初始化路由
 ```
