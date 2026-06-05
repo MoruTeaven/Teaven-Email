@@ -911,7 +911,7 @@ export function getDashboardHTML(): string {
         '<div class="modal-title">预览模板: ' + esc(code) + '</div>' +
         '<div class="form-group">' +
           '<label class="form-label">测试变量 (JSON)</label>' +
-          '<input class="form-input" id="pv-vars" placeholder='{"code":"123456"}' value="{}">' +
+          '<input class="form-input" id="pv-vars" placeholder=&#x27;{"code":"123456"}&#x27; value="{}">' +
         '</div>' +
         '<div id="pv-result" style="margin: 20px 0;"></div>' +
         '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
