@@ -628,7 +628,7 @@ export function getDashboardHTML(): string {
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (k.enabled ? 'badge-success' : 'badge-muted') + '">' + (k.enabled ? '启用' : '禁用') + '</span>' +
-                    '<button class="btn btn-sm btn-ghost" data-keyid="' + esc(k.id) + '" onclick="showRevealApiKeyModal(this.dataset.keyid)">复制</button>' +
+                    (k.encrypted ? '<button class="btn btn-sm btn-ghost" data-keyid="' + esc(k.id) + '" onclick="showRevealApiKeyModal(this.dataset.keyid)">复制</button>' : '<span class="badge badge-warning" style="cursor:default;" title="此密钥创建于加密功能上线前，无法查看，请删除后重建">旧版密钥</span>') +
                     '<button class="btn btn-sm btn-ghost" data-keyid="' + esc(k.id) + '" data-keyenabled="' + (!k.enabled ? 1 : 0) + '" onclick="toggleApiKey(this.dataset.keyid, +this.dataset.keyenabled)">' + (k.enabled ? '禁用' : '启用') + '</button>' +
                     '<button class="btn btn-sm btn-danger" data-keyid="' + esc(k.id) + '" onclick="deleteApiKey(this.dataset.keyid)">删除</button>' +
                   '</div>' +

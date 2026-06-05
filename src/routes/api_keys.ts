@@ -23,6 +23,7 @@ apiKeyRouter.get('/', authMiddleware(), async (c) => {
     prefix: k.api_key_prefix,
     permissions: typeof k.permissions === 'string' ? JSON.parse(k.permissions) : k.permissions,
     enabled: k.enabled,
+    encrypted: !!k.api_key_encrypted,
     last_used_at: k.last_used_at,
     created_at: k.created_at,
   }));
