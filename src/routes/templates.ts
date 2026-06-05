@@ -268,12 +268,12 @@ templateRouter.post('/:code/test-send', authMiddleware(['MANAGE_TEMPLATE', 'SEND
 
   const { html, error: renderError } = renderTemplate(template.html, variables);
   if (renderError) {
-    return c.json({ success: false, error: `Template render error: ${renderError}` }, 500);
+    return c.json({ success: false, error: renderError }, 500);
   }
 
   const { subject, error: subjectError } = renderSubject(template.subject, variables);
   if (subjectError) {
-    return c.json({ success: false, error: `Subject render error: ${subjectError}` }, 500);
+    return c.json({ success: false, error: subjectError }, 500);
   }
 
   const textContent = htmlToText(html);
