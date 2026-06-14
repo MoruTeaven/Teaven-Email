@@ -7,6 +7,7 @@ import { getDB } from '../db';
 import { renderTemplate, renderSubject, validateVariables, htmlToText } from '../template_engine';
 import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
+import { uuidv7 } from '../uuid';
 import type { SendCodeRequest, VerifyCodeRequest, MailLog, MailQueueItem, VerificationCode } from '../types';
 
 const verificationRouter = new Hono<{ Bindings: Env }>();
@@ -109,7 +110,7 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
 
   // 保存验证码到数据库
   const expiresAt = new Date(Date.now() + expireMinutes * 60 * 1000).toISOString();
-  const vcId = crypto.randomUUID();
+  const vcId = uuidv7();
 
   // 先将旧码标记为已使用
   await db.deleteUsedCodes(body.to, body.scene_type);
@@ -127,7 +128,7 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   await db.createVerificationCode(vc);
 
   // 加入发送队列
-  const mailLogId = crypto.randomUUID();
+  const mailLogId = uuidv7();
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -146,7 +147,7 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   await db.createMailLog(mailLog);
 
   const queueItem: Omit<MailQueueItem, 'created_at'> = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     mail_log_id: mailLogId,
     user_id: auth.userId,
     provider_id: providerId,
@@ -192,7 +193,7 @@ const MIN_RESEND_INTERVAL = 60;         // 同一邮箱+场景最小重发间隔
 // 防暴力破解保护（不限制 IP，适配后端调用场景）：
 //   1. 单条验证码最多尝试 5 次
 //   2. 单邮箱+场景 5 分钟内最多 10 次
-verificationRouter.post('/verify', async (c) => {
+verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) => {
   let body: VerifyCodeRequest;
   try {
     body = await c.req.json<VerifyCodeRequest>();

@@ -3,6 +3,7 @@
 import { Hono } from 'hono';
 import { getDB } from '../db';
 import { generateApiKey, encryptApiKey } from '../auth';
+import { uuidv7 } from '../uuid';
 import type { Permission } from '../types';
 
 const setupRouter = new Hono<{ Bindings: Env }>();
@@ -63,7 +64,7 @@ setupRouter.post('/init', async (c) => {
   const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
   // 创建用户
-  const userId = crypto.randomUUID();
+  const userId = uuidv7();
   await db.createUser({
     id: userId,
     name: body.name,
@@ -75,9 +76,9 @@ setupRouter.post('/init', async (c) => {
 
   // 生成 API Key
   const { raw, hash, prefix } = await generateApiKey();
-  const apiKeyId = crypto.randomUUID();
+  const apiKeyId = uuidv7();
 
-  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
   const secret = c.env.JWT_SECRET || '';
 
   await db.createApiKey({
@@ -198,9 +199,9 @@ setupRouter.post('/key-from-password', async (c) => {
   }
 
   // 生成新的 API Key（自动创建，24小时后过期）
-  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
   const { raw, hash, prefix } = await generateApiKey();
-  const apiKeyId = crypto.randomUUID();
+  const apiKeyId = uuidv7();
   const secret = c.env.JWT_SECRET || '';
 
   await db.createApiKey({

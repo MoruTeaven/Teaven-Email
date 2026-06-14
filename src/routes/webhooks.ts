@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
+import { uuidv7 } from '../uuid';
 import type { Webhook } from '../types';
 
 const webhookRouter = new Hono<{ Bindings: Env }>();
@@ -44,7 +45,7 @@ webhookRouter.post('/', authMiddleware(), async (c) => {
   }
 
   const webhook: Omit<Webhook, 'created_at' | 'updated_at'> = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     user_id: auth.userId,
     name: body.name,
     url: body.url,

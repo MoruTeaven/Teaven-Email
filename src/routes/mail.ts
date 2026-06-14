@@ -5,6 +5,7 @@ import { getDB } from '../db';
 import { renderTemplate, renderSubject, validateVariables, htmlToText } from '../template_engine';
 import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
+import { uuidv7 } from '../uuid';
 import type { SendTemplateRequest, SendMailRequest, MailLog, MailQueueItem } from '../types';
 
 const mailRouter = new Hono<{ Bindings: Env }>();
@@ -96,7 +97,7 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   let fromName: string | null = selected?.display_name || null;
 
   // 创建邮件日志
-  const mailLogId = crypto.randomUUID();
+  const mailLogId = uuidv7();
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -116,7 +117,7 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
 
   // 加入发送队列
   const queueItem: Omit<MailQueueItem, 'created_at'> = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     mail_log_id: mailLogId,
     user_id: auth.userId,
     provider_id: providerId,
@@ -201,7 +202,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   let fromEmail = selected?.email || 'noreply@teaven.email';
   let fromName: string | null = selected?.display_name || null;
 
-  const mailLogId = crypto.randomUUID();
+  const mailLogId = uuidv7();
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -220,7 +221,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   await db.createMailLog(mailLog);
 
   const queueItem: Omit<MailQueueItem, 'created_at'> = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     mail_log_id: mailLogId,
     user_id: auth.userId,
     provider_id: providerId,

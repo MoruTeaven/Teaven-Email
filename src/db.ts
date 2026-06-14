@@ -5,6 +5,7 @@ import type {
   TemplateVersion, MailLog, MailQueueItem, Webhook,
   VerificationCode
 } from './types';
+import { uuidv7 } from './uuid';
 
 export function getDB(db: D1Database) {
   return {
@@ -431,7 +432,7 @@ export function getDB(db: D1Database) {
         `INSERT INTO daily_stats (id, user_id, date, ${column})
          VALUES (?, ?, ?, 1)
          ON CONFLICT(user_id, date) DO UPDATE SET ${column} = ${column} + 1`
-      ).bind(crypto.randomUUID(), userId, date).run();
+      ).bind(uuidv7(), userId, date).run();
     },
 
     async getDailyStats(userId: string, days: number = 30): Promise<unknown[]> {

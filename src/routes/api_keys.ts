@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth, generateApiKey, encryptApiKey, decryptApiKey, hashApiKey } from '../auth';
 import { getDB } from '../db';
+import { uuidv7 } from '../uuid';
 import type { Permission } from '../types';
 
 const apiKeyRouter = new Hono<{ Bindings: Env }>();
@@ -51,7 +52,7 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
   }
 
   // 验证权限
-  const validPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const validPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
   const permissions = body.permissions || ['SEND_MAIL'];
   for (const p of permissions) {
     if (!validPermissions.includes(p)) {
@@ -63,7 +64,7 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
   const secret = c.env.JWT_SECRET || '';
 
   const apiKey = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     user_id: auth.userId,
     name: body.name,
     api_key_hash: hash,
@@ -97,7 +98,7 @@ apiKeyRouter.delete('/:id', authMiddleware(), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   await db.deleteApiKey(id, auth.userId);
 
   return c.json({ success: true, message: 'API key deleted' });
@@ -108,7 +109,7 @@ apiKeyRouter.put('/:id/toggle', authMiddleware(), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   let body: { enabled: boolean };
   try {
     body = await c.req.json();

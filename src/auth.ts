@@ -178,7 +178,7 @@ export function authMiddleware(requiredPermissions?: Permission[]) {
     }
 
     const db = getDB(c.env.DB);
-    const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+    const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
 
     // ===== 路径 1: 模拟登录令牌 (imp_ 前缀) =====
     if (token.startsWith('imp_')) {

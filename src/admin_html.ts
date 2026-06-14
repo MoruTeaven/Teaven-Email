@@ -119,11 +119,20 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
 /* Cards */
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all .2s;overflow:hidden}
-.card-padded{padding:22px}
-.card-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border-light)}
+.card-padded{padding:28px}
+.card-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px;border-bottom:1px solid var(--border-light)}
 .card-title{font-size:.9rem;font-weight:600;color:var(--text-primary)}
-.card-body{padding:22px}
-.card-footer{padding:14px 22px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px}
+.card-body{padding:28px}
+.card-footer{padding:20px 28px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px}
+
+/* Provider Grid & Cards */
+.provider-grid{display:grid;grid-template-columns:1fr;gap:16px}
+.provider-card{padding:24px;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-base);transition:all .15s}
+.provider-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(var(--primary-rgb),.08)}
+.provider-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.provider-name{font-size:.95rem;font-weight:600;color:var(--text-primary)}
+.provider-config{font-size:.78rem;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:16px;word-break:break-all}
+.provider-footer{display:flex;justify-content:space-between;align-items:center}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:var(--font-sans)}
@@ -742,7 +751,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           </div>
         </div>
 
-        <div class="card">
+        <div class="card card-padded">
           \${providers.length === 0 ? \`
             <div style="text-align: center; padding: 64px 32px;">
               <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -762,7 +771,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
                     '<span class="badge ' + (p.enabled ? 'badge-success' : 'badge-muted') + '">' + (p.enabled ? '启用' : '禁用') + '</span>' +
                   '</div>' +
                   '<div class="provider-config">' + esc(configInfo) + '</div>' +
-                  '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                  '<div class="provider-footer">' +
                     '<span class="badge badge-info">' + esc(p.type) + '</span>' +
                     '<div style="display: flex; gap: 8px;">' +
                       '<button class="btn btn-sm btn-ghost" data-pid="' + esc(p.id) + '" data-penabled="' + (!p.enabled ? 1 : 0) + '" onclick="toggleProvider(this.dataset.pid, +this.dataset.penabled)">' + (p.enabled ? '禁用' : '启用') + '</button>' +

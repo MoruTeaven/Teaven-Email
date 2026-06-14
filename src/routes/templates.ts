@@ -4,6 +4,7 @@ import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
 import { extractVariables, renderTemplate, renderSubject, htmlToText, validateVariables } from '../template_engine';
 import { sendEmail, selectAccount } from '../mailer';
+import { uuidv7 } from '../uuid';
 import type { Template, TemplateVersion, MailLog } from '../types';
 
 const templateRouter = new Hono<{ Bindings: Env }>();
@@ -28,7 +29,7 @@ templateRouter.get('/:code', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const code = c.req.param('code');
+  const code = c.req.param('code')!;
   const version = c.req.query('version') ? parseInt(c.req.query('version')!) : undefined;
 
   const template = await db.getTemplateByCode(auth.userId, code, version);
@@ -77,7 +78,7 @@ templateRouter.post('/', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
   // 提取变量
   const variables = extractVariables(body.html, body.subject);
 
-  const templateId = crypto.randomUUID();
+  const templateId = uuidv7();
   const template: Omit<Template, 'created_at' | 'updated_at'> = {
     id: templateId,
     user_id: auth.userId,
@@ -96,7 +97,7 @@ templateRouter.post('/', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
 
   // 创建版本记录
   const versionRecord: Omit<TemplateVersion, 'created_at'> = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     template_id: templateId,
     version: 1,
     subject: body.subject,
@@ -115,7 +116,7 @@ templateRouter.put('/:code', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const code = c.req.param('code');
+  const code = c.req.param('code')!;
   let body: {
     name?: string;
     category?: string;
@@ -144,7 +145,7 @@ templateRouter.put('/:code', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
   const variables = extractVariables(html, subject);
 
   // 创建新版本模板
-  const newTemplateId = crypto.randomUUID();
+  const newTemplateId = uuidv7();
   const newTemplate: Omit<Template, 'created_at' | 'updated_at'> = {
     id: newTemplateId,
     user_id: auth.userId,
@@ -163,7 +164,7 @@ templateRouter.put('/:code', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
 
   // 创建版本记录
   const versionRecord: Omit<TemplateVersion, 'created_at'> = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     template_id: newTemplateId,
     version: newVersion,
     subject,
@@ -182,7 +183,7 @@ templateRouter.delete('/:code', authMiddleware(['MANAGE_TEMPLATE']), async (c) =
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const code = c.req.param('code');
+  const code = c.req.param('code')!;
 
   // 获取所有版本并删除
   const templates = await db.getTemplatesByUser(auth.userId);
@@ -204,7 +205,7 @@ templateRouter.post('/:code/preview', authMiddleware(['MANAGE_TEMPLATE']), async
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const code = c.req.param('code');
+  const code = c.req.param('code')!;
   let body: { variables?: Record<string, string> };
   try {
     body = await c.req.json();
@@ -236,7 +237,7 @@ templateRouter.post('/:code/test-send', authMiddleware(['MANAGE_TEMPLATE', 'SEND
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const code = c.req.param('code');
+  const code = c.req.param('code')!;
   let body: { to: string; variables?: Record<string, string> };
   try {
     body = await c.req.json();
@@ -322,7 +323,7 @@ templateRouter.post('/:code/test-send', authMiddleware(['MANAGE_TEMPLATE', 'SEND
   });
 
   // 记录到 mail_logs
-  const mailLogId = crypto.randomUUID();
+  const mailLogId = uuidv7();
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -366,7 +367,7 @@ templateRouter.get('/:code/versions', authMiddleware(['MANAGE_TEMPLATE']), async
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
 
-  const code = c.req.param('code');
+  const code = c.req.param('code')!;
   const template = await db.getTemplateByCode(auth.userId, code);
 
   if (!template) {

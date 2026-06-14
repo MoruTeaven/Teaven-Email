@@ -88,7 +88,7 @@ Authorization: Bearer sk_xxxxxx
 
 ```http
 POST   /v1/verification/send    # 生成验证码并发信（需 SEND_MAIL 权限）
-POST   /v1/verification/verify  # 校验验证码（无需认证）
+POST   /v1/verification/verify  # 校验验证码（需 VERIFY_CODE 权限）
 ```
 
 **send 请求体**：
@@ -198,6 +198,16 @@ GET    /v1/admin/stats            # 全局统计
 ```
 
 ### API Key 管理
+
+创建 Key 时可勾选权限，可选权限：
+
+| 权限 | 标识 | 说明 |
+|------|------|------|
+| 发送邮件 | `SEND_MAIL` | 调用邮件发送接口 |
+| 管理模板 | `MANAGE_TEMPLATE` | 创建/编辑/删除邮件模板 |
+| 读取日志 | `READ_LOG` | 查看发送日志和统计 |
+| 管理通道 | `MANAGE_PROVIDER` | 管理发送通道和发件账号 |
+| 验证码校验 | `VERIFY_CODE` | 调用验证码校验接口 |
 
 ```http
 GET    /v1/api-keys              # API Key 列表

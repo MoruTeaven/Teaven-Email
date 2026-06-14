@@ -106,11 +106,20 @@ export function getDashboardHTML(): string {
 
     /* Cards */
     .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all .2s;overflow:hidden}
-    .card-padded{padding:22px}
-    .card-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border-light)}
+    .card-padded{padding:28px}
+    .card-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px;border-bottom:1px solid var(--border-light)}
     .card-title{font-size:.9rem;font-weight:600;color:var(--text-primary)}
-    .card-body{padding:22px}
-    .card-footer{padding:14px 22px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px}
+    .card-body{padding:28px}
+    .card-footer{padding:20px 28px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px}
+
+    /* Provider Grid & Cards */
+    .provider-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+    .provider-card{padding:24px;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-base);transition:all .15s}
+    .provider-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(var(--primary-rgb),.08)}
+    .provider-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .provider-name{font-size:.95rem;font-weight:600;color:var(--text-primary)}
+    .provider-config{font-size:.78rem;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:16px;word-break:break-all}
+    .provider-footer{display:flex;justify-content:space-between;align-items:center}
 
     /* Buttons */
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);font-size:.8rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:var(--font-sans)}
@@ -619,7 +628,7 @@ export function getDashboardHTML(): string {
           \` : \`
             <div class="list-card">
               \${keys.map(function(k) {
-                var permLabels = {SEND_MAIL:'发送邮件',MANAGE_TEMPLATE:'管理模板',READ_LOG:'读取日志',MANAGE_PROVIDER:'管理通道'};
+                var permLabels = {SEND_MAIL:'发送邮件',MANAGE_TEMPLATE:'管理模板',READ_LOG:'读取日志',MANAGE_PROVIDER:'管理通道',VERIFY_CODE:'验证码校验'};
                 var perms = (k.permissions||[]).map(function(p){return permLabels[p]||p;}).join(' · ');
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
@@ -652,7 +661,7 @@ export function getDashboardHTML(): string {
         '<div class="form-group">' +
           '<label class="form-label">权限</label>' +
           '<div style="display: flex; flex-wrap: wrap; gap: 12px;">' +
-            [{v:'SEND_MAIL',l:'发送邮件'},{v:'MANAGE_TEMPLATE',l:'管理模板'},{v:'READ_LOG',l:'读取日志'},{v:'MANAGE_PROVIDER',l:'管理通道'}].map(function(p) {
+            [{v:'SEND_MAIL',l:'发送邮件'},{v:'MANAGE_TEMPLATE',l:'管理模板'},{v:'READ_LOG',l:'读取日志'},{v:'MANAGE_PROVIDER',l:'管理通道'},{v:'VERIFY_CODE',l:'验证码校验'}].map(function(p) {
               return '<label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; background: var(--bg-base); border-radius: var(--radius-md);">' +
                 '<input type="checkbox" value="' + p.v + '" ' + (p.v === 'SEND_MAIL' ? 'checked' : '') + ' class="ak-perm" style="accent-color: var(--primary);">' +
                 '<span style="font-size: 0.85rem;">' + p.l + '</span>' +
@@ -1036,7 +1045,7 @@ export function getDashboardHTML(): string {
           <p class="page-subtitle">MAIL DELIVERY PROVIDERS CONFIGURATION</p>
         </div>
 
-        <div class="card">
+        <div class="card card-padded">
           \${providers.length === 0 ? \`
             <div class="empty-state">
               <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M9 8V2h6v6"/><path d="M15 8H9"/><path d="M3 17v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/></svg></div>
@@ -1044,16 +1053,16 @@ export function getDashboardHTML(): string {
               <div class="empty-desc">请联系管理员在后台添加全局发送通道配置</div>
             </div>
           \` : \`
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+            <div class="provider-grid">
               \${providers.map(function(p) {
                 var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
                 var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
-                return '<div style="background: var(--bg-base); border-radius: var(--radius-md); padding: 20px;">' +
-                  '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">' +
-                    '<div style="font-weight: 600; font-size: 1.05rem;">' + esc(p.name) + '</div>' +
+                return '<div class="provider-card">' +
+                  '<div class="provider-header">' +
+                    '<div class="provider-name">' + esc(p.name) + '</div>' +
                     '<span class="badge ' + (p.enabled ? 'badge-success' : 'badge-muted') + '">' + (p.enabled ? '启用' : '禁用') + '</span>' +
                   '</div>' +
-                  '<div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">' + esc(configInfo) + '</div>' +
+                  '<div class="provider-config">' + esc(configInfo) + '</div>' +
                   '<span class="badge badge-info">' + esc(p.type) + '</span>' +
                 '</div>';
               }).join('')}

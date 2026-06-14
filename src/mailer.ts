@@ -1,5 +1,6 @@
 // Teaven Email - 邮件发送引擎
 import type { EmailProvider, SmtpConfig, ApiProviderConfig, CloudflareEmailConfig, ProviderConfig } from './types';
+import { uuidv7 } from './uuid';
 
 export interface SendResult {
   success: boolean;
@@ -46,7 +47,7 @@ async function sendViaSmtp(config: SmtpConfig, params: SendParams): Promise<Send
 
     const body = await response.text();
     if (response.ok) {
-      return { success: true, messageId: crypto.randomUUID(), providerResponse: body };
+      return { success: true, messageId: uuidv7(), providerResponse: body };
     }
     return { success: false, error: `SMTP send failed: ${response.status}`, providerResponse: body };
   } catch (error) {
@@ -92,7 +93,7 @@ async function sendViaCloudflareEmail(
     const body = await response.text();
 
     if (response.ok) {
-      return { success: true, messageId: crypto.randomUUID(), providerResponse: body };
+      return { success: true, messageId: uuidv7(), providerResponse: body };
     }
     return { success: false, error: `Cloudflare Email send failed: ${response.status}`, providerResponse: body };
   } catch (error) {
@@ -208,7 +209,7 @@ async function sendViaApi(config: ApiProviderConfig, params: SendParams): Promis
 
     const responseBody = await response.text();
     if (response.ok) {
-      return { success: true, messageId: crypto.randomUUID(), providerResponse: responseBody };
+      return { success: true, messageId: uuidv7(), providerResponse: responseBody };
     }
     return { success: false, error: `API send failed: ${response.status}`, providerResponse: responseBody };
   } catch (error) {

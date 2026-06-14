@@ -3,7 +3,8 @@ import { Hono } from 'hono';
 import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey } from '../auth';
 import { getDB } from '../db';
 import { sendEmail } from '../mailer';
-import type { Permission } from '../types';
+import { uuidv7 } from '../uuid';
+import type { Permission, ProviderConfig, ProviderType } from '../types';
 
 const adminRouter = new Hono<{ Bindings: Env }>();
 
@@ -39,7 +40,7 @@ adminRouter.get('/tenants', superAdminMiddleware(), async (c) => {
 
 // GET /v1/admin/tenants/:id - 用户详情
 adminRouter.get('/tenants/:id', superAdminMiddleware(), async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   if (!user) return c.json({ success: false, error: 'User not found' }, 404);
   return c.json({ success: true, data: user });
@@ -47,7 +48,7 @@ adminRouter.get('/tenants/:id', superAdminMiddleware(), async (c) => {
 
 // PUT /v1/admin/tenants/:id - 更新用户状态
 adminRouter.put('/tenants/:id', superAdminMiddleware(), async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   let body: { status?: string; is_super_admin?: number };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
   if (body.status) {
@@ -91,7 +92,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
   const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
   // 创建用户
-  const userId = crypto.randomUUID();
+  const userId = uuidv7();
   await db.createUser({
     id: userId,
     name: body.name,
@@ -102,9 +103,9 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
   });
 
   // 自动生成 API Key
-  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER'];
+  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
   const { raw, hash, prefix } = await generateApiKey();
-  const apiKeyId = crypto.randomUUID();
+  const apiKeyId = uuidv7();
   const secret = c.env.JWT_SECRET || '';
 
   await db.createApiKey({
@@ -133,7 +134,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
 // POST /v1/admin/tenants/:id/impersonate - 模拟登录任意用户（返回签名临时令牌，24h有效） 
 adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
 
   const user = await db.getUserById(id);
   if (!user) {
@@ -184,10 +185,10 @@ adminRouter.post('/providers', superAdminMiddleware(), async (c) => {
   }
 
   const provider = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     name: body.name,
-    type: body.type as 'smtp' | 'api' | 'cloudflare_email',
-    config: body.config as Record<string, unknown>,
+    type: body.type as ProviderType,
+    config: body.config as unknown as ProviderConfig,
     priority: body.priority || 0,
     enabled: 1,
   };
@@ -199,12 +200,12 @@ adminRouter.post('/providers', superAdminMiddleware(), async (c) => {
 // PUT /v1/admin/providers/:id - 管理员更新 Provider
 adminRouter.put('/providers/:id', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
 
   const existing = await db.getProviderById(id);
   if (!existing) return c.json({ success: false, error: 'Provider not found' }, 404);
 
-  let body: { name?: string; type?: string; config?: Record<string, unknown>; priority?: number; enabled?: number };
+  let body: { name?: string; type?: ProviderType; config?: ProviderConfig; priority?: number; enabled?: number };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
 
   await db.updateProvider(id, body);
@@ -214,7 +215,7 @@ adminRouter.put('/providers/:id', superAdminMiddleware(), async (c) => {
 // DELETE /v1/admin/providers/:id - 管理员删除 Provider
 adminRouter.delete('/providers/:id', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   await db.deleteProvider(id);
   return c.json({ success: true, message: 'Provider deleted' });
 });
@@ -260,7 +261,7 @@ adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
   }
 
   const account = {
-    id: crypto.randomUUID(),
+    id: uuidv7(),
     provider_id: body.provider_id,
     name: body.name,
     email: body.email,
@@ -279,7 +280,7 @@ adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
 
 // DELETE /v1/admin/accounts/:id - 管理员删除任意账号
 adminRouter.delete('/accounts/:id', superAdminMiddleware(), async (c) => {
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
   await c.env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(id).run();
   return c.json({ success: true });
 });
@@ -287,7 +288,7 @@ adminRouter.delete('/accounts/:id', superAdminMiddleware(), async (c) => {
 // PUT /v1/admin/accounts/:id - 管理员更新任意账号
 adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
 
   // 验证账号存在
   const existing = await db.getAccountById(id);
@@ -336,7 +337,7 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
 // POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置
 adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
-  const id = c.req.param('id');
+  const id = c.req.param('id')!;
 
   const account = await db.getAccountById(id);
   if (!account) {

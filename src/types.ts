@@ -27,7 +27,7 @@ export interface ApiKey {
   updated_at: string;
 }
 
-export type Permission = 'SEND_MAIL' | 'MANAGE_TEMPLATE' | 'READ_LOG' | 'MANAGE_PROVIDER';
+export type Permission = 'SEND_MAIL' | 'MANAGE_TEMPLATE' | 'READ_LOG' | 'MANAGE_PROVIDER' | 'VERIFY_CODE';
 
 // 权限中文名称映射
 export const PERMISSION_LABELS: Record<Permission, string> = {
@@ -35,6 +35,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   MANAGE_TEMPLATE: '管理模板',
   READ_LOG: '读取日志',
   MANAGE_PROVIDER: '管理通道',
+  VERIFY_CODE: '验证码校验',
 };
 
 export type ProviderType = 'smtp' | 'api' | 'cloudflare_email';
