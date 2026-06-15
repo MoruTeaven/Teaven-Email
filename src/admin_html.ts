@@ -120,6 +120,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 /* Cards */
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all .2s;overflow:hidden}
 .card-padded{padding:28px}
+.auth-card{padding:36px}
 .card-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px;border-bottom:1px solid var(--border-light)}
 .card-title{font-size:.9rem;font-weight:600;color:var(--text-primary)}
 .card-body{padding:28px}
@@ -323,6 +324,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
   .toolbar-left{flex-direction:column;align-items:stretch}
   .search-input{width:100%}
   .search-input:focus{width:100%}
+  .auth-card{padding:28px}
 }
   </style>
 </head>
@@ -1392,7 +1394,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">超级管理员登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">使用超级管理员账号登录</div>' +
         '</div>' +
-        '<div class="card">' +
+        '<div class="card auth-card">' +
           '<div class="form-group">' +
             '<label class="form-label">邮箱</label>' +
             '<input class="form-input" id="login-email" type="email" placeholder="admin@example.com" value="' + esc(localStorage.getItem('teaven_admin_email') || '') + '">' +
@@ -1416,7 +1418,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">API Key 登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">输入超级管理员的 API Key</div>' +
         '</div>' +
-        '<div class="card">' +
+        '<div class="card auth-card">' +
           '<div class="form-group">' +
             '<label class="form-label">API Key</label>' +
             '<input class="form-input" id="setup-key" type="password" placeholder="sk_...">' +
@@ -1492,7 +1494,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">初始化超级管理员</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">首次使用，请创建超级管理员账户</div>' +
         '</div>' +
-        '<div class="card">' +
+        '<div class="card auth-card">' +
           '<div class="form-group">' +
             '<label class="form-label">姓名</label>' +
             '<input class="form-input" id="init-name" placeholder="如：张三">' +

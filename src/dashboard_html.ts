@@ -107,6 +107,7 @@ export function getDashboardHTML(): string {
     /* Cards */
     .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all .2s;overflow:hidden}
     .card-padded{padding:28px}
+    .auth-card{padding:36px}
     .card-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px;border-bottom:1px solid var(--border-light)}
     .card-title{font-size:.9rem;font-weight:600;color:var(--text-primary)}
     .card-body{padding:28px}
@@ -269,6 +270,7 @@ export function getDashboardHTML(): string {
       .mobile-toggle{display:flex}
       .stats-grid{grid-template-columns:1fr}
       .page-title{font-size:1.3rem}
+      .auth-card{padding:28px}
     }
   </style>
 </head>
@@ -1136,7 +1138,7 @@ export function getDashboardHTML(): string {
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">欢迎回来</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">登录到邮件管理平台</div>' +
         '</div>' +
-        '<div class="card">' +
+        '<div class="card auth-card">' +
           '<div class="form-group">' +
             '<label class="form-label">邮箱</label>' +
             '<input class="form-input" id="login-email" type="email" placeholder="admin@example.com" value="' + esc(localStorage.getItem('teaven_email') || '') + '">' +
@@ -1160,7 +1162,7 @@ export function getDashboardHTML(): string {
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">API Key 登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">使用 API Key 直接访问</div>' +
         '</div>' +
-        '<div class="card">' +
+        '<div class="card auth-card">' +
           '<div class="form-group">' +
             '<label class="form-label">API Key</label>' +
             '<input class="form-input" id="setup-key" type="password" placeholder="sk_...">' +
@@ -1229,7 +1231,7 @@ export function getDashboardHTML(): string {
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">欢迎使用</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">首次使用，请创建管理员账户</div>' +
         '</div>' +
-        '<div class="card">' +
+        '<div class="card auth-card">' +
           '<div class="form-group">' +
             '<label class="form-label">姓名</label>' +
             '<input class="form-input" id="init-name" placeholder="如：张三">' +
