@@ -356,7 +356,6 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         <button class="nav-item" data-page="users">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span class="nav-text">用户管理</span>
-          <span class="nav-badge nav-text" id="userCountBadgeAdm">--</span>
         </button>
         <button class="nav-item" data-page="providers">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.87 6.87a8 8 0 1 0 10.26 0"/><circle cx="12" cy="12" r="2"/></svg></span>
@@ -497,6 +496,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // 登出函数：清除 localStorage 并跳转到登录页
+    function logout() {
+      localStorage.removeItem('teaven_admin_key');
+      localStorage.removeItem('teaven_admin_name');
+      localStorage.removeItem('teaven_admin_email');
+      location.reload();
+    }
+
     async function api(path, opts) {
       opts = opts || {};
       var res = await fetch(API_BASE + path, {
@@ -517,6 +524,15 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         console.error('[api] Invalid JSON response for', path, 'status', res.status);
         toast('服务器返回了无效数据（状态码 ' + res.status + '），请稍后重试', 'error');
         throw new Error('Invalid JSON response: ' + text.substring(0, 200));
+      }
+
+      // 处理 401 错误：认证失败或 Key 过期
+      if (res.status === 401) {
+        console.warn('[api] Authentication failed for', path, ':', data && data.error);
+        toast('登录已过期，请重新登录', 'warning');
+        // 延迟 1 秒后登出，给用户看到提示的时间
+        setTimeout(logout, 1000);
+        throw new Error('Authentication expired');
       }
 
       if (!res.ok) {

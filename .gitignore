@@ -5,6 +5,9 @@ node_modules/
 dist/
 .mf/
 
+# Validation script
+validate.js
+
 
 agents.md
 

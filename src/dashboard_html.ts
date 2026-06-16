@@ -457,6 +457,14 @@ export function getDashboardHTML(): string {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // 登出函数：清除 localStorage 并跳转到登录页
+    function logout() {
+      localStorage.removeItem('teaven_api_key');
+      localStorage.removeItem('teaven_user_name');
+      localStorage.removeItem('teaven_user_email');
+      location.reload();
+    }
+
     async function api(path, opts = {}) {
       const res = await fetch(API_BASE + path, {
         headers: {
@@ -466,6 +474,17 @@ export function getDashboardHTML(): string {
         },
         ...opts
       });
+
+      // 处理 401 错误：认证失败或 Key 过期
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        console.warn('[api] Authentication failed for', path, ':', data && data.error);
+        toast('登录已过期，请重新登录', 'warning');
+        // 延迟 1 秒后登出，给用户看到提示的时间
+        setTimeout(logout, 1000);
+        throw new Error('Authentication expired');
+      }
+
       return res.json();
     }
 
