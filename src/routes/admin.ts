@@ -1,10 +1,10 @@
 // Teaven Email - 超级管理员路由（用户管理）
 import { Hono } from 'hono';
-import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey } from '../auth';
+import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getAuth } from '../auth';
 import { getDB } from '../db';
 import { sendEmail } from '../mailer';
 import { uuidv7 } from '../uuid';
-import type { Permission, ProviderConfig, ProviderType } from '../types';
+import type { MailStatus, Permission, ProviderConfig, ProviderType } from '../types';
 
 const adminRouter = new Hono<{ Bindings: Env }>();
 
@@ -334,9 +334,125 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
 
 // ========== 跨租户统计 ==========
 
+// GET /v1/admin/logs - 全局发送日志
+adminRouter.get('/logs', superAdminMiddleware(), async (c) => {
+  const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '50', 10) || 50, 1), 200);
+  const offset = Math.max(parseInt(c.req.query('offset') || '0', 10) || 0, 0);
+  const status = c.req.query('status') || '';
+  const category = c.req.query('category') || '';
+  const userId = c.req.query('user_id') || '';
+  const providerId = c.req.query('provider_id') || '';
+  const accountId = c.req.query('account_id') || '';
+  const startDate = c.req.query('start_date') || '';
+  const endDate = c.req.query('end_date') || '';
+  const q = (c.req.query('q') || '').trim();
+
+  const where: string[] = [];
+  const values: (string | number)[] = [];
+  const validStatuses: MailStatus[] = ['pending', 'sent', 'delivered', 'failed', 'bounced', 'spam'];
+  const validCategories = ['VERIFY', 'NOTIFY', 'MARKETING', 'SYSTEM'];
+
+  if (status) {
+    if (!validStatuses.includes(status as MailStatus)) {
+      return c.json({ success: false, error: 'Invalid status' }, 400);
+    }
+    where.push('ml.status = ?');
+    values.push(status);
+  }
+  if (category) {
+    if (!validCategories.includes(category)) {
+      return c.json({ success: false, error: 'Invalid category' }, 400);
+    }
+    where.push('ml.category = ?');
+    values.push(category);
+  }
+  if (userId) {
+    where.push('ml.user_id = ?');
+    values.push(userId);
+  }
+  if (providerId) {
+    where.push('ml.provider_id = ?');
+    values.push(providerId);
+  }
+  if (accountId) {
+    where.push('ml.account_id = ?');
+    values.push(accountId);
+  }
+  if (startDate) {
+    where.push('date(ml.created_at) >= ?');
+    values.push(startDate);
+  }
+  if (endDate) {
+    where.push('date(ml.created_at) <= ?');
+    values.push(endDate);
+  }
+  if (q) {
+    where.push('(ml.to_email LIKE ? OR ml.subject LIKE ? OR u.email LIKE ? OR u.name LIKE ? OR a.email LIKE ?)');
+    const keyword = `%${q}%`;
+    values.push(keyword, keyword, keyword, keyword, keyword);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const fromSql = `FROM mail_logs ml
+     LEFT JOIN users u ON u.id = ml.user_id
+     LEFT JOIN api_keys ak ON ak.id = ml.api_key_id
+     LEFT JOIN providers p ON p.id = ml.provider_id
+     LEFT JOIN accounts a ON a.id = ml.account_id
+     LEFT JOIN templates t ON t.id = ml.template_id`;
+
+  const countStmt = c.env.DB.prepare(`SELECT COUNT(*) as total ${fromSql} ${whereSql}`);
+  const countPromise = values.length > 0
+    ? countStmt.bind(...values).first<{ total: number }>()
+    : countStmt.first<{ total: number }>();
+
+  const [rows, countRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT ml.*, u.name as user_name, u.email as user_email,
+        ak.name as api_key_name, ak.api_key_prefix,
+        p.name as provider_name, p.type as provider_type,
+        a.name as account_name, a.email as account_email,
+        t.template_code, t.name as template_name
+       ${fromSql}
+       ${whereSql}
+       ORDER BY ml.created_at DESC
+       LIMIT ? OFFSET ?`
+    ).bind(...values, limit, offset).all(),
+    countPromise,
+  ]);
+
+  return c.json({
+    success: true,
+    data: rows.results,
+    meta: { total: countRow?.total || 0, limit, offset },
+  });
+});
+
+// GET /v1/admin/logs/:id - 全局发送日志详情
+adminRouter.get('/logs/:id', superAdminMiddleware(), async (c) => {
+  const id = c.req.param('id')!;
+  const row = await c.env.DB.prepare(
+    `SELECT ml.*, u.name as user_name, u.email as user_email,
+      ak.name as api_key_name, ak.api_key_prefix,
+      p.name as provider_name, p.type as provider_type,
+      a.name as account_name, a.email as account_email,
+      t.template_code, t.name as template_name
+     FROM mail_logs ml
+     LEFT JOIN users u ON u.id = ml.user_id
+     LEFT JOIN api_keys ak ON ak.id = ml.api_key_id
+     LEFT JOIN providers p ON p.id = ml.provider_id
+     LEFT JOIN accounts a ON a.id = ml.account_id
+     LEFT JOIN templates t ON t.id = ml.template_id
+     WHERE ml.id = ?`
+  ).bind(id).first();
+
+  if (!row) return c.json({ success: false, error: 'Mail log not found' }, 404);
+  return c.json({ success: true, data: row });
+});
+
 // POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置
 adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
+  const auth = getAuth(c);
   const id = c.req.param('id')!;
 
   const account = await db.getAccountById(id);
@@ -375,6 +491,22 @@ adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
     '<p style="margin: 0; font-size: 14px; color: #059669;">如果你收到了这封邮件，说明发件账号 <strong>' + escapeHtml(account.name) + '</strong> 配置正确，可以正常使用。</p>' +
   '</div>' +
 '</div>',
+  });
+
+  await db.createMailLog({
+    id: uuidv7(),
+    user_id: auth.userId,
+    api_key_id: auth.apiKeyId,
+    template_id: null,
+    provider_id: provider.id,
+    account_id: account.id,
+    category: 'SYSTEM',
+    to_email: toEmail,
+    subject: '[Teaven Email] 测试邮件 - 账号配置验证',
+    status: result.success ? 'sent' : 'failed',
+    provider_response: result.providerResponse || null,
+    error_message: result.error || null,
+    retry_count: 0,
   });
 
   if (result.success) {

@@ -475,6 +475,9 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     var API_KEY = localStorage.getItem('teaven_admin_key') || '';
     var _accountsById = {};
     var _providersData = [];
+    var _adminLogPage = 0;
+    var _adminLogLimit = 50;
+    var _adminLogFilters = { status: '', category: '', q: '' };
 
     // 更新侧栏用户头像和昵称
     function updateSidebarUser() {
@@ -584,9 +587,183 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       }
     }
 
-    // Placeholder page renderers for new pages
-    function renderLogs(main) {
-      main.innerHTML = '<div class=\"page-header\"><h1 class=\"page-title\">发送日志</h1><p class=\"page-subtitle\">SEND LOGS</p></div><div class=\"card\"><div class=\"empty-state\"><div class=\"empty-icon\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z\"/></svg></div><div class=\"empty-title\">功能开发中</div><div class=\"empty-desc\">日志查看功能即将上线，敬请期待。</div></div></div>';
+    // 发送日志
+    async function renderLogs(main) {
+      var offset = _adminLogPage * _adminLogLimit;
+      var params = new URLSearchParams({ limit: String(_adminLogLimit), offset: String(offset) });
+      if (_adminLogFilters.status) params.set('status', _adminLogFilters.status);
+      if (_adminLogFilters.category) params.set('category', _adminLogFilters.category);
+      if (_adminLogFilters.q) params.set('q', _adminLogFilters.q);
+
+      var resp = await api('/admin/logs?' + params.toString());
+      var logs = resp.data || [];
+      var meta = resp.meta || { total: logs.length, limit: _adminLogLimit, offset: offset };
+      var totalPages = Math.max(Math.ceil((meta.total || 0) / _adminLogLimit), 1);
+
+      main.innerHTML = \`
+        <div class="page-header">
+          <h1 class="page-title">发送日志</h1>
+          <p class="page-subtitle">GLOBAL MAIL DELIVERY LOGS</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" id="admin-log-q" value="\${esc(_adminLogFilters.q)}" placeholder="搜索收件人、主题、用户">
+            <select class="filter-select" id="admin-log-status">
+              <option value="">全部状态</option>
+              <option value="pending"\${_adminLogFilters.status === 'pending' ? ' selected' : ''}>等待中</option>
+              <option value="sent"\${_adminLogFilters.status === 'sent' ? ' selected' : ''}>已发送</option>
+              <option value="delivered"\${_adminLogFilters.status === 'delivered' ? ' selected' : ''}>已送达</option>
+              <option value="failed"\${_adminLogFilters.status === 'failed' ? ' selected' : ''}>失败</option>
+              <option value="bounced"\${_adminLogFilters.status === 'bounced' ? ' selected' : ''}>退信</option>
+              <option value="spam"\${_adminLogFilters.status === 'spam' ? ' selected' : ''}>垃圾邮件</option>
+            </select>
+            <select class="filter-select" id="admin-log-category">
+              <option value="">全部分类</option>
+              <option value="VERIFY"\${_adminLogFilters.category === 'VERIFY' ? ' selected' : ''}>验证邮件</option>
+              <option value="NOTIFY"\${_adminLogFilters.category === 'NOTIFY' ? ' selected' : ''}>通知邮件</option>
+              <option value="MARKETING"\${_adminLogFilters.category === 'MARKETING' ? ' selected' : ''}>营销邮件</option>
+              <option value="SYSTEM"\${_adminLogFilters.category === 'SYSTEM' ? ' selected' : ''}>系统邮件</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-secondary" onclick="resetAdminLogFilters()">重置</button>
+            <button class="btn btn-primary" onclick="applyAdminLogFilters()">筛选</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">日志列表</div>
+              <div class="card-subtitle">共 \${meta.total || 0} 条记录</div>
+            </div>
+          </div>
+          \${logs.length === 0 ? \`
+            <div class="empty-state">
+              <div class="empty-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div class="empty-title">暂无日志</div>
+              <div class="empty-desc">发信后可在这里查看全局投递记录和失败原因。</div>
+            </div>
+          \` : \`
+            <div class="list-card" style="border:0;border-radius:0;">
+              \${logs.map(function(l) {
+                return '<div class="list-item">' +
+                  '<div class="list-item-info">' +
+                    '<div class="list-item-title">' + esc(l.to_email) + '</div>' +
+                    '<div class="list-item-subtitle">' + formatLogTime(l.created_at) + ' · ' + esc(l.subject) + '</div>' +
+                    '<div class="list-item-subtitle">用户: ' + esc(l.user_email || l.user_name || '-') + ' · 通道: ' + esc(l.provider_name || '-') + ' · 账号: ' + esc(l.account_email || l.account_name || '-') + '</div>' +
+                  '</div>' +
+                  '<div class="list-item-actions">' +
+                    '<span class="badge badge-info">' + esc(categoryLabel(l.category)) + '</span>' +
+                    '<span class="badge ' + logStatusBadge(l.status) + '">' + esc(statusLabel(l.status)) + '</span>' +
+                    '<span style="color: var(--text-muted); font-size: 0.8rem;">重试: ' + (l.retry_count || 0) + '</span>' +
+                    '<button class="btn btn-sm btn-ghost" data-logid="' + esc(l.id) + '" onclick="showAdminLogDetail(this.dataset.logid)">详情</button>' +
+                  '</div>' +
+                '</div>';
+              }).join('')}
+            </div>
+          \`}
+        </div>
+
+        <div class="pagination">
+          <div>第 \${_adminLogPage + 1} / \${totalPages} 页，当前 \${logs.length} 条</div>
+          <div class="pagination-pages">
+            <button class="pagination-btn" onclick="prevAdminLogPage()" \${_adminLogPage <= 0 ? 'disabled' : ''}>&lt;</button>
+            <button class="pagination-btn active">\${_adminLogPage + 1}</button>
+            <button class="pagination-btn" onclick="nextAdminLogPage()" \${_adminLogPage + 1 >= totalPages ? 'disabled' : ''}>&gt;</button>
+          </div>
+        </div>
+      \`;
+
+      var qInput = document.getElementById('admin-log-q');
+      if (qInput) {
+        qInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') applyAdminLogFilters();
+        });
+      }
+    }
+
+    function applyAdminLogFilters() {
+      _adminLogFilters = {
+        status: document.getElementById('admin-log-status').value,
+        category: document.getElementById('admin-log-category').value,
+        q: document.getElementById('admin-log-q').value.trim()
+      };
+      _adminLogPage = 0;
+      renderPage('logs');
+    }
+
+    function resetAdminLogFilters() {
+      _adminLogFilters = { status: '', category: '', q: '' };
+      _adminLogPage = 0;
+      renderPage('logs');
+    }
+
+    function prevAdminLogPage() {
+      if (_adminLogPage > 0) {
+        _adminLogPage--;
+        renderPage('logs');
+      }
+    }
+
+    function nextAdminLogPage() {
+      _adminLogPage++;
+      renderPage('logs');
+    }
+
+    function logStatusBadge(status) {
+      return status === 'sent' || status === 'delivered' ? 'badge-success' : status === 'failed' || status === 'bounced' || status === 'spam' ? 'badge-danger' : status === 'pending' ? 'badge-warning' : 'badge-muted';
+    }
+
+    function statusLabel(status) {
+      var labels = { pending:'等待中', sent:'已发送', delivered:'已送达', failed:'失败', bounced:'退信', spam:'垃圾邮件' };
+      return labels[status] || status || '-';
+    }
+
+    function categoryLabel(category) {
+      var labels = { VERIFY:'验证邮件', NOTIFY:'通知邮件', MARKETING:'营销邮件', SYSTEM:'系统邮件' };
+      return labels[category] || category || '-';
+    }
+
+    function formatLogTime(value) {
+      if (!value) return '-';
+      return new Date(value).toLocaleString('zh-CN');
+    }
+
+    async function showAdminLogDetail(id) {
+      var resp = await api('/admin/logs/' + id);
+      var l = resp.data;
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal modal-lg">' +
+        '<div class="modal-title">发送日志详情</div>' +
+        '<div class="grid-2" style="margin: 20px 0;">' +
+          logDetailItem('状态', '<span class="badge ' + logStatusBadge(l.status) + '">' + esc(statusLabel(l.status)) + '</span>') +
+          logDetailItem('分类', esc(categoryLabel(l.category))) +
+          logDetailItem('收件人', esc(l.to_email)) +
+          logDetailItem('发送时间', esc(formatLogTime(l.created_at))) +
+          logDetailItem('用户', esc((l.user_name || '-') + ' / ' + (l.user_email || '-'))) +
+          logDetailItem('API Key', esc((l.api_key_name || '-') + (l.api_key_prefix ? ' / ' + l.api_key_prefix : ''))) +
+          logDetailItem('发送通道', esc((l.provider_name || '-') + (l.provider_type ? ' / ' + l.provider_type : ''))) +
+          logDetailItem('发件账号', esc((l.account_name || '-') + (l.account_email ? ' / ' + l.account_email : ''))) +
+          logDetailItem('模板', esc((l.template_code || '-') + (l.template_name ? ' / ' + l.template_name : ''))) +
+          logDetailItem('重试次数', String(l.retry_count || 0)) +
+        '</div>' +
+        '<div class="form-group"><label class="form-label">主题</label><div class="code-block">' + esc(l.subject || '-') + '</div></div>' +
+        (l.error_message ? '<div class="form-group"><label class="form-label">错误信息</label><div class="code-block" style="color: var(--danger);">' + esc(l.error_message) + '</div></div>' : '') +
+        (l.provider_response ? '<div class="form-group"><label class="form-label">Provider 响应</label><div class="code-block">' + esc(l.provider_response) + '</div></div>' : '') +
+        '<div class="modal-footer"><button class="btn btn-primary" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">关闭</button></div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function logDetailItem(label, valueHtml) {
+      return '<div style="padding: 12px 14px; background: var(--bg-base); border: 1px solid var(--border-light); border-radius: var(--radius-sm);">' +
+        '<div style="font-size: .68rem; color: var(--text-muted); margin-bottom: 4px;">' + esc(label) + '</div>' +
+        '<div style="font-size: .82rem; color: var(--text-primary); word-break: break-all;">' + valueHtml + '</div>' +
+      '</div>';
     }
     function renderAnalytics(main) {
       main.innerHTML = '<div class=\"page-header\"><h1 class=\"page-title\">数据分析</h1><p class=\"page-subtitle\">ANALYTICS</p></div><div class=\"card\"><div class=\"empty-state\"><div class=\"empty-icon\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 3v18h18\"/><path d=\"m19 9-5 5-4-4-3 3\"/></svg></div><div class=\"empty-title\">功能开发中</div><div class=\"empty-desc\">数据分析功能即将上线，敬请期待。</div></div></div>';

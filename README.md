@@ -194,6 +194,8 @@ GET    /v1/admin/accounts         # 全局发件账号列表
 POST   /v1/admin/accounts         # 创建全局发件账号
 PUT    /v1/admin/accounts/:id     # 更新发件账号
 DELETE /v1/admin/accounts/:id     # 删除发件账号
+GET    /v1/admin/logs             # 全局发送日志（支持 status/category/q/limit/offset）
+GET    /v1/admin/logs/:id         # 全局发送日志详情
 GET    /v1/admin/stats            # 全局统计
 ```
 

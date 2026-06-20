@@ -343,10 +343,11 @@ export function getDB(db: D1Database) {
     },
 
     async updateMailLogStatus(id: string, status: string, providerResponse?: string, errorMessage?: string): Promise<void> {
+      const retryIncrement = status === 'failed' || (status === 'pending' && !!errorMessage) ? 1 : 0;
       await db.prepare(
-        `UPDATE mail_logs SET status = ?, provider_response = ?, error_message = ?, retry_count = retry_count + 1
+        `UPDATE mail_logs SET status = ?, provider_response = ?, error_message = ?, retry_count = retry_count + ?
          WHERE id = ?`
-      ).bind(status, providerResponse || null, errorMessage || null, id).run();
+      ).bind(status, providerResponse || null, errorMessage || null, retryIncrement, id).run();
     },
 
     async getMailLogs(userId: string, limit: number = 50, offset: number = 0): Promise<MailLog[]> {
@@ -382,7 +383,7 @@ export function getDB(db: D1Database) {
       return result.results;
     },
 
-    async updateQueueItemStatus(id: string, status: string, errorMessage?: string, retry?: boolean): Promise<void> {
+    async updateQueueItemStatus(id: string, status: string, _errorMessage?: string, retry?: boolean): Promise<void> {
       const fields = ['status = ?'];
       const values: unknown[] = [status];
 
@@ -390,17 +391,9 @@ export function getDB(db: D1Database) {
         // 临时失败，等待重试：递增 retry_count，设置下次重试时间，状态回到 queued
         fields.push('retry_count = retry_count + 1');
         fields.push(`next_retry_at = datetime('now', '+' || (retry_count + 1) * 30 || ' seconds')`);
-        if (errorMessage) {
-          fields.push('error_message = ?');
-          values.push(errorMessage);
-        }
       } else if (status === 'failed') {
         // 永久失败，记录错误
         fields.push('retry_count = retry_count + 1');
-        if (errorMessage) {
-          fields.push('error_message = ?');
-          values.push(errorMessage);
-        }
       }
 
       values.push(id);
