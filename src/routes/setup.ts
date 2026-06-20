@@ -253,6 +253,7 @@ async function ensureTables(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_mail_queue_status ON mail_queue(status)`,
     `CREATE INDEX IF NOT EXISTS idx_daily_stats_user_date ON daily_stats(user_id, date)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_codes_email_scene ON verification_codes(email, scene_type)`,
+    `CREATE INDEX IF NOT EXISTS idx_verification_codes_user_email_scene ON verification_codes(user_id, email, scene_type)`,
   ];
 
   for (const sql of tables) {

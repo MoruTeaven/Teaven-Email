@@ -84,7 +84,7 @@ Authorization: Bearer sk_xxxxxx
 
 ### 验证码生成与校验
 
-验证码生成接口会通过模板发信并自动注入 `{{code}}` 变量，校验接口用邮箱+验证码+场景进行比对。
+验证码生成接口会通过模板发信并自动注入 `{{code}}` 变量，校验接口按当前 API Key 所属用户 + 邮箱 + 验证码 + 场景进行比对。
 
 ```http
 POST   /v1/verification/send    # 生成验证码并发信（需 SEND_MAIL 权限）
@@ -125,7 +125,7 @@ POST   /v1/verification/verify  # 校验验证码（需 VERIFY_CODE 权限）
 
 响应 `{ "success": true, "data": { "valid": true } }` 或 `valid: false`。
 
-**防护**：单条验证码最多尝试 5 次，超过自动废弃。同邮箱+场景 5 分钟内最多发送 3 次。
+**防护**：单条验证码最多尝试 5 次，超过自动废弃。同用户+邮箱+场景 5 分钟内最多发送 3 次、最多校验 10 次。
 
 ### 邮件发送
 

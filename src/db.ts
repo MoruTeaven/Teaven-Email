@@ -457,33 +457,32 @@ export function getDB(db: D1Database) {
       ).bind(vc.id, vc.email, vc.code, vc.scene_type, vc.user_id, vc.expires_at, vc.used, vc.attempts).run();
     },
 
-    async getLatestCode(email: string, scene_type: string): Promise<VerificationCode | null> {
+    async getLatestCode(userId: string, email: string, scene_type: string): Promise<VerificationCode | null> {
       return db.prepare(
         `SELECT * FROM verification_codes
-         WHERE email = ? AND scene_type = ? AND used = 0
+         WHERE user_id = ? AND email = ? AND scene_type = ? AND used = 0
          ORDER BY created_at DESC LIMIT 1`
-      ).bind(email, scene_type).first<VerificationCode>();
+      ).bind(userId, email, scene_type).first<VerificationCode>();
     },
 
-    async markCodeUsed(id: string): Promise<void> {
+    async markCodeUsed(id: string, userId: string): Promise<void> {
       await db.prepare(
-        `UPDATE verification_codes SET used = 1 WHERE id = ?`
-      ).bind(id).run();
+        `UPDATE verification_codes SET used = 1 WHERE id = ? AND user_id = ?`
+      ).bind(id, userId).run();
     },
 
-    async incrementCodeAttempts(id: string): Promise<void> {
+    async incrementCodeAttempts(id: string, userId: string): Promise<void> {
       await db.prepare(
-        `UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ?`
-      ).bind(id).run();
+        `UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ? AND user_id = ?`
+      ).bind(id, userId).run();
     },
 
-    async deleteUsedCodes(email: string, scene_type: string): Promise<void> {
-      // 标记同一 email + scene_type 下所有未使用的旧码为已使用（保证只有最新码有效）
+    async deleteUsedCodes(userId: string, email: string, scene_type: string): Promise<void> {
+      // 标记同一用户 + email + scene_type 下所有未使用的旧码为已使用。
       await db.prepare(
         `UPDATE verification_codes SET used = 1
-         WHERE email = ? AND scene_type = ? AND used = 0
-         AND id != (SELECT id FROM verification_codes WHERE email = ? AND scene_type = ? ORDER BY created_at DESC LIMIT 1)`
-      ).bind(email, scene_type, email, scene_type).run();
+         WHERE user_id = ? AND email = ? AND scene_type = ? AND used = 0`
+      ).bind(userId, email, scene_type).run();
     },
 
     async cleanupExpiredCodes(): Promise<number> {

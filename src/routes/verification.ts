@@ -34,8 +34,8 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   }
 
   // === 发信频率保护 ===
-  // 同一邮箱+场景 5 分钟内最多 3 次，最小间隔 60 秒
-  const sendLimitKey = `vc_send:${body.to}:${body.scene_type}`;
+  // 同一用户+邮箱+场景 5 分钟内最多 3 次
+  const sendLimitKey = buildRateLimitKey('vc_send', auth.userId, body.to, body.scene_type);
   const sendCount = await getRateLimitCount(c.env.KV, sendLimitKey);
   if (sendCount >= MAX_SEND_PER_EMAIL_SCENE) {
     return c.json({
@@ -113,7 +113,7 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   const vcId = uuidv7();
 
   // 先将旧码标记为已使用
-  await db.deleteUsedCodes(body.to, body.scene_type);
+  await db.deleteUsedCodes(auth.userId, body.to, body.scene_type);
 
   const vc: Omit<VerificationCode, 'created_at'> = {
     id: vcId,
@@ -185,15 +185,17 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
 // --- 限流常量 ---
 const MAX_ATTEMPTS_PER_CODE = 5;        // 单条验证码最多尝试次数
 const RATE_LIMIT_WINDOW = 300;          // 限流窗口 5 分钟（秒）
-const MAX_EMAIL_SCENE_ATTEMPTS = 10;    // 单邮箱+场景窗口内最多尝试
-const MAX_SEND_PER_EMAIL_SCENE = 3;     // 单邮箱+场景 5 分钟内最多发 3 次
-const MIN_RESEND_INTERVAL = 60;         // 同一邮箱+场景最小重发间隔（秒）
+const MAX_EMAIL_SCENE_ATTEMPTS = 10;    // 单用户+邮箱+场景窗口内最多尝试
+const MAX_SEND_PER_EMAIL_SCENE = 3;     // 单用户+邮箱+场景 5 分钟内最多发 3 次
+const MIN_RESEND_INTERVAL = 60;         // 同一用户+邮箱+场景最小重发间隔（秒）
 
 // POST /v1/verification/verify — 验证用户输入的验证码
 // 防暴力破解保护（不限制 IP，适配后端调用场景）：
 //   1. 单条验证码最多尝试 5 次
-//   2. 单邮箱+场景 5 分钟内最多 10 次
+//   2. 单用户+邮箱+场景 5 分钟内最多 10 次
 verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) => {
+  const auth = getAuth(c);
+
   let body: VerifyCodeRequest;
   try {
     body = await c.req.json<VerifyCodeRequest>();
@@ -209,8 +211,8 @@ verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) =>
     return c.json({ success: false, error: 'Invalid email address' }, 400);
   }
 
-  // === 第一层：邮箱+场景维度限流 ===
-  const emailKey = `vc_verify:email:${body.email}:${body.scene_type}`;
+  // === 第一层：用户+邮箱+场景维度限流 ===
+  const emailKey = buildRateLimitKey('vc_verify:email', auth.userId, body.email, body.scene_type);
   const emailCount = await getRateLimitCount(c.env.KV, emailKey);
   if (emailCount >= MAX_EMAIL_SCENE_ATTEMPTS) {
     return c.json({
@@ -222,7 +224,7 @@ verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) =>
 
   // === 第二层：单条验证码尝试次数 ===
   const db = getDB(c.env.DB);
-  const record = await db.getLatestCode(body.email, body.scene_type);
+  const record = await db.getLatestCode(auth.userId, body.email, body.scene_type);
 
   if (!record) {
     return c.json({
@@ -233,7 +235,7 @@ verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) =>
 
   // 先检查是否已达尝试上限（不递增，直接拒绝）
   if (record.attempts >= MAX_ATTEMPTS_PER_CODE) {
-    await db.markCodeUsed(record.id);
+    await db.markCodeUsed(record.id, auth.userId);
     return c.json({
       success: true,
       data: { valid: false, message: 'Too many attempts. Please request a new verification code.' },
@@ -241,11 +243,11 @@ verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) =>
   }
 
   // 递增尝试次数
-  await db.incrementCodeAttempts(record.id);
+  await db.incrementCodeAttempts(record.id, auth.userId);
 
   // 检查是否过期
   if (new Date(record.expires_at) <= new Date()) {
-    await db.markCodeUsed(record.id);
+    await db.markCodeUsed(record.id, auth.userId);
     return c.json({
       success: true,
       data: { valid: false, message: 'Verification code has expired. Please request a new one.' },
@@ -261,9 +263,9 @@ verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) =>
   }
 
   // 验证成功，标记为已使用
-  await db.markCodeUsed(record.id);
+  await db.markCodeUsed(record.id, auth.userId);
 
-  // 验证成功后可清除该邮箱的限流计数（给合法用户放行）
+  // 验证成功后可清除该用户+邮箱+场景的限流计数（给合法用户放行）
   c.executionCtx.waitUntil(c.env.KV.delete(emailKey));
 
   return c.json({
@@ -291,6 +293,10 @@ async function incrementRateLimit(kv: KVNamespace, key: string, ttlSeconds: numb
   } catch {
     // KV 写入失败不阻塞业务
   }
+}
+
+function buildRateLimitKey(prefix: string, userId: string, email: string, sceneType: string): string {
+  return `${prefix}:${encodeURIComponent(userId)}:${encodeURIComponent(email)}:${encodeURIComponent(sceneType)}`;
 }
 
 function generateNumericCode(length: number): string {

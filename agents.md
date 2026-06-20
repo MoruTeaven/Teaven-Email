@@ -23,5 +23,6 @@
 - **登录自动 API Key**：用户通过 `POST /v1/setup/key-from-password` 登录时自动创建的 Key 标记 `auto_created=1`，24 小时后自动过期（`expires_at = now + 24h`）。这类 Key **不展示在** Dashboard API Keys 列表和 Admin 用户 Key 计数中。Cron + 懒清理 + 认证中间件三重机制确保过期 Key 被及时删除。
 - 前端 `dashboard_html.ts` 为用户后台（只读），`admin_html.ts` 为超级管理员后台（完整管理）。
 - 用户注册后自动获得使用全局资源的权限，无需单独绑定。
+- **验证码租户隔离**：验证码记录、查询、旧码失效和 KV 限流必须按 `user_id + email + scene_type` 隔离，避免不同用户使用相同邮箱和场景时互相影响。
 
 ** 一些重大的更改记得更新agents.md和 docs/ **

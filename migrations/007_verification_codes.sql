@@ -1,5 +1,5 @@
 -- Migration 007: 验证码表
--- 支持生成验证码、按 email + scene_type 验证
+-- 支持生成验证码、按 user_id + email + scene_type 验证
 -- scene_type 为用户自定义场景字符串（如 "login"、"register"、"reset_password"）
 CREATE TABLE IF NOT EXISTS verification_codes (
   id TEXT PRIMARY KEY,
@@ -14,3 +14,4 @@ CREATE TABLE IF NOT EXISTS verification_codes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_verification_codes_email_scene ON verification_codes(email, scene_type);
+CREATE INDEX IF NOT EXISTS idx_verification_codes_user_email_scene ON verification_codes(user_id, email, scene_type);
