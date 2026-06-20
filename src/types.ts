@@ -51,6 +51,8 @@ export interface EmailProvider {
   updated_at: string;
 }
 
+export type PublicEmailProvider = Pick<EmailProvider, 'id' | 'name' | 'type' | 'enabled'>;
+
 export interface SmtpConfig {
   host: string;
   port: number;

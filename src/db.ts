@@ -1,7 +1,7 @@
 // Teaven Email - 数据库访问层
 import type { D1Database } from '@cloudflare/workers-types';
 import type {
-  User, ApiKey, EmailProvider, Account, Template,
+  User, ApiKey, EmailProvider, PublicEmailProvider, Account, Template,
   TemplateVersion, MailLog, MailQueueItem, Webhook,
   VerificationCode
 } from './types';
@@ -131,6 +131,13 @@ export function getDB(db: D1Database) {
       const result = await db.prepare(
         'SELECT * FROM providers ORDER BY priority DESC'
       ).all<EmailProvider>();
+      return result.results;
+    },
+
+    async getPublicProviders(): Promise<PublicEmailProvider[]> {
+      const result = await db.prepare(
+        'SELECT id, name, type, enabled FROM providers ORDER BY priority DESC'
+      ).all<PublicEmailProvider>();
       return result.results;
     },
 

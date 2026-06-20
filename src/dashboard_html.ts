@@ -1076,14 +1076,13 @@ export function getDashboardHTML(): string {
           \` : \`
             <div class="provider-grid">
               \${providers.map(function(p) {
-                var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
-                var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
+                var typeLabel = p.type === 'smtp' ? 'SMTP 发送通道' : (p.type === 'api' ? 'API 发送通道' : 'Cloudflare Email');
                 return '<div class="provider-card">' +
                   '<div class="provider-header">' +
                     '<div class="provider-name">' + esc(p.name) + '</div>' +
                     '<span class="badge ' + (p.enabled ? 'badge-success' : 'badge-muted') + '">' + (p.enabled ? '启用' : '禁用') + '</span>' +
                   '</div>' +
-                  '<div class="provider-config">' + esc(configInfo) + '</div>' +
+                  '<div class="provider-config">' + esc(typeLabel) + '</div>' +
                   '<span class="badge badge-info">' + esc(p.type) + '</span>' +
                 '</div>';
               }).join('')}

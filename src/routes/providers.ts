@@ -10,7 +10,7 @@ const providerRouter = new Hono<{ Bindings: Env }>();
 // GET /v1/providers - 获取全局发送通道列表（所有用户可查看）
 providerRouter.get('/', authMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
-  const providers = await db.getAllProviders();
+  const providers = await db.getPublicProviders();
   return c.json({ success: true, data: providers });
 });
 
