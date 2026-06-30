@@ -352,7 +352,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         <div class="logo-wrap">
           <div class="logo-icon">T</div>
           <div>
-            <div class="logo-text">Teaven</div>
+            <div class="logo-text">Teaven Email</div>
             <div class="logo-sub">Admin Panel</div>
           </div>
         </div>
@@ -1174,7 +1174,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     // 全局总览
     async function renderOverview(main) {
       var resp = await apiCache('/admin/stats');
-      if (!resp.success) { main.innerHTML = setupPage(); return; }
+      if (!resp.success) {
+        main.innerHTML = '<div style="max-width: 480px; margin: 100px auto; text-align: center;">' +
+          '<div style="color: var(--danger); font-size: 1.2rem; margin-bottom: 16px;">加载失败</div>' +
+          '<div style="color: var(--text-muted); margin-bottom: 24px;">' + esc(resp.error || '无法加载数据') + '</div>' +
+          '<button class="btn btn-primary" onclick="location.reload()">重新加载</button>' +
+        '</div>';
+        return;
+      }
       var d = resp.data;
 
       main.innerHTML = \`
@@ -1972,11 +1979,13 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
     // 登录页面
     function setupPage() {
-      // 隐藏侧栏和顶部导航
+      // 隐藏侧栏、顶部导航和顶栏
       var sidebar = document.getElementById('sidebar');
       var mainWrap = document.getElementById('mainWrap');
+      var topHeader = document.querySelector('.top-header');
       if (sidebar) sidebar.style.display = 'none';
       if (mainWrap) mainWrap.style.marginLeft = '0';
+      if (topHeader) topHeader.style.display = 'none';
 
       fetch(API_BASE + '/setup/status').then(function(r) { return r.json(); }).then(function(resp) {
         var needsSetup = resp.data && resp.data.needs_setup;
@@ -1986,8 +1995,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         } else {
           main.innerHTML = loginPage();
         }
-      }).catch(function() {
-        document.getElementById('main-content').innerHTML = initPage();
+      }).catch(function(err) {
+        console.error('Failed to check setup status:', err);
+        var main = document.getElementById('main-content');
+        main.innerHTML = '<div style="max-width: 480px; margin: 100px auto; text-align: center;">' +
+          '<div style="color: var(--danger); font-size: 1.2rem; margin-bottom: 16px;">无法连接到服务器</div>' +
+          '<div style="color: var(--text-muted); margin-bottom: 24px;">请检查网络连接或稍后重试</div>' +
+          '<button class="btn btn-primary" onclick="location.reload()">重新加载</button>' +
+        '</div>';
       });
       return '<div style="text-align: center; padding: 120px; color: var(--text-muted);">加载中...</div>';
     }
@@ -1995,7 +2010,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     function loginPage() {
       return '<div style="max-width: 480px; margin: 100px auto;">' +
         '<div style="text-align: center; margin-bottom: 48px;">' +
-          '<div style="font-size: 4rem; font-weight: 800; background: linear-gradient(135deg, var(--orange-400), var(--orange-600)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px;">Teaven</div>' +
+          '<div style="font-size: 4rem; font-weight: 800; background: linear-gradient(135deg, var(--orange-400), var(--orange-600)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px;">Teaven Email</div>' +
           '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">超级管理员登录</div>' +
           '<div style="color: var(--text-muted); font-size: 0.9rem;">使用超级管理员账号登录</div>' +
         '</div>' +
@@ -2095,9 +2110,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     function initPage() {
       return '<div style="max-width: 480px; margin: 100px auto;">' +
         '<div style="text-align: center; margin-bottom: 48px;">' +
-          '<div style="font-size: 4rem; font-weight: 800; background: linear-gradient(135deg, var(--orange-400), var(--orange-600)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px;">Teaven</div>' +
-          '<div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 8px;">初始化超级管理员</div>' +
-          '<div style="color: var(--text-muted); font-size: 0.9rem;">首次使用，请创建超级管理员账户</div>' +
+          '<div style="font-size: 4rem; font-weight: 800; background: linear-gradient(135deg, var(--orange-400), var(--orange-600)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 16px;">Teaven Email</div>' +
         '</div>' +
         '<div class="card auth-card">' +
           '<div class="form-group">' +

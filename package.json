@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy src/index.ts",
     "db:migrate": "wrangler d1 execute teaven-email-db --remote --file=./migrations/001_init.sql"
   },
   "dependencies": {

@@ -1318,8 +1318,14 @@ export function getDashboardHTML(): string {
         } else {
           main.innerHTML = loginPage();
         }
-      }).catch(function() {
-        document.getElementById('main-content').innerHTML = initPage();
+      }).catch(function(err) {
+        console.error('Failed to check setup status:', err);
+        var main = document.getElementById('main-content');
+        main.innerHTML = '<div style="max-width: 480px; margin: 100px auto; text-align: center;">' +
+          '<div style="color: var(--danger); font-size: 1.2rem; margin-bottom: 16px;">无法连接到服务器</div>' +
+          '<div style="color: var(--text-muted); margin-bottom: 24px;">请检查网络连接或稍后重试</div>' +
+          '<button class="btn btn-primary" onclick="location.reload()">重新加载</button>' +
+        '</div>';
       });
       return '<div style="text-align: center; padding: 120px; color: var(--text-muted);">加载中...</div>';
     }

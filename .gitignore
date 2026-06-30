@@ -11,9 +11,9 @@ validate.js
 
 agents.md
 
-# Wrangler (config + local state)
-wrangler.toml
+# Wrangler (local state)
 .wrangler/
+.dev.vars
 
 # IDE
 .vscode/

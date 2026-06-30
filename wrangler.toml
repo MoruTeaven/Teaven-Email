@@ -1,0 +1,23 @@
+name = "teaven-email"
+main = "src/index.ts"
+compatibility_date = "2025-06-03"
+compatibility_flags = ["nodejs_compat"]
+account_id = "40c5cdd4a50968b4e395ec7a001b9f3f"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "teaven-email-db"
+database_id = "f18ef7a4-ecec-4ef0-a47a-ed03640b4ffe"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "7f1ba6c1269d4f6ab0183443e6177555"
+
+[vars]
+ENVIRONMENT = "production"
+
+[triggers]
+crons = ["* * * * *"]
+
+[observability]
+enabled = true
