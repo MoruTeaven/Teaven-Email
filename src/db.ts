@@ -226,6 +226,12 @@ export function getDB(db: D1Database) {
       ).bind(id).run();
     },
 
+    async resetAllAccountSentToday(): Promise<void> {
+      await db.prepare(
+        `UPDATE accounts SET sent_today = 0, updated_at = datetime('now')`
+      ).run();
+    },
+
     async deleteAccount(id: string): Promise<void> {
       await db.prepare(
         'DELETE FROM accounts WHERE id = ?'

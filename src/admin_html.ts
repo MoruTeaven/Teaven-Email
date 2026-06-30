@@ -1005,7 +1005,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             <div class="stat-change">个邮件模板</div>
           </div>
           <div class="stat-card">
-            <div <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg></div>
+            <div class="stat-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg></div>
             <div class="stat-label">总邮件数</div>
             <div class="stat-value green">\${d.total_mails}</div>
             <div class="stat-change">封已发送</div>
