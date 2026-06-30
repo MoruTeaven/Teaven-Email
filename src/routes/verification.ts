@@ -8,6 +8,7 @@ import { renderTemplate, renderSubject, validateVariables, htmlToText } from '..
 import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
 import { uuidv7 } from '../uuid';
+import { isMaintenanceMode, getSetting, getIntSetting } from '../settings';
 import type { SendCodeRequest, VerifyCodeRequest, MailLog, MailQueueItem, VerificationCode } from '../types';
 
 const verificationRouter = new Hono<{ Bindings: Env }>();
@@ -16,6 +17,12 @@ const verificationRouter = new Hono<{ Bindings: Env }>();
 verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
+
+  // 维护模式：开启时拒绝发送验证码
+  if (await isMaintenanceMode(c.env.DB)) {
+    const message = await getSetting(c.env.DB, 'maintenance_message');
+    return c.json({ success: false, error: 'maintenance_mode', message }, 503);
+  }
 
   let body: SendCodeRequest;
   try {
@@ -57,10 +64,12 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     ? JSON.parse(template.variables) as string[]
     : template.variables;
 
-  // 生成验证码
-  const codeLength = Math.min(Math.max(body.code_length || 6, 4), 10);
+  // 生成验证码（长度与有效期回退到系统设置默认值）
+  const defaultCodeLength = await getIntSetting(c.env.DB, 'verification_code_length', 4, 6);
+  const defaultTtlMinutes = await getIntSetting(c.env.DB, 'verification_code_ttl_minutes', 1, 10);
+  const codeLength = Math.min(Math.max(body.code_length || defaultCodeLength, 4), 10);
   const code = generateNumericCode(codeLength);
-  const expireMinutes = Math.min(Math.max(body.expire_minutes || 10, 1), 60);
+  const expireMinutes = Math.min(Math.max(body.expire_minutes || defaultTtlMinutes, 1), 60);
 
   // 合并用户变量 + 自动注入 code
   const variables = { ...(body.variables || {}), code };
@@ -162,7 +171,7 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     scheduled_at: null,
     next_retry_at: null,
     retry_count: 0,
-    max_retries: 3,
+    max_retries: await getIntSetting(c.env.DB, 'default_max_retries', 0, 3),
   };
   await db.createQueueItem(queueItem);
 
@@ -233,8 +242,9 @@ verificationRouter.post('/verify', authMiddleware(['VERIFY_CODE']), async (c) =>
     });
   }
 
-  // 先检查是否已达尝试上限（不递增，直接拒绝）
-  if (record.attempts >= MAX_ATTEMPTS_PER_CODE) {
+  // 先检查是否已达尝试上限（不递增，直接拒绝）；上限来自系统设置，默认 5
+  const maxAttempts = await getIntSetting(c.env.DB, 'verification_max_attempts', 1, MAX_ATTEMPTS_PER_CODE);
+  if (record.attempts >= maxAttempts) {
     await db.markCodeUsed(record.id, auth.userId);
     return c.json({
       success: true,

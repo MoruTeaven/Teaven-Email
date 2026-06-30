@@ -6,14 +6,50 @@ import { renderTemplate, renderSubject, validateVariables, htmlToText } from '..
 import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
 import { uuidv7 } from '../uuid';
+import { isMaintenanceMode, getSetting, getIntSetting } from '../settings';
 import type { SendTemplateRequest, SendMailRequest, MailLog, MailQueueItem } from '../types';
 
 const mailRouter = new Hono<{ Bindings: Env }>();
+
+// 维护模式检查：开启时拒绝发信请求（管理员通道 /v1/admin/* 不受影响）
+async function checkMaintenance(env: Env): Promise<Response | null> {
+  if (await isMaintenanceMode(env.DB)) {
+    const message = await getSetting(env.DB, 'maintenance_message');
+    return new Response(JSON.stringify({ success: false, error: 'maintenance_mode', message }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  return null;
+}
+
+// 每用户每日发送上限检查（0 表示不限制）
+async function checkDailyLimit(env: Env, userId: string): Promise<Response | null> {
+  const limit = await getIntSetting(env.DB, 'default_daily_limit_per_user', 0, 0);
+  if (limit <= 0) return null;
+  const today = new Date().toISOString().split('T')[0];
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) as c FROM mail_logs WHERE user_id = ? AND date(created_at) = ? AND status IN ('pending','sent','delivered')"
+  ).bind(userId, today).first<{ c: number }>();
+  if (row && row.c >= limit) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Daily sending limit reached (${limit})`,
+    }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+  }
+  return null;
+}
 
 // POST /v1/mail/send-template - 模板发送
 mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
+
+  // 维护模式与每日上限检查
+  const maintenanceResp = await checkMaintenance(c.env);
+  if (maintenanceResp) return maintenanceResp;
+  const limitResp = await checkDailyLimit(c.env, auth.userId);
+  if (limitResp) return limitResp;
 
   let body: SendTemplateRequest;
   try {
@@ -132,7 +168,7 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
     scheduled_at: null,
     next_retry_at: null,
     retry_count: 0,
-    max_retries: 3,
+    max_retries: await getIntSetting(c.env.DB, 'default_max_retries', 0, 3),
   };
   await db.createQueueItem(queueItem);
 
@@ -155,6 +191,12 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
 mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   const auth = getAuth(c);
   const db = getDB(c.env.DB);
+
+  // 维护模式与每日上限检查
+  const maintenanceResp = await checkMaintenance(c.env);
+  if (maintenanceResp) return maintenanceResp;
+  const limitResp = await checkDailyLimit(c.env, auth.userId);
+  if (limitResp) return limitResp;
 
   let body: SendMailRequest;
   try {
@@ -236,7 +278,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     scheduled_at: null,
     next_retry_at: null,
     retry_count: 0,
-    max_retries: 3,
+    max_retries: await getIntSetting(c.env.DB, 'default_max_retries', 0, 3),
   };
   await db.createQueueItem(queueItem);
 

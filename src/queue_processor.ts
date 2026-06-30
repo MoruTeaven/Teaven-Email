@@ -60,11 +60,6 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
       await db.updateQueueItemStatus(item.id, 'completed');
       await db.updateMailLogStatus(item.mail_log_id, 'sent', result.providerResponse);
 
-      // 更新账号发送计数
-      if (item.account_id) {
-        await db.incrementAccountSent(item.account_id);
-      }
-
       // 更新每日统计
       const today = new Date().toISOString().split('T')[0];
       await db.upsertDailyStats(item.user_id, today, 'sent');

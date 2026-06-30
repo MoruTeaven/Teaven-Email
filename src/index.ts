@@ -95,25 +95,10 @@ export default {
         ctx.waitUntil(processQueue(env));
         ctx.waitUntil(cleanupExpiredKeys(env));
         ctx.waitUntil(cleanupExpiredCodes(env));
-        ctx.waitUntil(resetDailyAccountCounts(env));
         break;
     }
   },
 };
-
-async function resetDailyAccountCounts(env: Env): Promise<void> {
-  try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const lastReset = await env.KV.get('account_count_reset_date');
-    if (lastReset === today) return;
-    const db = getDB(env.DB);
-    await db.resetAllAccountSentToday();
-    await env.KV.put('account_count_reset_date', today);
-    console.log(`Reset all account sent_today counters for ${today}`);
-  } catch (err) {
-    console.error('Failed to reset daily account counts:', err);
-  }
-}
 
 async function cleanupExpiredKeys(env: Env): Promise<void> {
   try {

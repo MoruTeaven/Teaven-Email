@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { getDB } from '../db';
 import { generateApiKey, encryptApiKey } from '../auth';
 import { uuidv7 } from '../uuid';
+import { getIntSetting } from '../settings';
 import type { Permission } from '../types';
 
 const setupRouter = new Hono<{ Bindings: Env }>();
@@ -198,11 +199,12 @@ setupRouter.post('/key-from-password', async (c) => {
     return c.json({ success: false, error: 'Invalid email or password' }, 401);
   }
 
-  // 生成新的 API Key（自动创建，24小时后过期）
+  // 生成新的 API Key（自动创建，有效期由系统设置 auto_api_key_ttl_hours 控制，默认 24 小时）
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
   const { raw, hash, prefix } = await generateApiKey();
   const apiKeyId = uuidv7();
   const secret = c.env.JWT_SECRET || '';
+  const ttlHours = await getIntSetting(c.env.DB, 'auto_api_key_ttl_hours', 1, 24);
 
   await db.createApiKey({
     id: apiKeyId,
@@ -214,7 +216,7 @@ setupRouter.post('/key-from-password', async (c) => {
     permissions: allPermissions,
     enabled: 1,
     auto_created: 1,
-    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    expires_at: new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString(),
     last_used_at: null,
   });
 
@@ -248,12 +250,14 @@ async function ensureTables(db: D1Database): Promise<void> {
     `CREATE TABLE IF NOT EXISTS daily_stats (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), date TEXT NOT NULL, total_sent INTEGER DEFAULT 0, total_delivered INTEGER DEFAULT 0, total_failed INTEGER DEFAULT 0, total_bounced INTEGER DEFAULT 0, total_spam INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, url TEXT NOT NULL, events TEXT NOT NULL DEFAULT '["sent","failed","bounced"]', secret TEXT, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS verification_codes (id TEXT PRIMARY KEY, email TEXT NOT NULL, code TEXT NOT NULL, scene_type TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'general', description TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now')), updated_by TEXT)`,
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_code_version ON templates(user_id, template_code, version)`,
     `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(api_key_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_mail_queue_status ON mail_queue(status)`,
     `CREATE INDEX IF NOT EXISTS idx_daily_stats_user_date ON daily_stats(user_id, date)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_codes_email_scene ON verification_codes(email, scene_type)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_codes_user_email_scene ON verification_codes(user_id, email, scene_type)`,
+    `CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category)`,
   ];
 
   for (const sql of tables) {
@@ -268,6 +272,27 @@ async function ensureTables(db: D1Database): Promise<void> {
   ];
   for (const sql of alterStatements) {
     try { await db.prepare(sql).run(); } catch {}
+  }
+
+  // 初始化默认系统设置项（已存在的 key 不覆盖）
+  const defaultSettings: { key: string; value: string; category: string; description: string }[] = [
+    { key: 'platform_name', value: 'Teaven Email', category: 'platform', description: '平台名称，展示在后台与邮件中' },
+    { key: 'admin_contact_email', value: '', category: 'platform', description: '管理员联系邮箱' },
+    { key: 'announcement', value: '', category: 'platform', description: '系统公告，展示给用户（留空则不展示）' },
+    { key: 'default_max_retries', value: '3', category: 'mail', description: '单封邮件默认最大重试次数' },
+    { key: 'default_daily_limit_per_user', value: '1000', category: 'mail', description: '单用户每日发送上限（0 表示不限制）' },
+    { key: 'verification_code_ttl_minutes', value: '10', category: 'verification', description: '验证码默认有效期（分钟）' },
+    { key: 'verification_code_length', value: '6', category: 'verification', description: '验证码默认长度（4-10 位）' },
+    { key: 'verification_max_attempts', value: '5', category: 'verification', description: '单条验证码最大验证尝试次数' },
+    { key: 'maintenance_mode', value: '0', category: 'security', description: '维护模式开关（1=开启，开启后禁止发信）' },
+    { key: 'maintenance_message', value: '系统维护中，暂无法发送邮件，请稍后重试。', category: 'security', description: '维护模式开启时返回给用户的提示信息' },
+    { key: 'auto_api_key_ttl_hours', value: '24', category: 'security', description: '登录自动创建的 API Key 有效期（小时）' },
+  ];
+  for (const s of defaultSettings) {
+    try {
+      await db.prepare('INSERT OR IGNORE INTO system_settings (key, value, category, description) VALUES (?, ?, ?, ?)')
+        .bind(s.key, s.value, s.category, s.description).run();
+    } catch {}
   }
 }
 

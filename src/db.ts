@@ -197,7 +197,14 @@ export function getDB(db: D1Database) {
 
     async getEnabledAccountsByProvider(providerId: string): Promise<Account[]> {
       const result = await db.prepare(
-        'SELECT * FROM accounts WHERE provider_id = ? AND enabled = 1 ORDER BY daily_limit ASC'
+        `SELECT a.*,
+           (SELECT COUNT(*) FROM mail_logs ml
+            WHERE ml.account_id = a.id
+              AND ml.status IN ('sent','delivered')
+              AND date(ml.created_at) = date('now')) as sent_today
+         FROM accounts a
+         WHERE a.provider_id = ? AND a.enabled = 1
+         ORDER BY a.daily_limit ASC`
       ).bind(providerId).all<Account>();
       return result.results;
     },
@@ -216,19 +223,6 @@ export function getDB(db: D1Database) {
         account.daily_limit, account.sent_today,
         account.categories || '',
         account.enabled
-      ).run();
-    },
-
-    async incrementAccountSent(id: string): Promise<void> {
-      await db.prepare(
-        `UPDATE accounts SET sent_today = sent_today + 1, updated_at = datetime('now')
-         WHERE id = ?`
-      ).bind(id).run();
-    },
-
-    async resetAllAccountSentToday(): Promise<void> {
-      await db.prepare(
-        `UPDATE accounts SET sent_today = 0, updated_at = datetime('now')`
       ).run();
     },
 
@@ -323,14 +317,22 @@ export function getDB(db: D1Database) {
 
     // ============ Category-Based Account Routing ============
     // 分类路由已合并到 accounts 表，通过 categories 字段（逗号分隔）匹配。
-    // 查询已启用且未超每日限额的账号，按 sent_today 升序（最少用的优先）。
+    // 当日发送数直接从 mail_logs 按日期统计，无需维护 sent_today 累计字段，跨日自动归零。
 
     async getAccountsByCategory(category: string): Promise<Account[]> {
       const result = await db.prepare(
-        `SELECT * FROM accounts
-         WHERE enabled = 1
-           AND sent_today < daily_limit
-           AND (',' || categories || ',') LIKE ?
+        `SELECT a.*,
+           (SELECT COUNT(*) FROM mail_logs ml
+            WHERE ml.account_id = a.id
+              AND ml.status IN ('sent','delivered')
+              AND date(ml.created_at) = date('now')) as sent_today
+         FROM accounts a
+         WHERE a.enabled = 1
+           AND (SELECT COUNT(*) FROM mail_logs ml
+                WHERE ml.account_id = a.id
+                  AND ml.status IN ('sent','delivered')
+                  AND date(ml.created_at) = date('now')) < a.daily_limit
+           AND (',' || a.categories || ',') LIKE ?
          ORDER BY sent_today ASC`
       ).bind(`%,${category},%`).all<Account>();
       return result.results;

@@ -640,7 +640,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     var _CACHE_INVALIDATE_MAP = {
       '/admin/tenants': ['/admin/tenants', '/admin/stats'],
       '/admin/providers': ['/admin/providers', '/admin/stats'],
-      '/admin/accounts': ['/admin/accounts', '/admin/stats']
+      '/admin/accounts': ['/admin/accounts', '/admin/stats'],
+      '/admin/settings': ['/admin/settings']
     };
 
     function _cacheKey(path) {
@@ -762,6 +763,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'PROVIDERS',lines:4});
         else if (page === 'accounts') main.innerHTML = skeleton({title:'发件账号',subtitle:'SENDER ACCOUNTS MANAGEMENT',lines:5});
         else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'GLOBAL MAIL DELIVERY LOGS',lines:8});
+        else if (page === 'settings') main.innerHTML = skeleton({title:'系统设置',subtitle:'SYSTEM SETTINGS',lines:4});
       }
       // 自动刷新强制失效该页相关缓存
       if (forceFresh) {
@@ -770,6 +772,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         else if (page === 'providers') invalidateCache('/admin/providers');
         else if (page === 'accounts') invalidateCache('/admin/accounts');
         else if (page === 'logs') invalidateCache('/admin/logs');
+        else if (page === 'settings') invalidateCache('/admin/settings');
       }
       switch(page) {
         case 'dashboard': renderOverview(main); break;
