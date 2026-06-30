@@ -1972,6 +1972,12 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
     // 登录页面
     function setupPage() {
+      // 隐藏侧栏和顶部导航
+      var sidebar = document.getElementById('sidebar');
+      var mainWrap = document.getElementById('mainWrap');
+      if (sidebar) sidebar.style.display = 'none';
+      if (mainWrap) mainWrap.style.marginLeft = '0';
+
       fetch(API_BASE + '/setup/status').then(function(r) { return r.json(); }).then(function(resp) {
         var needsSetup = resp.data && resp.data.needs_setup;
         var main = document.getElementById('main-content');
