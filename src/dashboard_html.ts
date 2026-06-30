@@ -76,8 +76,14 @@ export function getDashboardHTML(): string {
     .breadcrumb-current{color:var(--text-primary);font-weight:500}
     .header-actions{display:flex;align-items:center;gap:10px}
     .header-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
-    .header-btn:hover{color:var(--primary);border-color:var(--primary)}
-    .header-btn svg{width:17px;height:17px}
+.header-btn:hover{color:var(--primary);border-color:var(--primary)}
+.header-btn svg{width:17px;height:17px}
+.auto-refresh-btn{display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:.74rem;font-weight:500;transition:all .15s;white-space:nowrap}
+.auto-refresh-btn:hover{color:var(--primary);border-color:var(--primary)}
+.auto-refresh-btn.active{color:var(--primary);border-color:rgba(var(--primary-rgb),.4);background:rgba(var(--primary-rgb),.08)}
+.auto-refresh-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);transition:all .3s;flex-shrink:0}
+.auto-refresh-btn.active .auto-refresh-dot{background:var(--success);box-shadow:0 0 0 0 rgba(60,170,90,.6);animation:arfPulse 1.8s infinite}
+@keyframes arfPulse{0%{box-shadow:0 0 0 0 rgba(60,170,90,.55)}70%{box-shadow:0 0 0 6px rgba(60,170,90,0)}100%{box-shadow:0 0 0 0 rgba(60,170,90,0)}}
     .mobile-toggle{display:none;width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
 
     /* Main */
@@ -272,6 +278,14 @@ export function getDashboardHTML(): string {
       .page-title{font-size:1.3rem}
       .auth-card{padding:28px}
     }
+
+    /* 骨架屏 */
+    .sk{display:inline-block;border-radius:4px;background:var(--bg-input);position:relative;overflow:hidden}
+    .sk-line{display:block;height:10px}
+    .sk::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skShimmer 1.2s infinite}
+    [data-theme="dark"] .sk::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+    @keyframes skShimmer{100%{transform:translateX(100%)}}
+    .list-item{padding:14px 16px}
   </style>
 </head>
 <body>
@@ -340,6 +354,9 @@ export function getDashboardHTML(): string {
           </div>
         </div>
         <div class="header-actions">
+          <button class="auto-refresh-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="自动刷新当前页数据">
+            <span class="auto-refresh-dot"></span><span id="autoRefreshLabel">自动刷新</span>
+          </button>
           <button class="header-btn" id="themeToggle" onclick="toggleTheme()" title="切换主题">
             <svg id="themeIconLight" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
             <svg id="themeIconDark" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -488,6 +505,83 @@ export function getDashboardHTML(): string {
       return res.json();
     }
 
+    // ===== 数据缓存层（解决来回切换 tab 重复请求导致的卡顿）=====
+    var _apiCache = {};
+    var _API_CACHE_TTL = 30000; // 30 秒
+    // 用户侧写操作 -> 需要失效的缓存前缀
+    var _CACHE_INVALIDATE_MAP = {
+      '/api-keys': ['/api-keys', '/dashboard/overview'],
+      '/templates': ['/templates', '/dashboard/overview']
+    };
+
+    async function apiCache(path, opts, ttl) {
+      opts = opts || {};
+      var method = (opts.method || 'GET').toUpperCase();
+      if (method !== 'GET') {
+        return api(path, opts);
+      }
+      var now = Date.now();
+      var entry = _apiCache[path];
+      if (entry && (now - entry.t) < (ttl || _API_CACHE_TTL)) {
+        return entry.data;
+      }
+      if (entry && entry.inflight) {
+        return entry.inflight;
+      }
+      var p = api(path, opts).then(function(data) {
+        _apiCache[path] = { t: Date.now(), data: data, inflight: null };
+        return data;
+      }).catch(function(e) {
+        if (_apiCache[path]) _apiCache[path].inflight = null;
+        throw e;
+      });
+      _apiCache[path] = { t: entry ? entry.t : 0, data: entry ? entry.data : null, inflight: p };
+      return p;
+    }
+
+    function invalidateCache(prefix) {
+      Object.keys(_apiCache).forEach(function(k) {
+        if (!prefix || k.indexOf(prefix) === 0) delete _apiCache[k];
+      });
+    }
+
+    function apiMutate(path, opts) {
+      Object.keys(_CACHE_INVALIDATE_MAP).forEach(function(route) {
+        if (path.indexOf(route) === 0) {
+          _CACHE_INVALIDATE_MAP[route].forEach(function(p) { invalidateCache(p); });
+        }
+      });
+      return api(path, opts);
+    }
+
+    // 骨架屏
+    function skeleton(opts) {
+      opts = opts || {};
+      var title = opts.title || '';
+      var subtitle = opts.subtitle || '';
+      var lines = opts.lines || 5;
+      var cards = opts.cards || 0;
+      var html = '';
+      if (title) {
+        html += '<div class="page-header"><h1 class="page-title">' + esc(title) + '</h1>';
+        if (subtitle) html += '<p class="page-subtitle">' + esc(subtitle) + '</p>';
+        html += '</div>';
+      }
+      if (cards > 0) {
+        html += '<div class="stats-grid" style="margin-bottom:28px">';
+        for (var i = 0; i < cards; i++) {
+          html += '<div class="stat-card"><div class="sk sk-line" style="width:40%;height:12px;margin-bottom:12px"></div><div class="sk sk-line" style="width:60%;height:28px"></div></div>';
+        }
+        html += '</div>';
+      }
+      html += '<div class="card"><div class="card-header"><div class="sk sk-line" style="width:140px;height:16px"></div></div>';
+      for (var j = 0; j < lines; j++) {
+        html += '<div class="list-item"><div class="list-item-info"><div class="sk sk-line" style="width:' + (40 + (j * 7) % 40) + '%;height:14px;margin-bottom:8px"></div><div class="sk sk-line" style="width:' + (60 + (j * 5) % 30) + '%;height:12px"></div></div></div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
     function toast(msg, type) {
       type = type || 'success';
       var c = document.getElementById('toast-container');
@@ -512,11 +606,27 @@ export function getDashboardHTML(): string {
       });
     });
 
-    function renderPage(page) {
+    function renderPage(page, forceFresh) {
       var breadcrumbPage = document.getElementById('breadcrumbPage');
       var names = {dashboard:'仪表盘','api-keys':'API Keys',templates:'模板管理',providers:'发送通道',logs:'发送日志'};
       if (breadcrumbPage) breadcrumbPage.textContent = names[page] || page;
       var main = document.getElementById('main-content');
+      // 自动刷新时不重新渲染骨架屏（避免闪烁），仅手动切换时显示骨架屏
+      if (!forceFresh) {
+        if (page === 'dashboard') main.innerHTML = skeleton({title:'仪表盘',subtitle:'MAIL PLATFORM DASHBOARD',cards:4,lines:4});
+        else if (page === 'api-keys') main.innerHTML = skeleton({title:'API Keys',subtitle:'API KEYS MANAGEMENT',lines:4});
+        else if (page === 'templates') main.innerHTML = skeleton({title:'模板管理',subtitle:'EMAIL TEMPLATES',lines:5});
+        else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'MAIL DELIVERY PROVIDERS',lines:4});
+        else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'MAIL DELIVERY LOGS',lines:8});
+      }
+      // 自动刷新强制失效该页相关缓存
+      if (forceFresh) {
+        if (page === 'dashboard') invalidateCache('/dashboard/overview');
+        else if (page === 'api-keys') invalidateCache('/api-keys');
+        else if (page === 'templates') invalidateCache('/templates');
+        else if (page === 'providers') invalidateCache('/providers');
+        else if (page === 'logs') invalidateCache('/mail/logs');
+      }
       switch (page) {
         case 'dashboard': renderDashboard(main); break;
         case 'api-keys': renderApiKeys(main); break;
@@ -526,10 +636,75 @@ export function getDashboardHTML(): string {
       }
     }
 
+    // ===== 自动刷新 =====
+    var ARF_INTERVAL = 15000; // 15 秒
+    var ARF_KEY = 'teaven_user_autorefresh';
+    var _arfTimer = null;
+    var _arfEnabled = localStorage.getItem(ARF_KEY) !== '0'; // 默认开启
+    // 仅这些页面有动态数据，值得自动刷新（仪表盘、日志）
+    var ARF_PAGES = { dashboard: 1, logs: 1 };
+
+    function syncAutoRefreshUI() {
+      var btn = document.getElementById('autoRefreshBtn');
+      var lbl = document.getElementById('autoRefreshLabel');
+      if (!btn || !lbl) return;
+      if (_arfEnabled) { btn.classList.add('active'); lbl.textContent = '自动刷新'; }
+      else { btn.classList.remove('active'); lbl.textContent = '已暂停'; }
+    }
+
+    function toggleAutoRefresh() {
+      _arfEnabled = !_arfEnabled;
+      localStorage.setItem(ARF_KEY, _arfEnabled ? '1' : '0');
+      syncAutoRefreshUI();
+      restartAutoRefresh();
+      toast(_arfEnabled ? '已开启自动刷新' : '已暂停自动刷新', 'info');
+    }
+
+    function canAutoRefreshNow() {
+      if (document.querySelector('.modal-overlay')) return false;
+      var ae = document.activeElement;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA')) return false;
+      var navEl = document.querySelector('.nav-item.active');
+      var page = navEl && navEl.dataset.page;
+      if (!page || !ARF_PAGES[page]) return false;
+      return true;
+    }
+
+    function doAutoRefresh() {
+      if (!_arfEnabled) return;
+      if (!canAutoRefreshNow()) return;
+      var navEl = document.querySelector('.nav-item.active');
+      if (!navEl) return;
+      try {
+        // 自动刷新要拿最新数据，强制跳过缓存
+        renderPage(navEl.dataset.page, true);
+      } catch (e) {
+        console.warn('[autorefresh] render failed', e);
+      }
+    }
+
+    function restartAutoRefresh() {
+      if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
+      if (_arfEnabled) {
+        _arfTimer = setInterval(doAutoRefresh, ARF_INTERVAL);
+      }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
+      } else {
+        doAutoRefresh();
+        restartAutoRefresh();
+      }
+    });
+
+
+
     // 仪表盘
     async function renderDashboard(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
-      var resp = await api('/dashboard/overview');
+      var resp = await apiCache('/dashboard/overview');
       if (!resp.success) { main.innerHTML = setupPage(); return; }
       var d = resp.data;
 
@@ -620,7 +795,7 @@ export function getDashboardHTML(): string {
     // API Keys
     async function renderApiKeys(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
-      var resp = await api('/api-keys');
+      var resp = await apiCache('/api-keys');
       var keys = resp.data || [];
 
       main.innerHTML = \`
@@ -701,7 +876,7 @@ export function getDashboardHTML(): string {
         var name = overlay.querySelector('#ak-name').value.trim();
         if (!name) { toast('请输入名称', 'error'); return; }
         var perms = [...overlay.querySelectorAll('.ak-perm:checked')].map(function(cb) { return cb.value; });
-        var resp = await api('/api-keys', { method: 'POST', body: JSON.stringify({ name: name, permissions: perms }) });
+        var resp = await apiMutate('/api-keys', { method: 'POST', body: JSON.stringify({ name: name, permissions: perms }) });
         if (resp.success) {
           overlay.remove();
           var main = document.getElementById('main-content');
@@ -723,13 +898,13 @@ export function getDashboardHTML(): string {
     }
 
     async function toggleApiKey(id, enabled) {
-      await api('/api-keys/' + id + '/toggle', { method: 'PUT', body: JSON.stringify({ enabled: enabled }) });
+      await apiMutate('/api-keys/' + id + '/toggle', { method: 'PUT', body: JSON.stringify({ enabled: enabled }) });
       renderPage('api-keys');
     }
 
     async function deleteApiKey(id) {
       if (!confirm('确定删除此 API Key？此操作不可撤销。')) return;
-      await api('/api-keys/' + id, { method: 'DELETE' });
+      await apiMutate('/api-keys/' + id, { method: 'DELETE' });
       renderPage('api-keys');
       toast('API Key 已删除');
     }
@@ -794,7 +969,7 @@ export function getDashboardHTML(): string {
     // 模板管理
     async function renderTemplates(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
-      var resp = await api('/templates');
+      var resp = await apiCache('/templates');
       var templates = resp.data || [];
 
       main.innerHTML = \`
@@ -929,7 +1104,7 @@ export function getDashboardHTML(): string {
 
     async function deleteTemplate(code) {
       if (!confirm('确定删除模板 "' + code + '"？')) return;
-      await api('/templates/' + code, { method: 'DELETE' });
+      await apiMutate('/templates/' + code, { method: 'DELETE' });
       renderPage('templates');
       toast('模板已删除');
     }
@@ -1057,7 +1232,7 @@ export function getDashboardHTML(): string {
     // 发送通道（只读）
     async function renderProviders(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
-      var pResp = await api('/providers');
+      var pResp = await apiCache('/providers');
       var providers = pResp.data || [];
 
       main.innerHTML = \`
@@ -1095,7 +1270,7 @@ export function getDashboardHTML(): string {
     // 发送日志
     async function renderLogs(main) {
       if (!API_KEY) { main.innerHTML = setupPage(); return; }
-      var resp = await api('/mail/logs?limit=100');
+      var resp = await apiCache('/mail/logs?limit=100');
       var logs = resp.data || [];
 
       main.innerHTML = \`
@@ -1311,6 +1486,8 @@ export function getDashboardHTML(): string {
     // 初始化
     if (API_KEY) { updateSidebarUser(); renderPage('dashboard'); }
     else { document.getElementById('main-content').innerHTML = setupPage(); }
+    syncAutoRefreshUI();
+    restartAutoRefresh();
   </script>
 </body>
 </html>`;

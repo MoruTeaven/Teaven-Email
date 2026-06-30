@@ -186,6 +186,26 @@ async function sendViaApi(config: ApiProviderConfig, params: SendParams): Promis
         break;
       }
 
+      case 'sweego':
+        url = api_url || 'https://api.sweego.io/send';
+        headers = {
+          'Api-Key': api_key,
+          'Content-Type': 'application/json',
+        };
+        body = JSON.stringify({
+          channel: 'email',
+          provider: 'sweego',
+          recipients: [{ email: params.to }],
+          from: {
+            name: params.fromName || params.from,
+            email: params.from,
+          },
+          subject: params.subject,
+          'message-html': params.html,
+          'message-txt': params.text || params.html.replace(/<[^>]*>/g, ''),
+        });
+        break;
+
       default:
         // 通用 API
         url = api_url;

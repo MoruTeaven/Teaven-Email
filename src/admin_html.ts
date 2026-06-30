@@ -84,6 +84,12 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 .header-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .header-btn:hover{color:var(--primary);border-color:var(--primary)}
 .header-btn svg{width:17px;height:17px}
+.auto-refresh-btn{display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:.74rem;font-weight:500;transition:all .15s;white-space:nowrap}
+.auto-refresh-btn:hover{color:var(--primary);border-color:var(--primary)}
+.auto-refresh-btn.active{color:var(--primary);border-color:rgba(var(--primary-rgb),.4);background:rgba(var(--primary-rgb),.08)}
+.auto-refresh-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);transition:all .3s;flex-shrink:0}
+.auto-refresh-btn.active .auto-refresh-dot{background:var(--success);box-shadow:0 0 0 0 rgba(60,170,90,.6);animation:arfPulse 1.8s infinite}
+@keyframes arfPulse{0%{box-shadow:0 0 0 0 rgba(60,170,90,.55)}70%{box-shadow:0 0 0 6px rgba(60,170,90,0)}100%{box-shadow:0 0 0 0 rgba(60,170,90,0)}}
 .mobile-toggle{display:none;width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
 
 /* Main */
@@ -326,6 +332,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
   .search-input:focus{width:100%}
   .auth-card{padding:28px}
 }
+
+/* 骨架屏 */
+.sk{display:inline-block;border-radius:4px;background:var(--bg-input);position:relative;overflow:hidden}
+.sk-line{display:block;height:10px}
+.sk::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skShimmer 1.2s infinite}
+[data-theme="dark"] .sk::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+@keyframes skShimmer{100%{transform:translateX(100%)}}
+.list-item{padding:14px 16px}
   </style>
 </head>
 
@@ -407,6 +421,9 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           </div>
         </div>
         <div class="header-actions">
+          <button class="auto-refresh-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()" title="自动刷新当前页数据">
+            <span class="auto-refresh-dot"></span><span id="autoRefreshLabel">自动刷新</span>
+          </button>
           <button class="header-btn" onclick="refreshCurrentPage()" title="刷新">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
           </button>
@@ -470,6 +487,75 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       var page = document.querySelector('.nav-item.active');
       if (page && page.dataset.page) renderPage(page.dataset.page);
     }
+
+    // ===== 自动刷新 =====
+    var ARF_INTERVAL = 15000; // 15 秒
+    var ARF_KEY = 'teaven_admin_autorefresh';
+    var _arfTimer = null;
+    var _arfEnabled = localStorage.getItem(ARF_KEY) !== '0'; // 默认开启
+
+    // 仅这些页面有动态数据，值得自动刷新
+    var ARF_PAGES = { dashboard: 1, logs: 1, users: 1, providers: 1, accounts: 1 };
+
+    function syncAutoRefreshUI() {
+      var btn = document.getElementById('autoRefreshBtn');
+      var lbl = document.getElementById('autoRefreshLabel');
+      if (!btn || !lbl) return;
+      if (_arfEnabled) { btn.classList.add('active'); lbl.textContent = '自动刷新'; }
+      else { btn.classList.remove('active'); lbl.textContent = '已暂停'; }
+    }
+
+    function toggleAutoRefresh() {
+      _arfEnabled = !_arfEnabled;
+      localStorage.setItem(ARF_KEY, _arfEnabled ? '1' : '0');
+      syncAutoRefreshUI();
+      restartAutoRefresh();
+      toast(_arfEnabled ? '已开启自动刷新' : '已暂停自动刷新', 'info');
+    }
+
+    // 是否可以安全刷新（不打断用户操作）
+    function canAutoRefreshNow() {
+      // 模态框打开时不刷新
+      if (document.querySelector('.modal-overlay')) return false;
+      // 有输入元素聚焦时不刷新（避免输入丢失）
+      var ae = document.activeElement;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA')) return false;
+      // 页面类型判断
+      var navEl = document.querySelector('.nav-item.active');
+      var page = navEl && navEl.dataset.page;
+      if (!page || !ARF_PAGES[page]) return false;
+      return true;
+    }
+
+    function doAutoRefresh() {
+      if (!_arfEnabled) return;
+      if (!canAutoRefreshNow()) return;
+      var navEl = document.querySelector('.nav-item.active');
+      if (!navEl) return;
+      try {
+        // 自动刷新要拿最新数据，强制跳过缓存
+        renderPage(navEl.dataset.page, true);
+      } catch (e) {
+        console.warn('[autorefresh] render failed', e);
+      }
+    }
+
+    function restartAutoRefresh() {
+      if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
+      if (_arfEnabled) {
+        _arfTimer = setInterval(doAutoRefresh, ARF_INTERVAL);
+      }
+    }
+
+    // 页面非可见时暂停，回来时立即刷新一次并重置计时
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
+      } else {
+        doAutoRefresh();
+        restartAutoRefresh();
+      }
+    });
 
     var API_BASE = '/v1';
     var API_KEY = localStorage.getItem('teaven_admin_key') || '';
@@ -546,6 +632,99 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       return data;
     }
 
+    // ===== 数据缓存层（解决来回切换 tab 重复请求导致的卡顿）=====
+    // 内存缓存 + TTL，仅缓存 GET 请求。写操作（POST/PUT/DELETE）自动失效相关缓存。
+    var _apiCache = {};
+    var _API_CACHE_TTL = 30000; // 30 秒
+    // 路由 -> 需要失效的缓存 key 前缀列表（写操作触发）
+    var _CACHE_INVALIDATE_MAP = {
+      '/admin/tenants': ['/admin/tenants', '/admin/stats'],
+      '/admin/providers': ['/admin/providers', '/admin/stats'],
+      '/admin/accounts': ['/admin/accounts', '/admin/stats']
+    };
+
+    function _cacheKey(path) {
+      // 去掉 query string 中的时间戳之类的不稳定参数由调用方保证；这里直接用 path
+      return path;
+    }
+
+    async function apiCache(path, opts, ttl) {
+      opts = opts || {};
+      var method = (opts.method || 'GET').toUpperCase();
+      // 非 GET 不走缓存
+      if (method !== 'GET') {
+        return api(path, opts);
+      }
+      var key = _cacheKey(path);
+      var now = Date.now();
+      var entry = _apiCache[key];
+      if (entry && (now - entry.t) < (ttl || _API_CACHE_TTL)) {
+        return entry.data;
+      }
+      // 用 inflight 去重，避免短时间多次相同请求
+      if (entry && entry.inflight) {
+        return entry.inflight;
+      }
+      var p = api(path, opts).then(function(data) {
+        _apiCache[key] = { t: Date.now(), data: data, inflight: null };
+        return data;
+      }).catch(function(e) {
+        // 请求失败清除 inflight，保留旧缓存（如果有）
+        if (_apiCache[key]) _apiCache[key].inflight = null;
+        throw e;
+      });
+      _apiCache[key] = { t: entry ? entry.t : 0, data: entry ? entry.data : null, inflight: p };
+      return p;
+    }
+
+    function invalidateCache(prefix) {
+      Object.keys(_apiCache).forEach(function(k) {
+        if (!prefix || k.indexOf(prefix) === 0) {
+          delete _apiCache[k];
+        }
+      });
+    }
+
+    // 写操作后自动失效相关缓存
+    function apiMutate(path, opts) {
+      var method = (opts && opts.method || 'POST').toUpperCase();
+      // 找到对应的失效规则
+      Object.keys(_CACHE_INVALIDATE_MAP).forEach(function(route) {
+        if (path.indexOf(route) === 0) {
+          _CACHE_INVALIDATE_MAP[route].forEach(function(p) { invalidateCache(p); });
+        }
+      });
+      return api(path, opts);
+    }
+
+    // ===== 骨架屏（切换瞬间立刻渲染页面骨架，避免白屏等待）=====
+    function skeleton(opts) {
+      opts = opts || {};
+      var title = opts.title || '';
+      var subtitle = opts.subtitle || '';
+      var lines = opts.lines || 5;
+      var cards = opts.cards || 0;
+      var html = '';
+      if (title) {
+        html += '<div class="page-header"><h1 class="page-title">' + esc(title) + '</h1>';
+        if (subtitle) html += '<p class="page-subtitle">' + esc(subtitle) + '</p>';
+        html += '</div>';
+      }
+      if (cards > 0) {
+        html += '<div class="stats-grid" style="grid-template-columns:repeat(' + Math.min(cards, 4) + ',1fr);margin-bottom:28px">';
+        for (var i = 0; i < cards; i++) {
+          html += '<div class="stat-card"><div class="sk sk-line" style="width:40%;height:12px;margin-bottom:12px"></div><div class="sk sk-line" style="width:60%;height:28px"></div></div>';
+        }
+        html += '</div>';
+      }
+      html += '<div class="card"><div class="card-header"><div class="sk sk-line" style="width:140px;height:16px"></div></div>';
+      for (var j = 0; j < lines; j++) {
+        html += '<div class="list-item"><div class="list-item-info"><div class="sk sk-line" style="width:' + (40 + (j * 7) % 40) + '%;height:14px;margin-bottom:8px"></div><div class="sk sk-line" style="width:' + (60 + (j * 5) % 30) + '%;height:12px"></div></div></div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
     function toast(msg, type) {
       type = type || 'success';
       var c = document.getElementById('toast-container');
@@ -571,11 +750,27 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       });
     });
 
-    function renderPage(page) {
+    function renderPage(page, forceFresh) {
       var bp = document.getElementById('breadcrumbPageAdm');
       var names = {dashboard:'仪表盘',users:'用户管理',providers:'发送通道',accounts:'发件账号',logs:'发送日志',analytics:'数据分析',settings:'系统设置'};
       if (bp) bp.textContent = names[page] || page;
       var main = document.getElementById('main-content');
+      // 自动刷新时不重新渲染骨架屏（避免闪烁），仅手动切换时显示骨架屏
+      if (!forceFresh) {
+        if (page === 'dashboard') main.innerHTML = skeleton({title:'全局总览',subtitle:'PLATFORM OVERVIEW',cards:4,lines:4});
+        else if (page === 'users') main.innerHTML = skeleton({title:'用户管理',subtitle:'USER MANAGEMENT',lines:5});
+        else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'PROVIDERS',lines:4});
+        else if (page === 'accounts') main.innerHTML = skeleton({title:'发件账号',subtitle:'SENDER ACCOUNTS MANAGEMENT',lines:5});
+        else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'GLOBAL MAIL DELIVERY LOGS',lines:8});
+      }
+      // 自动刷新强制失效该页相关缓存
+      if (forceFresh) {
+        if (page === 'dashboard') invalidateCache('/admin/stats');
+        else if (page === 'users') invalidateCache('/admin/tenants');
+        else if (page === 'providers') invalidateCache('/admin/providers');
+        else if (page === 'accounts') invalidateCache('/admin/accounts');
+        else if (page === 'logs') invalidateCache('/admin/logs');
+      }
       switch(page) {
         case 'dashboard': renderOverview(main); break;
         case 'users': renderUsers(main); break;
@@ -595,7 +790,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       if (_adminLogFilters.category) params.set('category', _adminLogFilters.category);
       if (_adminLogFilters.q) params.set('q', _adminLogFilters.q);
 
-      var resp = await api('/admin/logs?' + params.toString());
+      var resp = await apiCache('/admin/logs?' + params.toString());
       var logs = resp.data || [];
       var meta = resp.meta || { total: logs.length, limit: _adminLogLimit, offset: offset };
       var totalPages = Math.max(Math.ceil((meta.total || 0) / _adminLogLimit), 1);
@@ -774,7 +969,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
     // 全局总览
     async function renderOverview(main) {
-      var resp = await api('/admin/stats');
+      var resp = await apiCache('/admin/stats');
       if (!resp.success) { main.innerHTML = setupPage(); return; }
       var d = resp.data;
 
@@ -863,7 +1058,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     async function renderUsers(main) {
       var users = [];
       try {
-        var resp = await api('/admin/tenants');
+        var resp = await apiCache('/admin/tenants');
         users = resp.data || [];
       } catch (e) {
         console.error('[renderUsers] Failed to load users:', e);
@@ -919,14 +1114,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     }
 
     async function toggleUser(id, status) {
-      await api('/admin/tenants/' + id, { method: 'PUT', body: JSON.stringify({ status: status }) });
+      await apiMutate('/admin/tenants/' + id, { method: 'PUT', body: JSON.stringify({ status: status }) });
       renderPage('users');
       toast('用户状态已更新');
     }
 
     // 发送通道
     async function renderProviders(main) {
-      var resp = await api('/admin/providers');
+      var resp = await apiCache('/admin/providers');
       var providers = resp.data || [];
       _providersData = providers;
 
@@ -1014,7 +1209,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         if (!name) { toast('请输入名称', 'error'); return; }
         var config = getProviderConfig(overlay, type);
         if (!config) return;
-        var resp = await api('/admin/providers', { method: 'POST', body: JSON.stringify({ name: name, type: type, config: config }) });
+        var resp = await apiMutate('/admin/providers', { method: 'POST', body: JSON.stringify({ name: name, type: type, config: config }) });
         if (resp.success) { overlay.remove(); renderPage('providers'); toast('发送通道创建成功'); }
         else toast(resp.error, 'error');
       });
@@ -1061,7 +1256,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div class="form-group"><label class="form-label">Password</label><input class="form-input" id="pc-pass" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的密码出于安全原因不显示，留空则保持原密码不变</div></div>' +
           '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls"' + (config.encryption === 'tls' ? ' selected' : '') + '>TLS</option><option value="ssl"' + (config.encryption === 'ssl' ? ' selected' : '') + '>SSL</option><option value="none"' + (config.encryption === 'none' ? ' selected' : '') + '>None</option></select></div>';
       } else if (p.type === 'api') {
-        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(&#39;.modal-overlay&#39;))"><option value="sendgrid"' + (config.provider_name === 'sendgrid' ? ' selected' : '') + '>SendGrid</option><option value="mailgun"' + (config.provider_name === 'mailgun' ? ' selected' : '') + '>Mailgun</option><option value="resend"' + (config.provider_name === 'resend' ? ' selected' : '') + '>Resend</option><option value="ahasend"' + (config.provider_name === 'ahasend' ? ' selected' : '') + '>AhaSend</option><option value="generic"' + (config.provider_name === 'generic' || !config.provider_name ? ' selected' : '') + '>通用</option></select></div>' +
+        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(&#39;.modal-overlay&#39;))"><option value="sendgrid"' + (config.provider_name === 'sendgrid' ? ' selected' : '') + '>SendGrid</option><option value="mailgun"' + (config.provider_name === 'mailgun' ? ' selected' : '') + '>Mailgun</option><option value="resend"' + (config.provider_name === 'resend' ? ' selected' : '') + '>Resend</option><option value="ahasend"' + (config.provider_name === 'ahasend' ? ' selected' : '') + '>AhaSend</option><option value="sweego"' + (config.provider_name === 'sweego' ? ' selected' : '') + '>Sweego</option><option value="generic"' + (config.provider_name === 'generic' || !config.provider_name ? ' selected' : '') + '>通用</option></select></div>' +
           '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" value="' + esc(config.api_url || '') + '" placeholder="https://api.example.com/send"></div>' +
           '<div class="form-group" id="pc-accountid-group" style="display: ' + (config.provider_name === 'ahasend' ? 'block' : 'none') + ';"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" value="' + esc(config.account_id || '') + '" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="pc-apikey" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的 API Key 出于安全原因不显示，留空则保持原 Key 不变</div></div>';
@@ -1103,7 +1298,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         }
 
         var body = { name: name, type: type, config: mergedConfig };
-        var resp = await api('/admin/providers/' + id, { method: 'PUT', body: JSON.stringify(body) });
+        var resp = await apiMutate('/admin/providers/' + id, { method: 'PUT', body: JSON.stringify(body) });
         if (resp.success) { overlay.remove(); renderPage('providers'); toast('发送通道已更新'); }
         else toast(resp.error, 'error');
       });
@@ -1120,7 +1315,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="pc-pass" type="password" placeholder="••••"></div>' +
           '<div class="form-group"><label class="form-label">加密</label><select class="form-select" id="pc-enc"><option value="tls">TLS</option><option value="ssl">SSL</option><option value="none">None</option></select></div>';
       } else if (type === 'api') {
-        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(&#39;.modal-overlay&#39;))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="generic">通用</option></select></div>' +
+        area.innerHTML = '<div class="form-group"><label class="form-label">Provider 名称</label><select class="form-select" id="pc-pname" onchange="toggleApiProviderFields(this.closest(&#39;.modal-overlay&#39;))"><option value="sendgrid">SendGrid</option><option value="mailgun">Mailgun</option><option value="resend">Resend</option><option value="ahasend">AhaSend</option><option value="sweego">Sweego</option><option value="generic">通用</option></select></div>' +
           '<div class="form-group" id="pc-url-group"><label class="form-label">API URL（可选）</label><input class="form-input" id="pc-url" placeholder="https://api.example.com/send"></div>' +
           '<div class="form-group" id="pc-accountid-group" style="display: none;"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
@@ -1134,9 +1329,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       var pname = overlay.querySelector('#pc-pname') ? overlay.querySelector('#pc-pname').value : '';
       var urlGroup = overlay.querySelector('#pc-url-group');
       var accountIdGroup = overlay.querySelector('#pc-accountid-group');
+      // ahasend 需要 Account ID，隐藏 URL
+      // sweego 只需 API Key（端点固定），隐藏 URL 和 Account ID
       if (pname === 'ahasend') {
         if (urlGroup) urlGroup.style.display = 'none';
         if (accountIdGroup) accountIdGroup.style.display = 'block';
+      } else if (pname === 'sweego') {
+        if (urlGroup) urlGroup.style.display = 'none';
+        if (accountIdGroup) accountIdGroup.style.display = 'none';
       } else {
         if (urlGroup) urlGroup.style.display = 'block';
         if (accountIdGroup) accountIdGroup.style.display = 'none';
@@ -1159,7 +1359,9 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         var account_id = overlay.querySelector('#pc-accountid') ? overlay.querySelector('#pc-accountid').value.trim() : '';
         if (!api_key) { toast('请填写 API Key', 'error'); return null; }
         if (provider_name === 'ahasend' && !account_id) { toast('请填写 AhaSend Account ID', 'error'); return null; }
-        var cfg = { api_key: api_key, provider_name: provider_name, api_url: api_url };
+        var cfg = { api_key: api_key, provider_name: provider_name };
+        // sweego 端点固定，不存 api_url；其余 provider 保留 api_url（含通用/mailgun）
+        if (provider_name !== 'sweego' && api_url) cfg.api_url = api_url;
         if (account_id) cfg.account_id = account_id;
         return cfg;
       } else {
@@ -1171,21 +1373,21 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     }
 
     async function toggleProvider(id, enabled) {
-      await api('/admin/providers/' + id, { method: 'PUT', body: JSON.stringify({ enabled: enabled ? 1 : 0 }) });
+      await apiMutate('/admin/providers/' + id, { method: 'PUT', body: JSON.stringify({ enabled: enabled ? 1 : 0 }) });
       renderPage('providers');
       toast('发送通道状态已更新');
     }
 
     async function deleteAdminProvider(id) {
       if (!confirm('确定删除此发送通道？此操作不可撤销。')) return;
-      await api('/admin/providers/' + id, { method: 'DELETE' });
+      await apiMutate('/admin/providers/' + id, { method: 'DELETE' });
       renderPage('providers');
       toast('发送通道已删除');
     }
 
     // 发件账号
     async function renderAllAccounts(main) {
-      var accountsResp = await api('/admin/accounts');
+      var accountsResp = await apiCache('/admin/accounts');
       var accounts = accountsResp.data || [];
 
       // 缓存账号数据供编辑/测试使用
@@ -1310,7 +1512,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             categories: checkedCats.join(',')
           };
           if (!body.name || !body.email) { toast('请填写账号名称和邮箱', 'error'); return; }
-          var resp = await api('/admin/accounts', { method: 'POST', body: JSON.stringify(body) });
+          var resp = await apiMutate('/admin/accounts', { method: 'POST', body: JSON.stringify(body) });
           if (resp.success) { overlay.remove(); renderPage('accounts'); toast('账号创建成功'); }
           else toast(resp.error, 'error');
         });
@@ -1319,14 +1521,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     }
 
     async function toggleAccount(id, enabled) {
-      await api('/admin/accounts/' + id, { method: 'PUT', body: JSON.stringify({ enabled: enabled ? 1 : 0 }) });
+      await apiMutate('/admin/accounts/' + id, { method: 'PUT', body: JSON.stringify({ enabled: enabled ? 1 : 0 }) });
       renderPage('accounts');
       toast('账号状态已更新');
     }
 
     async function deleteAdminAccount(id) {
       if (!confirm('确定删除此发件账号？')) return;
-      await api('/admin/accounts/' + id, { method: 'DELETE' });
+      await apiMutate('/admin/accounts/' + id, { method: 'DELETE' });
       renderPage('accounts');
       toast('账号已删除');
     }
@@ -1401,7 +1603,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             categories: checkedCats.join(',')
           };
           if (!body.name || !body.email) { toast('请填写账号名称和邮箱', 'error'); return; }
-          var resp = await api('/admin/accounts/' + acctId, { method: 'PUT', body: JSON.stringify(body) });
+          var resp = await apiMutate('/admin/accounts/' + acctId, { method: 'PUT', body: JSON.stringify(body) });
           if (resp.success) { overlay.remove(); renderPage('accounts'); toast('账号已更新'); }
           else toast(resp.error, 'error');
         });
@@ -1508,7 +1710,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         if (!name || !email || !password) { toast('请填写所有字段', 'error'); return; }
         if (password.length < 6) { toast('密码至少需要6位', 'error'); return; }
 
-        var resp = await api('/admin/tenants', { method: 'POST', body: JSON.stringify({ name: name, email: email, password: password, is_super_admin: isSuper }) });
+        var resp = await apiMutate('/admin/tenants', { method: 'POST', body: JSON.stringify({ name: name, email: email, password: password, is_super_admin: isSuper }) });
         if (resp.success) {
           overlay.innerHTML = '<div class="modal" style="border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 24px;">' +
@@ -1741,6 +1943,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     // 初始化
     if (API_KEY) { updateSidebarUser(); renderPage('dashboard'); }
     else { document.getElementById('main-content').innerHTML = setupPage(); }
+    syncAutoRefreshUI();
+    restartAutoRefresh();
   </script>
 </body>
 </html>`;

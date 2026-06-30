@@ -64,7 +64,7 @@ export interface SmtpConfig {
 export interface ApiProviderConfig {
   api_url: string;
   api_key: string;
-  provider_name: string; // 'sendgrid' | 'mailgun' | 'resend' | 'ahasend' | etc.
+  provider_name: string; // 'sendgrid' | 'mailgun' | 'resend' | 'ahasend' | 'sweego' | etc.
   account_id?: string; // 用于 ahasend 等需要 account_id 的 provider
 }
 
