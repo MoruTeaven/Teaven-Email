@@ -24,5 +24,14 @@
 - 前端 `dashboard_html.ts` 为用户后台（只读），`admin_html.ts` 为超级管理员后台（完整管理）。
 - 用户注册后自动获得使用全局资源的权限，无需单独绑定。
 - **验证码租户隔离**：验证码记录、查询、旧码失效和 KV 限流必须按 `user_id + email + scene_type` 隔离，避免不同用户使用相同邮箱和场景时互相影响。
+- **系统设置**：全局 key-value 配置存储在 `system_settings` 表（migration 009），仅超级管理员通过 `GET/PUT /v1/admin/settings` 读写。访问层在 `src/settings.ts`（`loadSettings` / `getSetting` / `getIntSetting` / `isMaintenanceMode`），数据库故障时自动降级到 `SETTING_DEFAULTS`，不阻塞业务。已接入实际行为的设置项：
+  - `maintenance_mode` / `maintenance_message`：维护模式开启后，`/v1/mail/send`、`/v1/mail/send-template`、`/v1/verification/send` 返回 503（管理员后台 `/v1/admin/*` 不受影响）。
+  - `default_max_retries`：邮件队列项 `max_retries` 默认值（替换原硬编码 `3`）。
+  - `default_daily_limit_per_user`：每用户每日发信上限（0=不限制，超出返回 429）。
+  - `verification_code_ttl_minutes` / `verification_code_length`：验证码默认有效期与长度（调用方未指定时回退）。
+  - `verification_max_attempts`：单条验证码最大尝试次数（替换原硬编码 `MAX_ATTEMPTS_PER_CODE=5`）。
+  - `auto_api_key_ttl_hours`：登录自动创建的 API Key 有效期（替换原硬编码 24h）。
+  - `platform_name` / `admin_contact_email` / `announcement`：仅存储，供后续展示使用。
+  - 写入受 `WRITABLE_KEYS` 白名单约束，整型设置在 `INT_SETTING_BOUNDS` 范围内夹取。
 
 ** 一些重大的更改记得更新agents.md和 docs/ **

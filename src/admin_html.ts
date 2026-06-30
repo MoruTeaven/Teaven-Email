@@ -967,7 +967,208 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       main.innerHTML = '<div class=\"page-header\"><h1 class=\"page-title\">数据分析</h1><p class=\"page-subtitle\">ANALYTICS</p></div><div class=\"card\"><div class=\"empty-state\"><div class=\"empty-icon\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 3v18h18\"/><path d=\"m19 9-5 5-4-4-3 3\"/></svg></div><div class=\"empty-title\">功能开发中</div><div class=\"empty-desc\">数据分析功能即将上线，敬请期待。</div></div></div>';
     }
     function renderSettings(main) {
-      main.innerHTML = '<div class=\"page-header\"><h1 class=\"page-title\">系统设置</h1><p class=\"page-subtitle\">SETTINGS</p></div><div class=\"card\"><div class=\"empty-state\"><div class=\"empty-icon\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42\"/></svg></div><div class=\"empty-title\">功能开发中</div><div class=\"empty-desc\">系统设置功能即将上线，敬请期待。</div></div></div>';
+      main.innerHTML = \`
+        <div class="page-header">
+          <h1 class="page-title">系统设置</h1>
+          <p class="page-subtitle">SYSTEM SETTINGS</p>
+        </div>
+
+        <style>
+          .settings-card{margin-bottom:20px}
+          .settings-card-body{padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+          .settings-card-body .full-row{grid-column:1 / -1}
+          .settings-field-desc{font-size:.72rem;color:var(--text-muted);margin-top:4px;line-height:1.5}
+          .settings-input-suffix{display:flex;align-items:center;gap:8px}
+          .settings-input-suffix .form-input{flex:1}
+          .settings-input-suffix .suffix{font-size:.78rem;color:var(--text-muted);white-space:nowrap}
+          .settings-toggle{position:relative;display:inline-block;width:42px;height:24px;cursor:pointer;flex-shrink:0}
+          .settings-toggle input{opacity:0;width:0;height:0;position:absolute}
+          .settings-toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:100px;transition:.2s}
+          .settings-toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+          .settings-toggle input:checked + .settings-toggle-slider{background:var(--primary)}
+          .settings-toggle input:checked + .settings-toggle-slider:before{transform:translateX(18px)}
+          .settings-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;background:var(--bg-base);border:1px solid var(--border-light);border-radius:var(--radius-sm)}
+          .settings-toggle-row.maintenance-on{border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.06)}
+          .settings-toggle-text{flex:1}
+          .settings-toggle-text .t-title{font-size:.85rem;font-weight:600;color:var(--text-primary)}
+          .settings-toggle-text .t-desc{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+          .settings-card-footer{padding:12px 28px;border-top:1px solid var(--border-light);font-size:.7rem;color:var(--text-muted);font-family:var(--font-mono)}
+          .settings-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:var(--radius-sm);color:var(--warning);font-size:.82rem;font-weight:500;margin-bottom:20px}
+          .settings-sysinfo{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+          .settings-sysinfo-item{padding:14px 16px;background:var(--bg-base);border:1px solid var(--border-light);border-radius:var(--radius-sm)}
+          .settings-sysinfo-item .s-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+          .settings-sysinfo-item .s-value{font-size:.9rem;font-weight:600;color:var(--text-primary);font-family:var(--font-mono)}
+          @media (max-width:768px){.settings-card-body{grid-template-columns:1fr}.settings-sysinfo{grid-template-columns:1fr}}
+        </style>
+
+        <div class="toolbar">
+          <div class="toolbar-left"></div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="renderPage('settings')">重置</button>
+            <button class="btn btn-primary" id="settings-save-btn" onclick="saveSettings()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              保存设置
+            </button>
+          </div>
+        </div>
+
+        <div id="settings-banner-area"></div>
+        <div id="settings-cards-area"><div style="text-align:center;padding:64px;color:var(--text-muted)">加载设置中...</div></div>
+
+        <div class="card settings-card" style="margin-top:24px">
+          <div class="card-header"><div style="font-size:.95rem;font-weight:600">系统信息</div><span class="badge badge-muted">只读</span></div>
+          <div class="card-padded" style="padding:24px 28px">
+            <div class="settings-sysinfo">
+              <div class="settings-sysinfo-item"><div class="s-label">版本</div><div class="s-value">v1.0.0</div></div>
+              <div class="settings-sysinfo-item"><div class="s-label">运行环境</div><div class="s-value">Cloudflare Workers</div></div>
+              <div class="settings-sysinfo-item"><div class="s-label">数据库</div><div class="s-value">D1 + KV</div></div>
+            </div>
+          </div>
+        </div>
+      \`;
+
+      // 拉取设置数据
+      apiCache('/admin/settings').then(function(resp) {
+        if (!resp.success) { document.getElementById('settings-cards-area').innerHTML = '<div class="card"><div class="card-padded" style="color:var(--text-muted)">设置加载失败：' + esc(resp.error || '未知错误') + '</div></div>'; return; }
+
+        // 扁平化为 { key: { value, description, updated_at, updated_by } }
+        var flat = {};
+        Object.keys(resp.data || {}).forEach(function(cat) {
+          (resp.data[cat] || []).forEach(function(item) { flat[item.key] = item; });
+        });
+
+        renderSettingsCards(flat);
+      }).catch(function(e) {
+        document.getElementById('settings-cards-area').innerHTML = '<div class="card"><div class="card-padded" style="color:var(--text-muted)">设置加载失败</div></div>';
+      });
+
+      // 设置区块定义（展示顺序）
+      function renderSettingsCards(flat) {
+        var sections = [
+          {
+            title: '平台设置', subtitle: 'PLATFORM',
+            fields: [
+              { key: 'platform_name', label: '平台名称', type: 'text', full: true, placeholder: 'Teaven Email' },
+              { key: 'admin_contact_email', label: '管理员联系邮箱', type: 'email', placeholder: 'admin@example.com' },
+              { key: 'announcement', label: '系统公告', type: 'textarea', full: true, placeholder: '展示给所有用户的公告内容（留空则不展示）' }
+            ]
+          },
+          {
+            title: '邮件发送', subtitle: 'MAIL DELIVERY',
+            fields: [
+              { key: 'default_max_retries', label: '默认最大重试次数', type: 'number', min: 0, max: 10, placeholder: '3', desc: '单封邮件发送失败后的最大重试次数' },
+              { key: 'default_daily_limit_per_user', label: '每用户每日发送上限', type: 'number', min: 0, max: 1000000, placeholder: '1000', suffix: '封', desc: '0 表示不限制。超出后拒绝发信并返回 429' }
+            ]
+          },
+          {
+            title: '验证码', subtitle: 'VERIFICATION CODE',
+            fields: [
+              { key: 'verification_code_ttl_minutes', label: '验证码有效期', type: 'number', min: 1, max: 60, placeholder: '10', suffix: '分钟', desc: '调用方未指定时的默认有效期' },
+              { key: 'verification_code_length', label: '验证码长度', type: 'number', min: 4, max: 10, placeholder: '6', suffix: '位', desc: '数字验证码的位数（4-10）' },
+              { key: 'verification_max_attempts', label: '最大尝试次数', type: 'number', min: 1, max: 20, placeholder: '5', full: true, desc: '单条验证码的最大验证尝试次数，超出后作废' }
+            ]
+          },
+          {
+            title: '安全与维护', subtitle: 'SECURITY & MAINTENANCE',
+            fields: [
+              { key: 'maintenance_mode', label: '维护模式', type: 'toggle', desc: '开启后将拒绝所有发信与验证码请求（管理员后台不受影响）' },
+              { key: 'maintenance_message', label: '维护提示信息', type: 'textarea', full: true, placeholder: '维护模式开启时返回给用户的提示信息' },
+              { key: 'auto_api_key_ttl_hours', label: '登录 Key 有效期', type: 'number', min: 1, max: 168, placeholder: '24', suffix: '小时', desc: '账号密码登录自动创建的 API Key 有效期' }
+            ]
+          }
+        ];
+
+        var html = '';
+        sections.forEach(function(sec) {
+          // 计算该区块最近更新时间
+          var latest = '';
+          sec.fields.forEach(function(f) { var v = flat[f.key]; if (v && v.updated_at && v.updated_at > latest) latest = v.updated_at; });
+
+          html += '<div class="card settings-card">';
+          html += '<div class="card-header"><div style="font-size:.95rem;font-weight:600">' + esc(sec.title) + '</div><span style="font-size:.66rem;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:.06em">' + esc(sec.subtitle) + '</span></div>';
+          html += '<div class="settings-card-body">';
+          sec.fields.forEach(function(f) {
+            var v = flat[f.key] ? flat[f.key].value : '';
+            var desc = f.desc || (flat[f.key] && flat[f.key].description) || '';
+            html += '<div class="form-group' + (f.full ? ' full-row' : '') + '">';
+            html += '<label class="form-label">' + esc(f.label) + '</label>';
+            if (f.type === 'textarea') {
+              html += '<textarea class="form-textarea" id="set-' + esc(f.key) + '" style="min-height:84px" placeholder="' + esc(f.placeholder || '') + '">' + esc(v) + '</textarea>';
+            } else if (f.type === 'toggle') {
+              var on = (v === '1' || v === 'true');
+              html += '<div class="settings-toggle-row' + (on ? ' maintenance-on' : '') + '" id="set-maintenance-row">';
+              html += '<div class="settings-toggle-text"><div class="t-title">' + (on ? '维护模式已开启' : '维护模式已关闭') + '</div><div class="t-desc">' + esc(desc) + '</div></div>';
+              html += '<label class="settings-toggle"><input type="checkbox" id="set-' + esc(f.key) + '" ' + (on ? 'checked' : '') + ' onchange="onMaintenanceToggle(this.checked)"><span class="settings-toggle-slider"></span></label>';
+              html += '</div>';
+            } else {
+              var suffix = f.suffix ? '<span class="suffix">' + esc(f.suffix) + '</span>' : '';
+              html += '<div class="settings-input-suffix">';
+              html += '<input class="form-input" id="set-' + esc(f.key) + '" type="' + esc(f.type) + '" value="' + esc(v) + '"' + (f.min !== undefined ? ' min="' + f.min + '"' : '') + (f.max !== undefined ? ' max="' + f.max + '"' : '') + ' placeholder="' + esc(f.placeholder || '') + '">';
+              html += suffix + '</div>';
+              if (desc) html += '<div class="settings-field-desc">' + esc(desc) + '</div>';
+            }
+            html += '</div>';
+          });
+          html += '</div>'; // body
+          if (latest) {
+            html += '<div class="settings-card-footer">最近更新：' + esc(latest) + '</div>';
+          }
+          html += '</div>';
+        });
+        document.getElementById('settings-cards-area').innerHTML = html;
+
+        // 渲染维护模式横幅
+        var mm = flat['maintenance_mode'];
+        var mmOn = mm && (mm.value === '1' || mm.value === 'true');
+        document.getElementById('settings-banner-area').innerHTML = mmOn
+          ? '<div class="settings-banner"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>维护模式当前已开启，所有发信与验证码请求将被拒绝</div>'
+          : '';
+      }
+    }
+
+    function onMaintenanceToggle(on) {
+      var row = document.getElementById('set-maintenance-row');
+      if (!row) return;
+      var title = row.querySelector('.t-title');
+      if (on) {
+        row.classList.add('maintenance-on');
+        if (title) title.textContent = '维护模式已开启';
+      } else {
+        row.classList.remove('maintenance-on');
+        if (title) title.textContent = '维护模式已关闭';
+      }
+    }
+
+    async function saveSettings() {
+      var btn = document.getElementById('settings-save-btn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>保存中...'; }
+
+      var keys = ['platform_name','admin_contact_email','announcement','default_max_retries','default_daily_limit_per_user','verification_code_ttl_minutes','verification_code_length','verification_max_attempts','maintenance_mode','maintenance_message','auto_api_key_ttl_hours'];
+      var payload = {};
+      for (var i = 0; i < keys.length; i++) {
+        var el = document.getElementById('set-' + keys[i]);
+        if (!el) continue;
+        if (el.type === 'checkbox') {
+          payload[keys[i]] = el.checked ? '1' : '0';
+        } else {
+          payload[keys[i]] = el.value;
+        }
+      }
+
+      try {
+        var resp = await apiMutate('/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
+        if (resp.success) {
+          toast('设置已保存');
+          invalidateCache('/admin/settings');
+          renderPage('settings', true);
+        } else {
+          toast(resp.error || '保存失败', 'error');
+        }
+      } catch (e) {
+        // apiMutate 已弹 toast
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>保存设置'; }
+      }
     }
 
     // 全局总览
