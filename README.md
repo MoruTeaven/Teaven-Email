@@ -61,16 +61,20 @@ npx wrangler kv:namespace create "teaven-email-kv"
 npx wrangler r2 bucket create teaven-email
 ```
 
-将创建的 database_id、namespace id 填入 `wrangler.toml`，然后：
+将创建的 database_id、namespace id 填入 `wrangler.jsonc`，然后：
 
 ```bash
-npx wrangler d1 execute teaven-email-db --remote --file=./migrations/001_init.sql
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put IMPERSONATION_SECRET
+npm run db:migrate
 npm run deploy
 ```
 
+`JWT_SECRET` 用于加密可找回的 API Key 原文，`IMPERSONATION_SECRET` 用于签名超级管理员模拟登录令牌。`IMPERSONATION_SECRET` 未配置时会回退使用 `JWT_SECRET`，但生产环境建议单独配置。
+
 部署后访问 `/dashboard`，页面会自动引导创建管理员账户。
 
-> **注意**：如果未提前运行迁移脚本，首次注册时系统会自动建表。
+> **注意**：如果未提前运行迁移脚本，首次注册时系统会自动建表；升级已有部署时仍需运行 `npm run db:migrate`，以应用 `migrations/` 下的后续 D1 migrations。
 
 ## API 文档
 

@@ -1,6 +1,6 @@
 // Teaven Email - 超级管理员路由（用户管理）
 import { Hono } from 'hono';
-import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getAuth } from '../auth';
+import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getImpersonationSecret, getAuth } from '../auth';
 import { getDB } from '../db';
 import { sendEmail } from '../mailer';
 import { uuidv7 } from '../uuid';
@@ -134,33 +134,38 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
 
 // POST /v1/admin/tenants/:id/impersonate - 模拟登录任意用户（返回签名临时令牌，24h有效） 
 adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) => {
-  const db = getDB(c.env.DB);
-  const id = c.req.param('id')!;
+  try {
+    const db = getDB(c.env.DB);
+    const id = c.req.param('id')!;
 
-  const user = await db.getUserById(id);
-  if (!user) {
-    return c.json({ success: false, error: 'User not found' }, 404);
+    const user = await db.getUserById(id);
+    if (!user) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+    if (user.status !== 'active') {
+      return c.json({ success: false, error: 'User is not active' }, 400);
+    }
+
+    const secret = getImpersonationSecret(c.env);
+    if (!secret) {
+      return c.json({ success: false, error: 'Impersonation not configured. Set IMPERSONATION_SECRET or JWT_SECRET.' }, 500);
+    }
+
+    // 生成签名模拟令牌（24小时有效），不再创建永久 API Key
+    const token = await generateImpersonationToken(user.id, secret);
+
+    return c.json({
+      success: true,
+      data: {
+        user: { id: user.id, name: user.name, email: user.email },
+        impersonation_token: token,
+        expires_in: 24 * 60 * 60, // 24 hours in seconds
+      },
+    }, 200);
+  } catch (err) {
+    console.error('[admin] impersonate error:', err);
+    return c.json({ success: false, error: 'Internal server error' }, 500);
   }
-  if (user.status !== 'active') {
-    return c.json({ success: false, error: 'User is not active' }, 400);
-  }
-
-  const secret = c.env.IMPERSONATION_SECRET || '';
-  if (!secret) {
-    return c.json({ success: false, error: 'Impersonation not configured' }, 500);
-  }
-
-  // 生成签名模拟令牌（24小时有效），不再创建永久 API Key
-  const token = await generateImpersonationToken(user.id, secret);
-
-  return c.json({
-    success: true,
-    data: {
-      user: { id: user.id, name: user.name, email: user.email },
-      impersonation_token: token,
-      expires_in: 24 * 60 * 60, // 24 hours in seconds
-    },
-  }, 200);
 });
 
 // ========== 全局发送通道管理 ==========

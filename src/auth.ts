@@ -113,6 +113,10 @@ async function hmacVerify(data: string, signature: string, secret: string): Prom
   return crypto.subtle.verify('HMAC', key, sigBytes, stringToBytes(data));
 }
 
+export function getImpersonationSecret(env: { IMPERSONATION_SECRET?: string; JWT_SECRET?: string }): string {
+  return env.IMPERSONATION_SECRET || env.JWT_SECRET || '';
+}
+
 // 生成模拟登录令牌（24小时有效）
 export async function generateImpersonationToken(
   userId: string,
@@ -170,132 +174,142 @@ export function extractBearerToken(authHeader: string | undefined): string | nul
 // 认证中间件（支持 API Key 和模拟登录令牌）
 export function authMiddleware(requiredPermissions?: Permission[]) {
   return async (c: Context, next: Next) => {
-    const authHeader = c.req.header('Authorization');
-    const token = extractBearerToken(authHeader);
+    try {
+      const authHeader = c.req.header('Authorization');
+      const token = extractBearerToken(authHeader);
 
-    if (!token) {
-      return c.json({ success: false, error: 'Missing or invalid Authorization header' }, 401);
-    }
-
-    const db = getDB(c.env.DB);
-    const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
-
-    // ===== 路径 1: 模拟登录令牌 (imp_ 前缀) =====
-    if (token.startsWith('imp_')) {
-      const secret = c.env.IMPERSONATION_SECRET || '';
-      if (!secret) {
-        return c.json({ success: false, error: 'Impersonation not configured' }, 500);
+      if (!token) {
+        return c.json({ success: false, error: 'Missing or invalid Authorization header' }, 401);
       }
 
-      const result = await verifyImpersonationToken(token, secret);
-      if (!result) {
-        return c.json({ success: false, error: 'Invalid or expired impersonation token' }, 401);
+      const db = getDB(c.env.DB);
+      const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
+
+      // ===== 路径 1: 模拟登录令牌 (imp_ 前缀) =====
+      if (token.startsWith('imp_')) {
+        const secret = getImpersonationSecret(c.env);
+        if (!secret) {
+          return c.json({ success: false, error: 'Impersonation not configured. Set IMPERSONATION_SECRET or JWT_SECRET.' }, 500);
+        }
+
+        const result = await verifyImpersonationToken(token, secret);
+        if (!result) {
+          return c.json({ success: false, error: 'Invalid or expired impersonation token' }, 401);
+        }
+
+        const user = await db.getUserById(result.userId);
+        if (!user || user.status !== 'active') {
+          return c.json({ success: false, error: 'Account is not active' }, 403);
+        }
+
+        const auth: AuthContext = {
+          userId: user.id,
+          apiKeyId: null,
+          permissions: allPermissions,
+          impersonated: true,
+        };
+        c.set('auth', auth);
+        return next();
       }
 
-      const user = await db.getUserById(result.userId);
+      // ===== 路径 2: API Key (sk_ 前缀，原有逻辑) =====
+      if (!token.startsWith('sk_')) {
+        return c.json({ success: false, error: 'Invalid token format' }, 401);
+      }
+
+      const hash = await hashApiKey(token);
+      const apiKeyRecord = await db.getApiKeyByHash(hash);
+
+      if (!apiKeyRecord) {
+        return c.json({ success: false, error: 'Invalid or disabled API key' }, 401);
+      }
+
+      // 检查 key 是否已过期（登录自动创建的 key 24 小时后过期）
+      if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) <= new Date()) {
+        // 懒清理：删除已过期的 key
+        await db.deleteApiKey(apiKeyRecord.id, apiKeyRecord.user_id);
+        return c.json({ success: false, error: 'API key has expired. Please log in again.' }, 401);
+      }
+
+      // 检查用户状态
+      const user = await db.getUserById(apiKeyRecord.user_id);
       if (!user || user.status !== 'active') {
         return c.json({ success: false, error: 'Account is not active' }, 403);
       }
 
+      // 检查权限
+      if (requiredPermissions && requiredPermissions.length > 0) {
+        const permissions = JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[];
+        const hasPermission = requiredPermissions.every(p => permissions.includes(p));
+        if (!hasPermission) {
+          return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+        }
+      }
+
+      // 更新最后使用时间
+      await db.updateApiKeyLastUsed(apiKeyRecord.id);
+
+      // 注入认证上下文
       const auth: AuthContext = {
-        userId: user.id,
-        apiKeyId: null,
-        permissions: allPermissions,
-        impersonated: true,
+        userId: apiKeyRecord.user_id,
+        apiKeyId: apiKeyRecord.id,
+        permissions: JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[],
+        impersonated: false,
       };
       c.set('auth', auth);
-      return next();
+
+      await next();
+    } catch (err) {
+      console.error('[auth] authMiddleware error:', err);
+      return c.json({ success: false, error: 'Internal server error', message: err instanceof Error ? err.message : String(err) }, 500);
     }
-
-    // ===== 路径 2: API Key (sk_ 前缀，原有逻辑) =====
-    if (!token.startsWith('sk_')) {
-      return c.json({ success: false, error: 'Invalid token format' }, 401);
-    }
-
-    const hash = await hashApiKey(token);
-    const apiKeyRecord = await db.getApiKeyByHash(hash);
-
-    if (!apiKeyRecord) {
-      return c.json({ success: false, error: 'Invalid or disabled API key' }, 401);
-    }
-
-    // 检查 key 是否已过期（登录自动创建的 key 24 小时后过期）
-    if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) <= new Date()) {
-      // 懒清理：删除已过期的 key
-      await db.deleteApiKey(apiKeyRecord.id, apiKeyRecord.user_id);
-      return c.json({ success: false, error: 'API key has expired. Please log in again.' }, 401);
-    }
-
-    // 检查用户状态
-    const user = await db.getUserById(apiKeyRecord.user_id);
-    if (!user || user.status !== 'active') {
-      return c.json({ success: false, error: 'Account is not active' }, 403);
-    }
-
-    // 检查权限
-    if (requiredPermissions && requiredPermissions.length > 0) {
-      const permissions = JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[];
-      const hasPermission = requiredPermissions.every(p => permissions.includes(p));
-      if (!hasPermission) {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
-      }
-    }
-
-    // 更新最后使用时间
-    await db.updateApiKeyLastUsed(apiKeyRecord.id);
-
-    // 注入认证上下文
-    const auth: AuthContext = {
-      userId: apiKeyRecord.user_id,
-      apiKeyId: apiKeyRecord.id,
-      permissions: JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[],
-      impersonated: false,
-    };
-    c.set('auth', auth);
-
-    await next();
   };
 }
 
 // 超级管理员中间件（仅接受 API Key，不接受模拟令牌）
 export function superAdminMiddleware() {
   return async (c: Context, next: Next) => {
-    const authHeader = c.req.header('Authorization');
-    const apiKey = extractApiKey(authHeader);
+    try {
+      const authHeader = c.req.header('Authorization');
+      const apiKey = extractApiKey(authHeader);
 
-    if (!apiKey) {
-      return c.json({ success: false, error: 'Missing or invalid API key' }, 401);
+      if (!apiKey) {
+        return c.json({ success: false, error: 'Missing or invalid API key' }, 401);
+      }
+
+      const hash = await hashApiKey(apiKey);
+      const db = getDB(c.env.DB);
+      const apiKeyRecord = await db.getApiKeyByHash(hash);
+
+      if (!apiKeyRecord) {
+        return c.json({ success: false, error: 'Invalid API key' }, 401);
+      }
+
+      // 检查 key 是否已过期
+      if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) <= new Date()) {
+        await db.deleteApiKey(apiKeyRecord.id, apiKeyRecord.user_id);
+        return c.json({ success: false, error: 'API key has expired. Please log in again.' }, 401);
+      }
+
+      const user = await db.getUserById(apiKeyRecord.user_id);
+      if (!user || user.status !== 'active' || !user.is_super_admin) {
+        return c.json({ success: false, error: 'Super admin access required' }, 403);
+      }
+
+      await db.updateApiKeyLastUsed(apiKeyRecord.id);
+
+      c.set('auth', {
+        userId: apiKeyRecord.user_id,
+        apiKeyId: apiKeyRecord.id,
+        permissions: JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[],
+        impersonated: false,
+      } as AuthContext);
+
+      await next();
+    } catch (err) {
+      console.error('[auth] superAdminMiddleware error:', err);
+      return c.json({ success: false, error: 'Internal server error', message: err instanceof Error ? err.message : String(err) }, 500);
     }
-
-    const hash = await hashApiKey(apiKey);
-    const db = getDB(c.env.DB);
-    const apiKeyRecord = await db.getApiKeyByHash(hash);
-
-    if (!apiKeyRecord) {
-      return c.json({ success: false, error: 'Invalid API key' }, 401);
-    }
-
-    // 检查 key 是否已过期
-    if (apiKeyRecord.expires_at && new Date(apiKeyRecord.expires_at) <= new Date()) {
-      await db.deleteApiKey(apiKeyRecord.id, apiKeyRecord.user_id);
-      return c.json({ success: false, error: 'API key has expired. Please log in again.' }, 401);
-    }
-
-    const user = await db.getUserById(apiKeyRecord.user_id);
-    if (!user || user.status !== 'active' || !user.is_super_admin) {
-      return c.json({ success: false, error: 'Super admin access required' }, 403);
-    }
-
-    await db.updateApiKeyLastUsed(apiKeyRecord.id);
-
-    c.set('auth', {
-      userId: apiKeyRecord.user_id,
-      apiKeyId: apiKeyRecord.id,
-      permissions: JSON.parse(apiKeyRecord.permissions as unknown as string) as Permission[],
-      impersonated: false,
-    } as AuthContext);
-
-    await next();
   };
 }
 

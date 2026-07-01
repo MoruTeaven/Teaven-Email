@@ -6,8 +6,8 @@ declare global {
     DB: D1Database;
     KV: KVNamespace;
     ENVIRONMENT: string;
-    JWT_SECRET: string;
-    IMPERSONATION_SECRET: string;
+    JWT_SECRET?: string;
+    IMPERSONATION_SECRET?: string;
   }
 }
 

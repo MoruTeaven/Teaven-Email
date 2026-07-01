@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy src/index.ts",
-    "db:migrate": "wrangler d1 execute teaven-email-db --remote --file=./migrations/001_init.sql"
+    "db:migrate": "wrangler d1 migrations apply teaven-email-db --remote"
   },
   "dependencies": {
     "hono": "^4.4.0"

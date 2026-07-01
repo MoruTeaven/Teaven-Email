@@ -487,10 +487,19 @@ export function getDB(db: D1Database) {
     },
 
     async cleanupExpiredCodes(): Promise<number> {
-      const result = await db.prepare(
-        `DELETE FROM verification_codes WHERE expires_at <= datetime('now') OR used = 1`
-      ).run();
-      return result.meta?.changes ?? 0;
+      try {
+        const result = await db.prepare(
+          `DELETE FROM verification_codes WHERE expires_at <= datetime('now') OR used = 1`
+        ).run();
+        return result.meta?.changes ?? 0;
+      } catch (err) {
+        // 兼容 migration 007 未应用到生产库的情况（verification_codes 表不存在）
+        if (err instanceof Error && err.message.includes('no such table') && err.message.includes('verification_codes')) {
+          console.warn('[db] verification_codes table missing, skipping cleanupExpiredCodes. Run migration 007.');
+          return 0;
+        }
+        throw err;
+      }
     },
   };
 }
