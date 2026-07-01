@@ -23,6 +23,7 @@
 - **登录自动 API Key**：用户通过 `POST /v1/setup/key-from-password` 登录时自动创建的 Key 标记 `auto_created=1`，24 小时后自动过期（`expires_at = now + 24h`）。这类 Key **不展示在** Dashboard API Keys 列表和 Admin 用户 Key 计数中。Cron + 懒清理 + 认证中间件三重机制确保过期 Key 被及时删除。
 - 前端 `dashboard_html.ts` 为用户后台（只读），`admin_html.ts` 为超级管理员后台（完整管理）。
 - 用户注册后自动获得使用全局资源的权限，无需单独绑定。
+- **队列处理**：`/__internal/process-queue` 手动 HTTP 触发必须通过超级管理员 API Key 鉴权；正常自动处理使用 Cloudflare Cron Trigger 和发信请求的 `waitUntil(processQueue)`。队列表领取必须使用原子 claim，`processing` 状态下 `next_retry_at` 表示处理租约过期时间，超时后回到 `queued` 防止卡死。
 - **验证码租户隔离**：验证码记录、查询、旧码失效和 KV 限流必须按 `user_id + email + scene_type` 隔离，避免不同用户使用相同邮箱和场景时互相影响。
 - **系统设置**：全局 key-value 配置存储在 `system_settings` 表（migration 009），仅超级管理员通过 `GET/PUT /v1/admin/settings` 读写。访问层在 `src/settings.ts`（`loadSettings` / `getSetting` / `getIntSetting` / `isMaintenanceMode`），数据库故障时自动降级到 `SETTING_DEFAULTS`，不阻塞业务。已接入实际行为的设置项：
   - `maintenance_mode` / `maintenance_message`：维护模式开启后，`/v1/mail/send`、`/v1/mail/send-template`、`/v1/verification/send` 返回 503（管理员后台 `/v1/admin/*` 不受影响）。

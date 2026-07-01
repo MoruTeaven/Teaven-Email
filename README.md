@@ -332,4 +332,7 @@ crons = ["*/30 * * * *"]
 
 ```http
 POST /__internal/process-queue
+Authorization: Bearer sk_super_admin_api_key
 ```
+
+该内部端点仅接受超级管理员 API Key；Cron Trigger 和发信请求中的后台触发不经过公开 HTTP 端点。队列处理会原子领取 `queued` 记录，并为 `processing` 记录设置 15 分钟租约，超时后自动回到 `queued` 防止卡死。

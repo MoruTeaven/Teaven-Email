@@ -378,16 +378,39 @@ export function getDB(db: D1Database) {
       ).run();
     },
 
-    async getPendingQueueItems(limit: number = 10): Promise<MailQueueItem[]> {
-      const now = new Date().toISOString();
+    async requeueStaleProcessingQueueItems(leaseSeconds: number = 900): Promise<number> {
+      await db.prepare(
+        `UPDATE mail_queue
+         SET next_retry_at = datetime('now', '+' || ? || ' seconds')
+         WHERE status = 'processing'
+           AND next_retry_at IS NULL`
+      ).bind(leaseSeconds).run();
+
       const result = await db.prepare(
-        `SELECT * FROM mail_queue
-         WHERE status = 'queued'
-         AND (scheduled_at IS NULL OR scheduled_at <= ?)
-         AND (next_retry_at IS NULL OR next_retry_at <= ?)
-         ORDER BY priority DESC, created_at ASC
-         LIMIT ?`
-      ).bind(now, now, limit).all<MailQueueItem>();
+        `UPDATE mail_queue
+         SET status = 'queued', next_retry_at = NULL
+         WHERE status = 'processing'
+           AND next_retry_at <= datetime('now')`
+      ).run();
+      return result.meta?.changes ?? 0;
+    },
+
+    async claimPendingQueueItems(limit: number = 10, leaseSeconds: number = 900): Promise<MailQueueItem[]> {
+      const result = await db.prepare(
+        `WITH next_items AS (
+           SELECT id FROM mail_queue
+           WHERE status = 'queued'
+             AND (scheduled_at IS NULL OR scheduled_at <= datetime('now'))
+             AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
+           ORDER BY priority DESC, created_at ASC
+           LIMIT ?
+         )
+         UPDATE mail_queue
+         SET status = 'processing',
+             next_retry_at = datetime('now', '+' || ? || ' seconds')
+         WHERE id IN (SELECT id FROM next_items)
+         RETURNING *`
+      ).bind(limit, leaseSeconds).all<MailQueueItem>();
       return result.results;
     },
 
@@ -402,6 +425,9 @@ export function getDB(db: D1Database) {
       } else if (status === 'failed') {
         // 永久失败，记录错误
         fields.push('retry_count = retry_count + 1');
+        fields.push('next_retry_at = NULL');
+      } else if (status === 'completed' || status === 'queued') {
+        fields.push('next_retry_at = NULL');
       }
 
       values.push(id);

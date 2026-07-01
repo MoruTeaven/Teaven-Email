@@ -12,6 +12,7 @@ import adminRouter from './routes/admin';
 import verificationRouter from './routes/verification';
 import { processQueue } from './queue_processor';
 import { getDB } from './db';
+import { superAdminMiddleware } from './auth';
 import { getDashboardHTML } from './dashboard_html';
 import { getAdminHTML } from './admin_html';
 
@@ -68,17 +69,14 @@ app.onError((err, c) => {
   }, 500);
 });
 
-// Cron 触发器 - 处理邮件队列（每分钟执行一次）
-// 在 wrangler.toml 中配置：
-// [triggers]
-// crons = ["* * * * *"]
-app.get('/__internal/process-queue', async (c) => {
+// 内部 HTTP 触发队列处理（需超级管理员 API Key）。Cron Trigger 走 scheduled handler。
+app.get('/__internal/process-queue', superAdminMiddleware(), async (c) => {
   const result = await processQueue(c.env);
   return c.json({ success: true, data: result });
 });
 
 // 手动触发队列处理
-app.post('/__internal/process-queue', async (c) => {
+app.post('/__internal/process-queue', superAdminMiddleware(), async (c) => {
   const result = await processQueue(c.env);
   return c.json({ success: true, data: result });
 });
