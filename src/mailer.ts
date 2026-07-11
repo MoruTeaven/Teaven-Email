@@ -3,6 +3,7 @@ import { connect } from 'cloudflare:sockets';
 import type { EmailProvider, SmtpConfig, ApiProviderConfig, CloudflareEmailConfig, ProviderConfig } from './types';
 import { uuidv7 } from './uuid';
 import { decryptApiKey } from './auth';
+import { htmlToText } from './utils';
 
 export interface SendResult {
   success: boolean;
@@ -50,17 +51,9 @@ function formatAddress(email: string, name?: string): string {
   return `${encodeHeader(name)} <${email}>`;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function buildMimeMessage(params: SendParams): string {
   const boundary = `teaven-${uuidv7()}`;
-  const text = params.text || stripHtml(params.html);
+  const text = params.text || htmlToText(params.html);
   const headers = [
     `From: ${formatAddress(params.from, params.fromName)}`,
     `To: <${params.to}>`,
@@ -210,7 +203,7 @@ async function sendViaCloudflareEmail(
       from: { email: params.from, name: params.fromName || params.from },
       subject: params.subject,
       html: params.html,
-      text: params.text || stripHtml(params.html),
+      text: params.text || htmlToText(params.html),
     });
 
     return { success: true, messageId: response.messageId || uuidv7(), providerResponse: JSON.stringify(response) };

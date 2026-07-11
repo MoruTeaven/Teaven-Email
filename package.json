@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy src/index.ts",
-    "db:migrate": "wrangler d1 migrations apply teaven-email-db --remote"
+    "build": "wrangler deploy --dry-run src/index.ts",
+    "db:migrate": "wrangler d1 migrations apply teaven-email-db --remote",
+    "typecheck": "tsc --noEmit",
+    "dev": "wrangler dev"
   },
   "dependencies": {
     "hono": "^4.4.0"

@@ -5,6 +5,7 @@
 
 import { getDB } from './db';
 import { sendWithRetry } from './mailer';
+import { getSetting } from './settings';
 import type { EmailProvider, MailQueueItem } from './types';
 
 const QUEUE_BATCH_SIZE = 10;
@@ -71,7 +72,7 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
       };
 
       // 获取发件人信息（全局账号）
-      let fromEmail = 'noreply@teaven.email';
+      let fromEmail = await getSetting(env.DB, 'default_from_email');
       let fromName: string | undefined;
 
       if (item.account_id) {
@@ -193,21 +194,34 @@ async function triggerWebhooks(
 
   for (const wh of matchingWebhooks) {
     try {
+      const body = JSON.stringify({
+        event,
+        queue_id: item.id,
+        to: item.to_email,
+        subject: item.subject,
+        category: item.category,
+        timestamp: new Date().toISOString(),
+      });
+
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(wh.secret || '');
+      const bodyData = encoder.encode(body);
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw', keyData, { name: 'HMAC', hash: 'SHA-256' },
+        false, ['sign']
+      );
+      const signature = await crypto.subtle.sign('HMAC', cryptoKey, bodyData);
+      const signatureHex = Array.from(new Uint8Array(signature))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+
       await fetch(wh.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Webhook-Event': event,
-          'X-Webhook-Secret': wh.secret || '',
+          'X-Webhook-Signature': `sha256=${signatureHex}`,
         },
-        body: JSON.stringify({
-          event,
-          queue_id: item.id,
-          to: item.to_email,
-          subject: item.subject,
-          category: item.category,
-          timestamp: new Date().toISOString(),
-        }),
+        body,
       });
     } catch {
       // Webhook 失败不影响主流程

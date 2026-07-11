@@ -16,6 +16,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   // 平台设置
   platform_name: 'Teaven Email',
   admin_contact_email: '',
+  default_from_email: 'noreply@teaven.email',
   announcement: '',
   // 邮件发送
   default_max_retries: '3',

@@ -221,12 +221,12 @@ export function getDB(db: D1Database) {
 
     async createAccount(account: Omit<Account, 'created_at' | 'updated_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO accounts (id, provider_id, name, email, display_name, config, daily_limit, sent_today, categories, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO accounts (id, provider_id, name, email, display_name, config, daily_limit, categories, enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         account.id, account.provider_id, account.name,
         account.email, account.display_name, account.config,
-        account.daily_limit, account.sent_today,
+        account.daily_limit,
         account.categories || '',
         account.enabled
       ).run();

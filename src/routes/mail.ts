@@ -2,11 +2,12 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
-import { renderTemplate, renderSubject, validateVariables, htmlToText } from '../template_engine';
+import { renderTemplate, renderSubject, validateVariables } from '../template_engine';
 import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
 import { uuidv7 } from '../uuid';
 import { isMaintenanceMode, getSetting, getIntSetting } from '../settings';
+import { isValidEmail, htmlToText } from '../utils';
 import type { SendTemplateRequest, SendMailRequest, MailLog, MailQueueItem } from '../types';
 
 const mailRouter = new Hono<{ Bindings: Env }>();
@@ -337,9 +338,5 @@ mailRouter.get('/stats', authMiddleware(['READ_LOG']), async (c) => {
 
   return c.json({ success: true, data: stats });
 });
-
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 export default mailRouter;

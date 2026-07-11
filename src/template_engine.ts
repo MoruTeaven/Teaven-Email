@@ -1,6 +1,8 @@
 // Teaven Email - 模板引擎 (零依赖，兼容 Cloudflare Workers CSP)
 // 不使用任何依赖 new Function() 的库，纯字符串替换
 
+import { htmlToText } from './utils';
+
 // 内置 helper 函数（与之前 Handlebars 注册的 helpers 行为一致）
 const builtinHelpers: Record<string, (...args: string[]) => string> = {
   uppercase: (str: string) => (typeof str === 'string' ? str.toUpperCase() : str),
@@ -111,21 +113,4 @@ export function validateVariables(
 ): { valid: boolean; missing: string[] } {
   const missing = requiredVars.filter(v => !(v in providedVars));
   return { valid: missing.length === 0, missing };
-}
-
-// HTML 转纯文本（简单实现）
-export function htmlToText(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/h[1-6]>/gi, '\n\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
 }

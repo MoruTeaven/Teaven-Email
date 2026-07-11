@@ -2,9 +2,10 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
-import { extractVariables, renderTemplate, renderSubject, htmlToText, validateVariables } from '../template_engine';
+import { extractVariables, renderTemplate, renderSubject, validateVariables } from '../template_engine';
 import { sendEmail, selectAccount } from '../mailer';
 import { uuidv7 } from '../uuid';
+import { htmlToText } from '../utils';
 import type { Template, TemplateVersion, MailLog } from '../types';
 
 const templateRouter = new Hono<{ Bindings: Env }>();

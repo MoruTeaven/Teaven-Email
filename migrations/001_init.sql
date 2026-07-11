@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     display_name TEXT,
     config TEXT,
     daily_limit INTEGER DEFAULT 1000,
-    sent_today INTEGER DEFAULT 0,
+    categories TEXT DEFAULT '',
     enabled INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -94,21 +94,6 @@ CREATE TABLE IF NOT EXISTS template_versions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_template_versions_template ON template_versions(template_id);
-
--- 分类路由规则表
-CREATE TABLE IF NOT EXISTS category_routes (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id),
-    category TEXT NOT NULL,
-    provider_id TEXT NOT NULL REFERENCES providers(id),
-    account_id TEXT,
-    priority INTEGER NOT NULL DEFAULT 0,
-    enabled INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_category_routes_user ON category_routes(user_id);
 
 -- 邮件日志表
 CREATE TABLE IF NOT EXISTS mail_logs (
