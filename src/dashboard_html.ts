@@ -57,6 +57,7 @@ export function getDashboardHTML(): string {
     .sidebar-collapse-btn:hover{color:var(--primary);border-color:var(--primary)}
     .sidebar-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
     .nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--radius-md);color:var(--text-secondary);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;border:none;background:transparent;width:100%;text-align:left;position:relative}
+    a.nav-item{text-decoration:none}
     .nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted)}
     .nav-item:hover{background:var(--bg-card-hover);color:var(--text-primary)}
     .nav-item:hover .nav-icon{color:var(--text-secondary)}
@@ -90,6 +91,8 @@ export function getDashboardHTML(): string {
     .main{flex:1;margin-left:260px;transition:margin-left .3s}
     .main.expanded{margin-left:72px}
     .main-inner{padding:28px;max-width:1400px}
+    .page-section{display:none}
+    .page-section.active{display:block;animation:fadeIn .12s ease-out}
     .page-header{margin-bottom:28px}
     .page-title{font-size:1.6rem;font-weight:700;color:var(--text-primary)}
     .page-subtitle{font-size:.72rem;color:var(--text-muted);margin-top:2px;font-family:var(--font-mono);letter-spacing:.04em}
@@ -306,26 +309,30 @@ export function getDashboardHTML(): string {
         </button>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" data-page="dashboard">
+        <a href="#dashboard" class="nav-item active" data-page="dashboard">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
           <span class="nav-text">仪表盘</span>
-        </button>
-        <button class="nav-item" data-page="api-keys">
+        </a>
+        <a href="#api-keys" class="nav-item" data-page="api-keys">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></span>
           <span class="nav-text">API Keys</span>
-        </button>
-        <button class="nav-item" data-page="templates">
+        </a>
+        <a href="#templates" class="nav-item" data-page="templates">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
           <span class="nav-text">模板管理</span>
-        </button>
-        <button class="nav-item" data-page="providers">
+        </a>
+        <a href="#providers" class="nav-item" data-page="providers">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.87 6.87a8 8 0 1 0 10.26 0"/><circle cx="12" cy="12" r="2"/></svg></span>
           <span class="nav-text">发送通道</span>
-        </button>
-        <button class="nav-item" data-page="logs">
+        </a>
+        <a href="#logs" class="nav-item" data-page="logs">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
           <span class="nav-text">发送日志</span>
-        </button>
+        </a>
+        <a href="#profile" class="nav-item" data-page="profile">
+          <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span class="nav-text">个人中心</span>
+        </a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-avatar">A</div>
@@ -365,7 +372,14 @@ export function getDashboardHTML(): string {
         </div>
       </header>
 
-      <div class="main-inner" id="main-content"></div>
+      <div class="main-inner" id="main-content">
+        <section class="page-section active" id="page-dashboard" data-page="dashboard"></section>
+        <section class="page-section" id="page-api-keys" data-page="api-keys"></section>
+        <section class="page-section" id="page-templates" data-page="templates"></section>
+        <section class="page-section" id="page-providers" data-page="providers"></section>
+        <section class="page-section" id="page-logs" data-page="logs"></section>
+        <section class="page-section" id="page-profile" data-page="profile"></section>
+      </div>
     </div>
   </div>
   <div class="toast-container" id="toast-container"></div>
@@ -429,11 +443,20 @@ export function getDashboardHTML(): string {
       var params = new URLSearchParams(window.location.search);
       var impToken = params.get('imp_token');
       if (impToken) {
-        localStorage.setItem('teaven_api_key', impToken);
+        sessionStorage.setItem('teaven_api_key', impToken);
         window.history.replaceState({}, '', '/dashboard');
       }
     })();
-    const API_KEY = localStorage.getItem('teaven_api_key') || '';
+    var legacyApiKey = localStorage.getItem('teaven_api_key') || '';
+    if (legacyApiKey) {
+      sessionStorage.setItem('teaven_api_key', legacyApiKey);
+      localStorage.removeItem('teaven_api_key');
+    }
+    const API_KEY = sessionStorage.getItem('teaven_api_key') || '';
+
+    function hasAuth() {
+      return !!API_KEY || localStorage.getItem('teaven_has_session') === '1';
+    }
 
     // 检测模拟登录并显示提示条
     var isImpersonated = API_KEY.startsWith('imp_');
@@ -443,11 +466,7 @@ export function getDashboardHTML(): string {
     }
 
     function exitImpersonation() {
-      var adminKey = localStorage.getItem('teaven_super_admin_key_backup');
-      if (adminKey) {
-        localStorage.setItem('teaven_admin_key', adminKey);
-        localStorage.removeItem('teaven_super_admin_key_backup');
-      }
+      sessionStorage.removeItem('teaven_api_key');
       localStorage.removeItem('teaven_api_key');
       window.location.href = '/admin';
     }
@@ -476,20 +495,21 @@ export function getDashboardHTML(): string {
 
     // 登出函数：清除 localStorage 并跳转到登录页
     function logout() {
+      sessionStorage.removeItem('teaven_api_key');
       localStorage.removeItem('teaven_api_key');
+      localStorage.removeItem('teaven_has_session');
       localStorage.removeItem('teaven_user_name');
       localStorage.removeItem('teaven_user_email');
-      location.reload();
+      fetch(API_BASE + '/setup/logout', { method: 'POST', credentials: 'same-origin' }).finally(function() { location.reload(); });
     }
 
     async function api(path, opts = {}) {
+      var headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (API_KEY) headers.Authorization = 'Bearer ' + API_KEY;
       const res = await fetch(API_BASE + path, {
-        headers: {
-          'Authorization': 'Bearer ' + API_KEY,
-          'Content-Type': 'application/json',
-          ...opts.headers
-        },
-        ...opts
+        ...opts,
+        headers: headers,
+        credentials: 'same-origin',
       });
 
       // 处理 401 错误：认证失败或 Key 过期
@@ -507,51 +527,125 @@ export function getDashboardHTML(): string {
 
     // ===== 数据缓存层（解决来回切换 tab 重复请求导致的卡顿）=====
     var _apiCache = {};
-    var _API_CACHE_TTL = 30000; // 30 秒
-    // 用户侧写操作 -> 需要失效的缓存前缀
+    var _pageRendered = {};
+    var _pageDirty = {};
+    var _preloadStarted = false;
+    var _CACHE_SECTION_MAP = {
+      '/dashboard/overview': 'dashboard',
+      '/api-keys': 'api-keys',
+      '/templates': 'templates',
+      '/providers': 'providers',
+      '/mail/logs': 'logs',
+      '/dashboard/profile': 'profile'
+    };
+    // 用户侧写操作 -> 需要失效的缓存
     var _CACHE_INVALIDATE_MAP = {
       '/api-keys': ['/api-keys', '/dashboard/overview'],
-      '/templates': ['/templates', '/dashboard/overview']
+      '/templates': ['/templates', '/dashboard/overview'],
+      '/dashboard/profile': ['/dashboard/profile']
     };
+    // 路由 -> 两级 TTL（毫秒）：fresh 内直接返回，stale 内返回旧数据+后台刷新
+    var _ROUTE_TTL = {
+      '/dashboard/overview': { fresh: 15000, stale: 120000 },
+      '/mail/logs':          { fresh: 10000, stale: 60000 },
+      '/api-keys':           { fresh: 30000, stale: 120000 },
+      '/templates':          { fresh: 30000, stale: 120000 },
+      '/providers':          { fresh: 30000, stale: 120000 },
+      '/dashboard/profile':  { fresh: 60000, stale: 300000 },
+    };
+    var _DEFAULT_TTL = { fresh: 30000, stale: 120000 };
 
-    async function apiCache(path, opts, ttl) {
+    function _getRouteTTL(key) {
+      var matched = '';
+      Object.keys(_ROUTE_TTL).forEach(function(prefix) {
+        if (key.indexOf(prefix) === 0 && prefix.length > matched.length) matched = prefix;
+      });
+      return matched ? _ROUTE_TTL[matched] : _DEFAULT_TTL;
+    }
+
+    function sectionForCacheKey(key) {
+      var matched = '';
+      Object.keys(_CACHE_SECTION_MAP).forEach(function(prefix) {
+        if (key.indexOf(prefix) === 0 && prefix.length > matched.length) matched = prefix;
+      });
+      return matched ? _CACHE_SECTION_MAP[matched] : '';
+    }
+
+    function markPagesDirtyForCache(prefix) {
+      Object.keys(_CACHE_SECTION_MAP).forEach(function(cachePrefix) {
+        if (!prefix || cachePrefix.indexOf(prefix) === 0 || prefix.indexOf(cachePrefix) === 0) {
+          _pageDirty[_CACHE_SECTION_MAP[cachePrefix]] = true;
+        }
+      });
+    }
+
+    // 后台 SWR 刷新（带 inflight 去重）
+    function _revalidate(key, path, opts) {
+      var entry = _apiCache[key];
+      if (entry && entry.inflight) return;
+      var p = api(path, opts).then(function(data) {
+        _apiCache[key] = { t: Date.now(), data: data, inflight: null };
+        var section = sectionForCacheKey(key);
+        var currentSection = (location.hash || '#dashboard').slice(1);
+        if (section && section === currentSection) {
+          _pageDirty[section] = true;
+          renderPage(section);
+        }
+      }).catch(function() {
+        if (_apiCache[key]) _apiCache[key].inflight = null;
+      });
+      if (_apiCache[key]) _apiCache[key].inflight = p;
+    }
+
+    async function apiCache(path, opts) {
       opts = opts || {};
       var method = (opts.method || 'GET').toUpperCase();
-      if (method !== 'GET') {
-        return api(path, opts);
-      }
+      if (method !== 'GET') return api(path, opts);
+      var key = path;
       var now = Date.now();
-      var entry = _apiCache[path];
-      if (entry && (now - entry.t) < (ttl || _API_CACHE_TTL)) {
+      var entry = _apiCache[key];
+      var ttl = _getRouteTTL(key);
+      var age = entry ? now - entry.t : Infinity;
+      // Fresh：直接返回
+      if (entry && entry.data && age < ttl.fresh) {
         return entry.data;
       }
-      if (entry && entry.inflight) {
-        return entry.inflight;
+      // Stale：返回旧数据，后台刷新
+      if (entry && entry.data && age < ttl.stale) {
+        _revalidate(key, path, opts);
+        return entry.data;
       }
+      // Miss：inflight 去重，否则发起新请求
+      if (entry && entry.inflight) return entry.inflight;
       var p = api(path, opts).then(function(data) {
-        _apiCache[path] = { t: Date.now(), data: data, inflight: null };
+        _apiCache[key] = { t: Date.now(), data: data, inflight: null };
         return data;
       }).catch(function(e) {
-        if (_apiCache[path]) _apiCache[path].inflight = null;
+        if (_apiCache[key]) _apiCache[key].inflight = null;
         throw e;
       });
-      _apiCache[path] = { t: entry ? entry.t : 0, data: entry ? entry.data : null, inflight: p };
+      _apiCache[key] = { t: entry ? entry.t : 0, data: entry ? entry.data : null, inflight: p };
       return p;
     }
 
     function invalidateCache(prefix) {
       Object.keys(_apiCache).forEach(function(k) {
-        if (!prefix || k.indexOf(prefix) === 0) delete _apiCache[k];
+        if (!prefix || k.indexOf(prefix) === 0) {
+          delete _apiCache[k];
+        }
       });
+      markPagesDirtyForCache(prefix);
     }
 
-    function apiMutate(path, opts) {
+    // 写操作成功后才失效缓存
+    async function apiMutate(path, opts) {
+      var result = await api(path, opts);
       Object.keys(_CACHE_INVALIDATE_MAP).forEach(function(route) {
         if (path.indexOf(route) === 0) {
           _CACHE_INVALIDATE_MAP[route].forEach(function(p) { invalidateCache(p); });
         }
       });
-      return api(path, opts);
+      return result;
     }
 
     // 骨架屏
@@ -592,48 +686,143 @@ export function getDashboardHTML(): string {
       };
       var el = document.createElement('div');
       el.className = 'toast toast-' + type;
-      el.innerHTML = (icons[type] || '') + msg;
+      el.innerHTML = (icons[type] || '');
+      var text = document.createElement('span');
+      text.textContent = msg || '';
+      el.appendChild(text);
       c.appendChild(el);
       setTimeout(function() { el.style.opacity='0';el.style.transform='translateX(100%)';el.style.transition='all .3s';setTimeout(function(){el.remove()},300); }, 3500);
     }
 
-    // 导航
-    document.querySelectorAll('.nav-item').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        renderPage(btn.dataset.page);
+    // ===== Hash 路由 (SPA Navigation) =====
+    var PAGE_TITLES = {dashboard:'仪表盘','api-keys':'API Keys',templates:'模板管理',providers:'发送通道',logs:'发送日志',profile:'个人中心'};
+    var PRELOAD_PAGES = ['dashboard', 'api-keys', 'templates', 'providers'];
+    var DYNAMIC_PAGES = { dashboard: 1, logs: 1 };
+
+    function normalizePage(page) {
+      return PAGE_TITLES[page] ? page : 'dashboard';
+    }
+
+    function pageSectionHtml() {
+      return Object.keys(PAGE_TITLES).map(function(page) {
+        return '<section class="page-section" id="page-' + page + '" data-page="' + page + '"></section>';
+      }).join('');
+    }
+
+    function ensurePageSections() {
+      var root = document.getElementById('main-content');
+      if (!root.querySelector('.page-section')) {
+        root.innerHTML = pageSectionHtml();
+      }
+      return root;
+    }
+
+    function getPageContainer(page) {
+      ensurePageSections();
+      return document.getElementById('page-' + page);
+    }
+
+    function setActivePageSection(page) {
+      ensurePageSections();
+      document.querySelectorAll('.page-section').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-page') === page);
       });
+    }
+
+    function cachePrefixesForPage(page) {
+      var prefixes = [];
+      Object.keys(_CACHE_SECTION_MAP).forEach(function(prefix) {
+        if (_CACHE_SECTION_MAP[prefix] === page) prefixes.push(prefix);
+      });
+      return prefixes;
+    }
+
+    function invalidatePageCache(page) {
+      cachePrefixesForPage(page).forEach(function(prefix) { invalidateCache(prefix); });
+    }
+
+    function setPageSkeleton(page, main) {
+      if (page === 'dashboard') main.innerHTML = skeleton({title:'仪表盘',subtitle:'MAIL PLATFORM DASHBOARD',cards:4,lines:4});
+      else if (page === 'api-keys') main.innerHTML = skeleton({title:'API Keys',subtitle:'API KEYS MANAGEMENT',lines:4});
+      else if (page === 'templates') main.innerHTML = skeleton({title:'模板管理',subtitle:'EMAIL TEMPLATES',lines:5});
+      else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'MAIL DELIVERY PROVIDERS',lines:4});
+      else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'MAIL DELIVERY LOGS',lines:8});
+    }
+
+    function refreshPageInBackground(page) {
+      // 不失效缓存，让 apiCache 的两级 SWR 自行决定：fresh 直返，stale 后台刷新
+      _pageDirty[page] = true;
+      renderPage(page);
+    }
+
+    function preloadCorePages(activePage) {
+      if (_preloadStarted) return;
+      _preloadStarted = true;
+      PRELOAD_PAGES.forEach(function(page) {
+        if (page === activePage) return;
+        setTimeout(function() { renderPage(page); }, 0);
+      });
+    }
+
+    function showSection(section) {
+      section = normalizePage(section);
+      if (location.hash !== '#' + section) {
+        history.replaceState(null, '', '#' + section);
+      }
+      setActivePageSection(section);
+      document.querySelectorAll('.nav-item').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-page') === section);
+      });
+      var bp = document.getElementById('breadcrumbPage');
+      if (bp) bp.textContent = PAGE_TITLES[section] || section;
+      if (!_pageRendered[section] || _pageDirty[section]) {
+        renderPage(section);
+      } else {
+        // 已渲染页面：SWR 刷新（apiCache 自动决定 fresh 直返 / stale 后台刷新 / miss 拉取）
+        refreshPageInBackground(section);
+      }
+    }
+
+    document.querySelector('.sidebar-nav').addEventListener('click', function(e) {
+      var link = e.target.closest('[data-page]');
+      if (!link) return;
+      e.preventDefault();
+      var page = link.getAttribute('data-page');
+      location.hash = '#' + page;
+    });
+
+    window.addEventListener('hashchange', function() {
+      showSection((location.hash || '#dashboard').slice(1));
     });
 
     function renderPage(page, forceFresh) {
-      var breadcrumbPage = document.getElementById('breadcrumbPage');
-      var names = {dashboard:'仪表盘','api-keys':'API Keys',templates:'模板管理',providers:'发送通道',logs:'发送日志'};
-      if (breadcrumbPage) breadcrumbPage.textContent = names[page] || page;
-      var main = document.getElementById('main-content');
-      // 自动刷新时不重新渲染骨架屏（避免闪烁），仅手动切换时显示骨架屏
-      if (!forceFresh) {
-        if (page === 'dashboard') main.innerHTML = skeleton({title:'仪表盘',subtitle:'MAIL PLATFORM DASHBOARD',cards:4,lines:4});
-        else if (page === 'api-keys') main.innerHTML = skeleton({title:'API Keys',subtitle:'API KEYS MANAGEMENT',lines:4});
-        else if (page === 'templates') main.innerHTML = skeleton({title:'模板管理',subtitle:'EMAIL TEMPLATES',lines:5});
-        else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'MAIL DELIVERY PROVIDERS',lines:4});
-        else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'MAIL DELIVERY LOGS',lines:8});
-      }
-      // 自动刷新强制失效该页相关缓存
+      page = normalizePage(page);
+      var main = getPageContainer(page);
+      if (!forceFresh && _pageRendered[page] && !_pageDirty[page] && !DYNAMIC_PAGES[page]) return Promise.resolve();
+      // 首次进入显示骨架；已有内容的自动/后台刷新不闪屏。
+      if ((!_pageRendered[page] || !main.innerHTML) && !forceFresh) setPageSkeleton(page, main);
       if (forceFresh) {
-        if (page === 'dashboard') invalidateCache('/dashboard/overview');
-        else if (page === 'api-keys') invalidateCache('/api-keys');
-        else if (page === 'templates') invalidateCache('/templates');
-        else if (page === 'providers') invalidateCache('/providers');
-        else if (page === 'logs') invalidateCache('/mail/logs');
+        invalidatePageCache(page);
+        if (!_pageRendered[page] && !main.innerHTML) setPageSkeleton(page, main);
       }
+      var rendered;
       switch (page) {
-        case 'dashboard': renderDashboard(main); break;
-        case 'api-keys': renderApiKeys(main); break;
-        case 'templates': renderTemplates(main); break;
-        case 'providers': renderProviders(main); break;
-        case 'logs': renderLogs(main); break;
+        case 'dashboard': rendered = renderDashboard(main); break;
+        case 'api-keys': rendered = renderApiKeys(main); break;
+        case 'templates': rendered = renderTemplates(main); break;
+        case 'providers': rendered = renderProviders(main); break;
+        case 'logs': rendered = renderLogs(main); break;
+        case 'profile': rendered = renderProfile(main); break;
       }
+      return Promise.resolve(rendered).then(function() {
+        _pageRendered[page] = true;
+        _pageDirty[page] = false;
+      }).catch(function(e) {
+        _pageDirty[page] = true;
+        if (!main.innerHTML) {
+          main.innerHTML = '<div style="max-width:480px;margin:100px auto;text-align:center"><div style="color:var(--danger);font-size:1.2rem;margin-bottom:16px">加载失败</div><div style="color:var(--text-muted);margin-bottom:24px">' + esc(e.message || String(e)) + '</div><button class="btn btn-primary" onclick="renderPage(\\'' + page + '\\', true)">重试</button></div>';
+        }
+      });
     }
 
     // ===== 自动刷新 =====
@@ -641,8 +830,8 @@ export function getDashboardHTML(): string {
     var ARF_KEY = 'teaven_user_autorefresh';
     var _arfTimer = null;
     var _arfEnabled = localStorage.getItem(ARF_KEY) !== '0'; // 默认开启
-    // 仅这些页面有动态数据，值得自动刷新（仪表盘、日志）
-    var ARF_PAGES = { dashboard: 1, logs: 1 };
+    // 聚焦回来只刷新当前页；输入/弹窗中不会刷新，避免打断操作。
+    var ARF_PAGES = { dashboard: 1, logs: 1, 'api-keys': 1, templates: 1, providers: 1 };
 
     function syncAutoRefreshUI() {
       var btn = document.getElementById('autoRefreshBtn');
@@ -664,46 +853,45 @@ export function getDashboardHTML(): string {
       if (document.querySelector('.modal-overlay')) return false;
       var ae = document.activeElement;
       if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA')) return false;
-      var navEl = document.querySelector('.nav-item.active');
-      var page = navEl && navEl.dataset.page;
-      if (!page || !ARF_PAGES[page]) return false;
+      var section = (location.hash || '#dashboard').slice(1);
+      if (!section || !ARF_PAGES[section]) return false;
       return true;
     }
 
-    function doAutoRefresh() {
+    var lastAutoRefreshAt = Date.now();
+
+    function refreshCurrentSection() {
+      var section = (location.hash || '#dashboard').slice(1);
+      if (!ARF_PAGES[section]) return;
       if (!_arfEnabled) return;
       if (!canAutoRefreshNow()) return;
-      var navEl = document.querySelector('.nav-item.active');
-      if (!navEl) return;
       try {
-        // 自动刷新要拿最新数据，强制跳过缓存
-        renderPage(navEl.dataset.page, true);
+        refreshPageInBackground(section);
       } catch (e) {
         console.warn('[autorefresh] render failed', e);
       }
     }
 
-    function restartAutoRefresh() {
-      if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
-      if (_arfEnabled) {
-        _arfTimer = setInterval(doAutoRefresh, ARF_INTERVAL);
-      }
+    function onPageVisible() {
+      if (document.visibilityState !== 'visible') return;
+      var now = Date.now();
+      if (now - lastAutoRefreshAt < 1000) return;
+      lastAutoRefreshAt = now;
+      refreshCurrentSection();
     }
 
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) {
-        if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
-      } else {
-        doAutoRefresh();
-        restartAutoRefresh();
-      }
-    });
+    document.addEventListener('visibilitychange', onPageVisible);
+    window.addEventListener('focus', onPageVisible);
+
+    function restartAutoRefresh() {
+      if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
+    }
 
 
 
     // 仪表盘
     async function renderDashboard(main) {
-      if (!API_KEY) { main.innerHTML = setupPage(); return; }
+      if (!hasAuth()) { main.innerHTML = setupPage(); return; }
       var resp = await apiCache('/dashboard/overview');
       if (!resp.success) { main.innerHTML = setupPage(); return; }
       var d = resp.data;
@@ -794,7 +982,7 @@ export function getDashboardHTML(): string {
 
     // API Keys
     async function renderApiKeys(main) {
-      if (!API_KEY) { main.innerHTML = setupPage(); return; }
+      if (!hasAuth()) { main.innerHTML = setupPage(); return; }
       var resp = await apiCache('/api-keys');
       var keys = resp.data || [];
 
@@ -879,7 +1067,10 @@ export function getDashboardHTML(): string {
         var resp = await apiMutate('/api-keys', { method: 'POST', body: JSON.stringify({ name: name, permissions: perms }) });
         if (resp.success) {
           overlay.remove();
-          var main = document.getElementById('main-content');
+          var main = getPageContainer('api-keys');
+          await renderApiKeys(main);
+          _pageRendered['api-keys'] = true;
+          _pageDirty['api-keys'] = false;
           main.insertAdjacentHTML('afterbegin', '<div class="card" style="border-color: var(--success); margin-bottom: 24px;" id="key-reveal">' +
             '<div class="card-header">' +
               '<div class="card-title">API Key 创建成功</div>' +
@@ -888,7 +1079,6 @@ export function getDashboardHTML(): string {
             '<p style="color: var(--text-muted); margin-bottom: 12px;">请保存此 Key。后续可在 API Keys 列表中验证密码后重新查看。</p>' +
             '<div class="code-block"><span class="key-highlight">' + esc(resp.data.api_key) + '</span></div>' +
           '</div>');
-          renderApiKeys(main);
           toast('API Key 创建成功');
         } else {
           toast(resp.error, 'error');
@@ -968,7 +1158,7 @@ export function getDashboardHTML(): string {
 
     // 模板管理
     async function renderTemplates(main) {
-      if (!API_KEY) { main.innerHTML = setupPage(); return; }
+      if (!hasAuth()) { main.innerHTML = setupPage(); return; }
       var resp = await apiCache('/templates');
       var templates = resp.data || [];
 
@@ -1001,7 +1191,7 @@ export function getDashboardHTML(): string {
                 var vars = typeof t.variables === 'string' ? JSON.parse(t.variables) : (t.variables || []);
                 return '<div class="list-item">' +
                   '<div class="list-item-info">' +
-                    '<div class="list-item-title"><code style="background: var(--bg-base); padding: 4px 8px; border-radius: 4px; margin-right: 8px;">' + esc(t.template_code) + '</code>' + esc(t.name) + '</div>' +
+                    '<div class="list-item-title">' + esc(t.name) + '</div>' +
                     '<div class="list-item-subtitle">分类: <span class="badge badge-info">' + esc((function() { var m = {VERIFY:'验证邮件',NOTIFY:'通知邮件',MARKETING:'营销邮件',SYSTEM:'系统邮件'}; return m[t.category]||t.category; })()) + '</span> · 版本: v' + t.version + ' · 变量: ' + vars.length + '个</div>' +
                   '</div>' +
                   '<div class="list-item-actions">' +
@@ -1026,8 +1216,8 @@ export function getDashboardHTML(): string {
         '<div class="modal-title">' + (isEdit ? '编辑模板' : '创建模板') + '</div>' +
         '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">' +
           '<div class="form-group">' +
-            '<label class="form-label">模板编号 *</label>' +
-            '<input class="form-input" id="tmpl-code" placeholder="如：VERIFY_CODE" ' + (isEdit ? 'disabled' : '') + '>' +
+            '<label class="form-label">模板编号</label>' +
+            '<input class="form-input" id="tmpl-code" placeholder="系统自动生成" disabled>' +
           '</div>' +
           '<div class="form-group">' +
             '<label class="form-label">模板名称 *</label>' +
@@ -1078,7 +1268,6 @@ export function getDashboardHTML(): string {
       }
 
       overlay.querySelector('#tmpl-save-btn').addEventListener('click', async function() {
-        var codeVal = overlay.querySelector('#tmpl-code').value.trim();
         var name = overlay.querySelector('#tmpl-name').value.trim();
         var category = overlay.querySelector('#tmpl-category').value;
         var subject = overlay.querySelector('#tmpl-subject').value.trim();
@@ -1086,11 +1275,11 @@ export function getDashboardHTML(): string {
         var textContent = overlay.querySelector('#tmpl-text').value.trim();
         var changelog = overlay.querySelector('#tmpl-changelog') ? overlay.querySelector('#tmpl-changelog').value.trim() : null;
 
-        if (!codeVal || !name || !subject || !html) { toast('请填写所有必填字段', 'error'); return; }
+        if (!name || !subject || !html) { toast('请填写所有必填字段', 'error'); return; }
 
         var method = isEdit ? 'PUT' : 'POST';
         var url = isEdit ? '/templates/' + code : '/templates';
-        var body = { template_code: codeVal, name: name, category: category, subject: subject, html: html, text_content: textContent || null };
+        var body = { name: name, category: category, subject: subject, html: html, text_content: textContent || null };
         if (isEdit && changelog) body.changelog = changelog;
 
         var resp = await api(url, { method: method, body: JSON.stringify(body) });
@@ -1113,7 +1302,7 @@ export function getDashboardHTML(): string {
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal" style="max-width: 800px;">' +
-        '<div class="modal-title">预览模板: ' + esc(code) + '</div>' +
+        '<div class="modal-title">预览模板</div>' +
         '<div class="form-group">' +
           '<label class="form-label">测试变量 (JSON)</label>' +
           '<input class="form-input" id="pv-vars" placeholder=&#x27;{"code":"123456"}&#x27; value="{}">' +
@@ -1131,10 +1320,13 @@ export function getDashboardHTML(): string {
         try { vars = JSON.parse(overlay.querySelector('#pv-vars').value); } catch (e) {}
         var resp = await api('/templates/' + code + '/preview', { method: 'POST', body: JSON.stringify({ variables: vars }) });
         var data = resp.data || {};
-        overlay.querySelector('#pv-result').innerHTML =
+        var result = overlay.querySelector('#pv-result');
+        result.innerHTML =
           '<div class="card" style="margin-bottom: 16px;"><div class="form-label">主题</div><div>' + esc(data.subject || '') + '</div></div>' +
-          '<div class="card"><div class="form-label">HTML 预览</div><div style="border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; background: #fff; color: #000;">' + (data.html || '<em style="color: #999;">无内容</em>') + '</div></div>' +
-          (data.render_errors && data.render_errors.length ? '<div style="color: var(--danger); margin-top: 12px;">警告: ' + data.render_errors.join(', ') + '</div>' : '');
+          '<div class="card"><div class="form-label">HTML 预览</div><iframe id="pv-frame" sandbox="" style="width:100%;min-height:360px;border:1px solid var(--border);border-radius:var(--radius-md);background:#fff;"></iframe></div>' +
+          (data.render_errors && data.render_errors.length ? '<div style="color: var(--danger); margin-top: 12px;">警告: ' + esc(data.render_errors.join(', ')) + '</div>' : '');
+        var frame = result.querySelector('#pv-frame');
+        if (frame) frame.srcdoc = data.html || '<em style="color:#999;">无内容</em>';
       }
       refresh();
       overlay.querySelector('#pv-refresh').addEventListener('click', refresh);
@@ -1151,7 +1343,7 @@ export function getDashboardHTML(): string {
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal" style="max-width: 600px;">' +
-        '<div class="modal-title">测试发送: ' + esc(code) + '</div>' +
+        '<div class="modal-title">测试发送: ' + esc(template.name) + '</div>' +
         '<div style="margin-bottom: 16px; color: var(--text-secondary); font-size: 13px;">发送一封真实邮件以验证模板渲染效果</div>' +
         '<div class="form-group">' +
           '<label class="form-label">收件邮箱 *</label>' +
@@ -1231,7 +1423,7 @@ export function getDashboardHTML(): string {
 
     // 发送通道（只读）
     async function renderProviders(main) {
-      if (!API_KEY) { main.innerHTML = setupPage(); return; }
+      if (!hasAuth()) { main.innerHTML = setupPage(); return; }
       var pResp = await apiCache('/providers');
       var providers = pResp.data || [];
 
@@ -1251,7 +1443,7 @@ export function getDashboardHTML(): string {
           \` : \`
             <div class="provider-grid">
               \${providers.map(function(p) {
-                var typeLabel = p.type === 'smtp' ? 'SMTP 发送通道' : (p.type === 'api' ? 'API 发送通道' : 'Cloudflare Email');
+                var typeLabel = p.type === 'smtp' ? 'SMTP 发送通道' : (p.type === 'api' ? 'API 发送通道' : 'Cloudflare Email Sending');
                 return '<div class="provider-card">' +
                   '<div class="provider-header">' +
                     '<div class="provider-name">' + esc(p.name) + '</div>' +
@@ -1269,7 +1461,7 @@ export function getDashboardHTML(): string {
 
     // 发送日志
     async function renderLogs(main) {
-      if (!API_KEY) { main.innerHTML = setupPage(); return; }
+      if (!hasAuth()) { main.innerHTML = setupPage(); return; }
       var resp = await apiCache('/mail/logs?limit=100');
       var logs = resp.data || [];
 
@@ -1308,7 +1500,141 @@ export function getDashboardHTML(): string {
       \`;
     }
 
-    // 登录页面
+    // 个人中心
+    async function renderProfile(main) {
+      if (!hasAuth()) { main.innerHTML = setupPage(); return; }
+      var resp = await apiCache('/dashboard/profile');
+      var u = resp.data || {};
+      _profileData = u;
+
+      var initial = (u.name || '?').charAt(0).toUpperCase();
+      main.innerHTML = \`
+        <div class="page-header">
+          <h1 class="page-title">个人中心</h1>
+          <p class="page-subtitle">ACCOUNT PROFILE</p>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">账户信息</div>
+              <div class="card-subtitle">ACCOUNT DETAILS</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 20px; padding: 8px 0;">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 700; flex-shrink: 0;">\${esc(initial)}</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">\${esc(u.name || '-')}\${u.is_super_admin ? ' <span class="badge badge-info" style="vertical-align: middle;">超管</span>' : ''}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">\${esc(u.email || '-')}</div>
+            </div>
+            <button class="btn btn-primary" onclick="showEditProfileModal()">修改昵称</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">账户资料</div>
+              <div class="card-subtitle">PROFILE FIELDS</div>
+            </div>
+          </div>
+          <div class="list-card">
+            <div class="list-item">
+              <div class="list-item-info">
+                <div class="list-item-title">昵称</div>
+                <div class="list-item-subtitle">展示在后台与侧栏</div>
+              </div>
+              <div class="list-item-actions">
+                <span style="color: var(--text-primary); font-weight: 500;">\${esc(u.name || '-')}</span>
+                <button class="btn btn-sm btn-ghost" onclick="showEditProfileModal()">编辑</button>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="list-item-info">
+                <div class="list-item-title">邮箱</div>
+                <div class="list-item-subtitle">登录账号，不可修改</div>
+              </div>
+              <div class="list-item-actions">
+                <span style="color: var(--text-primary); font-weight: 500;">\${esc(u.email || '-')}</span>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="list-item-info">
+                <div class="list-item-title">账户角色</div>
+                <div class="list-item-subtitle">账户权限标识</div>
+              </div>
+              <div class="list-item-actions">
+                <span class="badge \${u.is_super_admin ? 'badge-info' : 'badge-muted'}">\${u.is_super_admin ? '超级管理员' : '普通用户'}</span>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="list-item-info">
+                <div class="list-item-title">注册时间</div>
+                <div class="list-item-subtitle">账户创建时间</div>
+              </div>
+              <div class="list-item-actions">
+                <span style="color: var(--text-primary); font-weight: 500;">\${u.created_at ? new Date(u.created_at).toLocaleString('zh-CN') : '-'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      \`;
+    }
+
+    var _profileData = {};
+
+    function showEditProfileModal() {
+      var u = _profileData || {};
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal">' +
+        '<div class="modal-title">修改昵称</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">昵称</label>' +
+          '<input class="form-input" id="pf-name" maxlength="50" value="' + esc(u.name || '') + '" placeholder="请输入新的昵称">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">邮箱</label>' +
+          '<input class="form-input" value="' + esc(u.email || '') + '" disabled style="opacity: 0.6;">' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
+          '<button class="btn btn-primary" id="pf-save-btn">保存</button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+      var nameInput = overlay.querySelector('#pf-name');
+      nameInput.focus();
+      nameInput.select();
+
+      overlay.querySelector('#pf-save-btn').addEventListener('click', async function() {
+        var btn = this;
+        var name = nameInput.value.trim();
+        if (!name) { toast('昵称不能为空', 'error'); return; }
+        if (name === u.name) { overlay.remove(); return; }
+
+        btn.disabled = true;
+        try {
+          var resp = await apiMutate('/dashboard/profile', { method: 'PUT', body: JSON.stringify({ name: name }) });
+          if (resp.success) {
+            // 同步更新侧栏与 localStorage
+            localStorage.setItem('teaven_user_name', name);
+            updateSidebarUser();
+            overlay.remove();
+            renderPage('profile', true);
+            toast('昵称已更新');
+          } else {
+            btn.disabled = false;
+            toast(resp.error || '更新失败', 'error');
+          }
+        } catch (e) {
+          btn.disabled = false;
+          toast('请求异常：' + e.message, 'error');
+        }
+      });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
     function setupPage() {
       fetch(API_BASE + '/setup/status').then(function(r) { return r.json(); }).then(function(resp) {
         var needsSetup = resp.data && resp.data.needs_setup;
@@ -1403,7 +1729,12 @@ export function getDashboardHTML(): string {
             body: JSON.stringify({ email: email, password: password, name: 'Dashboard Login' })
           }).then(function(r2) { return r2.json(); }).then(function(resp2) {
             if (resp2.success) {
-              localStorage.setItem('teaven_api_key', resp2.data.api_key.key);
+              // 将登录 Key 存入 sessionStorage，使后续请求带 Authorization 头，
+              // 避免在反代场景下因 Set-Cookie 未被正确转发而丢失会话
+              if (resp2.data && resp2.data.api_key && resp2.data.api_key.key) {
+                sessionStorage.setItem('teaven_api_key', resp2.data.api_key.key);
+              }
+              localStorage.setItem('teaven_has_session', '1');
               location.reload();
             } else {
               toast('获取 API Key 失败: ' + (resp2.error || '未知错误'), 'error');
@@ -1464,7 +1795,7 @@ export function getDashboardHTML(): string {
           localStorage.setItem('teaven_email', email);
           localStorage.setItem('teaven_user_name', resp.data.user.name);
           localStorage.setItem('teaven_user_email', resp.data.user.email);
-          localStorage.setItem('teaven_api_key', resp.data.api_key.key);
+          localStorage.setItem('teaven_has_session', '1');
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 32px;">' +
@@ -1472,7 +1803,7 @@ export function getDashboardHTML(): string {
               '<div style="font-size: 1.5rem; font-weight: 600;">初始化成功！</div>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 8px;">账户: <strong>' + esc(resp.data.user.email) + '</strong></p>' +
-            '<p style="color: var(--text-muted); margin-bottom: 12px;">你的 API Key（<strong style="color: var(--danger);">已自动保存</strong>）：</p>' +
+            '<p style="color: var(--text-muted); margin-bottom: 12px;">你的 API Key（请保存；浏览器已通过 HttpOnly Cookie 登录）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;"><span class="key-highlight">' + esc(resp.data.api_key.key) + '</span></div>' +
             '<button class="btn btn-primary btn-lg" onclick="location.reload()" style="width: 100%;">进入后台</button>' +
           '</div>';
@@ -1485,12 +1816,18 @@ export function getDashboardHTML(): string {
     function saveApiKey() {
       var key = document.getElementById('setup-key').value.trim();
       if (!key) { toast('请输入 API Key', 'error'); return; }
-      localStorage.setItem('teaven_api_key', key);
+      sessionStorage.setItem('teaven_api_key', key);
+      localStorage.removeItem('teaven_api_key');
       location.reload();
     }
 
     // 初始化
-    if (API_KEY) { updateSidebarUser(); renderPage('dashboard'); }
+    if (hasAuth()) {
+      updateSidebarUser();
+      var initialPage = normalizePage((location.hash || '#dashboard').slice(1));
+      showSection(initialPage);
+      preloadCorePages(initialPage);
+    }
     else { document.getElementById('main-content').innerHTML = setupPage(); }
     syncAutoRefreshUI();
     restartAutoRefresh();

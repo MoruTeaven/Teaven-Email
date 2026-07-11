@@ -62,20 +62,15 @@ app.route('/v1', v1);
 // 全局错误处理 — 捕获所有未处理的异常，避免裸 500
 app.onError((err, c) => {
   console.error(`[${c.req.method} ${c.req.path}] Unhandled error:`, err);
+  const isProduction = c.env.ENVIRONMENT === 'production';
   return c.json({
     success: false,
     error: 'Internal Server Error',
-    message: err instanceof Error ? err.message : String(err),
+    ...(isProduction ? {} : { message: err instanceof Error ? err.message : String(err) }),
   }, 500);
 });
 
 // 内部 HTTP 触发队列处理（需超级管理员 API Key）。Cron Trigger 走 scheduled handler。
-app.get('/__internal/process-queue', superAdminMiddleware(), async (c) => {
-  const result = await processQueue(c.env);
-  return c.json({ success: true, data: result });
-});
-
-// 手动触发队列处理
 app.post('/__internal/process-queue', superAdminMiddleware(), async (c) => {
   const result = await processQueue(c.env);
   return c.json({ success: true, data: result });

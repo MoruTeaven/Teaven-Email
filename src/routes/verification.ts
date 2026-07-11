@@ -117,6 +117,9 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     }
   }
 
+  const dailyLimitResp = await reserveDailyQuota(c.env, auth.userId);
+  if (dailyLimitResp) return dailyLimitResp;
+
   // 保存验证码到数据库
   const expiresAt = new Date(Date.now() + expireMinutes * 60 * 1000).toISOString();
   const vcId = uuidv7();
@@ -318,6 +321,20 @@ function generateNumericCode(length: number): string {
     code += digits[array[i] % 10];
   }
   return code;
+}
+
+async function reserveDailyQuota(env: Env, userId: string): Promise<Response | null> {
+  const limit = await getIntSetting(env.DB, 'default_daily_limit_per_user', 0, 0);
+  if (limit <= 0) return null;
+  const today = new Date().toISOString().split('T')[0];
+  const reserved = await getDB(env.DB).reserveDailySendQuota(userId, today, limit);
+  if (!reserved) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Daily sending limit reached (${limit})`,
+    }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+  }
+  return null;
 }
 
 function isValidEmail(email: string): boolean {

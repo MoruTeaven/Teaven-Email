@@ -70,7 +70,6 @@ export interface ApiProviderConfig {
 
 export interface CloudflareEmailConfig {
   domain: string;
-  dkim_selector: string;
 }
 
 export type ProviderConfig = SmtpConfig | ApiProviderConfig | CloudflareEmailConfig;

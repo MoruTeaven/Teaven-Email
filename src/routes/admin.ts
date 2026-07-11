@@ -1,13 +1,30 @@
 // Teaven Email - 超级管理员路由（用户管理）
 import { Hono } from 'hono';
-import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getImpersonationSecret, getAuth } from '../auth';
+import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getImpersonationSecret, getAuth, hashPassword } from '../auth';
 import { getDB } from '../db';
 import { sendEmail } from '../mailer';
 import { uuidv7 } from '../uuid';
 import { loadSettings, WRITABLE_KEYS, SETTING_DEFAULTS } from '../settings';
-import type { MailStatus, Permission, ProviderConfig, ProviderType } from '../types';
+import type { EmailProvider, MailStatus, Permission, ProviderConfig, ProviderType } from '../types';
 
 const adminRouter = new Hono<{ Bindings: Env }>();
+const SENSITIVE_CONFIG_KEYS = new Set(['password', 'api_key']);
+const SENSITIVE_VALUE_MASK = '********';
+const ENCRYPTED_VALUE_PREFIX = 'enc:v1:';
+
+// ========== Isolate 级内存缓存（最佳努力，跨请求复用 isolate 时生效）==========
+// Cloudflare Workers isolate 可能在请求间复用，此缓存减少重查询的 D1 往返。
+// 缓存过期或 isolate 回收后自动失效，不影响正确性。
+interface CacheEntry<T> { t: number; data: T; }
+const _statsCache: { entry: CacheEntry<unknown> | null } = { entry: null };
+const _analyticsCache = new Map<number, CacheEntry<unknown>>();
+const STATS_CACHE_TTL = 15_000;     // 15s
+const ANALYTICS_CACHE_TTL = 60_000; // 60s（analytics 跑 10 个查询，很重）
+
+function invalidateAdminCache() {
+  _statsCache.entry = null;
+  _analyticsCache.clear();
+}
 
 // ========== 用户数据查询 ==========
 
@@ -47,11 +64,23 @@ adminRouter.get('/tenants/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, data: user });
 });
 
-// PUT /v1/admin/tenants/:id - 更新用户状态
+// PUT /v1/admin/tenants/:id - 更新用户信息（昵称/状态/超管标记）
 adminRouter.put('/tenants/:id', superAdminMiddleware(), async (c) => {
   const id = c.req.param('id')!;
-  let body: { status?: string; is_super_admin?: number };
+  let body: { name?: string; status?: string; is_super_admin?: number };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  if (body.name !== undefined) {
+    const name = body.name.trim();
+    if (!name) {
+      return c.json({ success: false, error: '昵称不能为空' }, 400);
+    }
+    if (name.length > 50) {
+      return c.json({ success: false, error: '昵称长度不能超过 50 个字符' }, 400);
+    }
+    await c.env.DB.prepare('UPDATE users SET name = ?, updated_at = datetime(\'now\') WHERE id = ?')
+      .bind(name, id).run();
+  }
   if (body.status) {
     await c.env.DB.prepare('UPDATE users SET status = ?, updated_at = datetime(\'now\') WHERE id = ?')
       .bind(body.status, id).run();
@@ -60,6 +89,7 @@ adminRouter.put('/tenants/:id', superAdminMiddleware(), async (c) => {
     await c.env.DB.prepare('UPDATE users SET is_super_admin = ?, updated_at = datetime(\'now\') WHERE id = ?')
       .bind(body.is_super_admin, id).run();
   }
+  invalidateAdminCache();
   return c.json({ success: true });
 });
 
@@ -86,11 +116,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
     return c.json({ success: false, error: 'Email already in use' }, 409);
   }
 
-  // 密码哈希
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(body.password));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const passwordHash = await hashPassword(body.password);
 
   // 创建用户
   const userId = uuidv7();
@@ -123,6 +149,7 @@ adminRouter.post('/tenants', superAdminMiddleware(), async (c) => {
     last_used_at: null,
   });
 
+  invalidateAdminCache();
   return c.json({
     success: true,
     data: {
@@ -174,7 +201,7 @@ adminRouter.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) =
 adminRouter.get('/providers', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
   const rows = await db.getAllProviders();
-  return c.json({ success: true, data: rows });
+  return c.json({ success: true, data: rows.map(sanitizeProviderForAdmin) });
 });
 
 // POST /v1/admin/providers - 管理员创建全局 Provider
@@ -190,17 +217,25 @@ adminRouter.post('/providers', superAdminMiddleware(), async (c) => {
     return c.json({ success: false, error: 'type must be smtp, api, or cloudflare_email' }, 400);
   }
 
+  let protectedConfig: ProviderConfig;
+  try {
+    protectedConfig = await protectProviderConfig(body.config as unknown as ProviderConfig, c.env);
+  } catch (err) {
+    return c.json({ success: false, error: err instanceof Error ? err.message : 'Failed to protect provider config' }, 500);
+  }
+
   const provider = {
     id: uuidv7(),
     name: body.name,
     type: body.type as ProviderType,
-    config: body.config as unknown as ProviderConfig,
+    config: protectedConfig,
     priority: body.priority || 0,
     enabled: 1,
   };
 
   await db.createProvider(provider);
-  return c.json({ success: true, data: provider }, 201);
+  invalidateAdminCache();
+  return c.json({ success: true, data: sanitizeProviderForAdmin(provider) }, 201);
 });
 
 // PUT /v1/admin/providers/:id - 管理员更新 Provider
@@ -214,7 +249,19 @@ adminRouter.put('/providers/:id', superAdminMiddleware(), async (c) => {
   let body: { name?: string; type?: ProviderType; config?: ProviderConfig; priority?: number; enabled?: number };
   try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
 
+  if (body.config) {
+    try {
+      body.config = await protectProviderConfig(
+        mergeProviderConfigForUpdate(existing, body.type || existing.type, body.config),
+        c.env
+      );
+    } catch (err) {
+      return c.json({ success: false, error: err instanceof Error ? err.message : 'Failed to protect provider config' }, 500);
+    }
+  }
+
   await db.updateProvider(id, body);
+  invalidateAdminCache();
   return c.json({ success: true, message: 'Provider updated' });
 });
 
@@ -223,6 +270,7 @@ adminRouter.delete('/providers/:id', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
   const id = c.req.param('id')!;
   await db.deleteProvider(id);
+  invalidateAdminCache();
   return c.json({ success: true, message: 'Provider deleted' });
 });
 
@@ -285,6 +333,7 @@ adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
 
   await db.createAccount(account);
 
+  invalidateAdminCache();
   return c.json({ success: true, data: account }, 201);
 });
 
@@ -292,6 +341,7 @@ adminRouter.post('/accounts', superAdminMiddleware(), async (c) => {
 adminRouter.delete('/accounts/:id', superAdminMiddleware(), async (c) => {
   const id = c.req.param('id')!;
   await c.env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(id).run();
+  invalidateAdminCache();
   return c.json({ success: true });
 });
 
@@ -339,6 +389,7 @@ adminRouter.put('/accounts/:id', superAdminMiddleware(), async (c) => {
   sets.push("updated_at = datetime('now')");
   vals.push(id);
   await c.env.DB.prepare(`UPDATE accounts SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
+  invalidateAdminCache();
   return c.json({ success: true });
 });
 
@@ -459,6 +510,179 @@ adminRouter.get('/logs/:id', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, data: row });
 });
 
+// GET /v1/admin/analytics - 数据分析
+adminRouter.get('/analytics', superAdminMiddleware(), async (c) => {
+  const days = parseAnalyticsDays(c.req.query('days'));
+  const cached = _analyticsCache.get(days);
+  if (cached && Date.now() - cached.t < ANALYTICS_CACHE_TTL) {
+    return c.json({ success: true, data: cached.data });
+  }
+  const startModifier = `-${days - 1} days`;
+
+  const [rangeRow, summaryRow, queueRows, dailyRows, statusRows, categoryRows, topUserRows, topProviderRows, topAccountRows, errorRows] = await Promise.all([
+    c.env.DB.prepare("SELECT date('now', ?) as start_date, date('now') as end_date").bind(startModifier).first<AnalyticsRangeRow>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as total,
+        COUNT(DISTINCT user_id) as active_users,
+        COALESCE(SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END), 0) as sent,
+        COALESCE(SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END), 0) as delivered,
+        COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed,
+        COALESCE(SUM(CASE WHEN status = 'bounced' THEN 1 ELSE 0 END), 0) as bounced,
+        COALESCE(SUM(CASE WHEN status = 'spam' THEN 1 ELSE 0 END), 0) as spam
+       FROM mail_logs
+       WHERE date(created_at) >= date('now', ?)`
+    ).bind(startModifier).first<AnalyticsSummaryRow>(),
+    c.env.DB.prepare('SELECT status, COUNT(*) as c FROM mail_queue GROUP BY status').all<CountByNameRow>(),
+    c.env.DB.prepare(
+      `WITH RECURSIVE dates(d) AS (
+         SELECT date('now', ?)
+         UNION ALL
+         SELECT date(d, '+1 day') FROM dates WHERE d < date('now')
+       )
+       SELECT dates.d as date,
+         COUNT(ml.id) as total,
+         COALESCE(SUM(CASE WHEN ml.status IN ('sent','delivered') THEN 1 ELSE 0 END), 0) as success,
+         COALESCE(SUM(CASE WHEN ml.status IN ('failed','bounced','spam') THEN 1 ELSE 0 END), 0) as failed,
+         COALESCE(SUM(CASE WHEN ml.status = 'pending' THEN 1 ELSE 0 END), 0) as pending
+       FROM dates
+       LEFT JOIN mail_logs ml ON date(ml.created_at) = dates.d
+       GROUP BY dates.d
+       ORDER BY dates.d ASC`
+    ).bind(startModifier).all<AnalyticsDailyRow>(),
+    c.env.DB.prepare(
+      `SELECT status, COUNT(*) as c
+       FROM mail_logs
+       WHERE date(created_at) >= date('now', ?)
+       GROUP BY status
+       ORDER BY c DESC`
+    ).bind(startModifier).all<CountByNameRow>(),
+    c.env.DB.prepare(
+      `SELECT COALESCE(category, 'SYSTEM') as category,
+        COUNT(*) as total,
+        COALESCE(SUM(CASE WHEN status IN ('sent','delivered') THEN 1 ELSE 0 END), 0) as success,
+        COALESCE(SUM(CASE WHEN status IN ('failed','bounced','spam') THEN 1 ELSE 0 END), 0) as failed
+       FROM mail_logs
+       WHERE date(created_at) >= date('now', ?)
+       GROUP BY COALESCE(category, 'SYSTEM')
+       ORDER BY total DESC`
+    ).bind(startModifier).all<AnalyticsCategoryRow>(),
+    c.env.DB.prepare(
+      `SELECT ml.user_id, COALESCE(u.name, '未知用户') as user_name, COALESCE(u.email, '') as user_email,
+        COUNT(*) as total,
+        COALESCE(SUM(CASE WHEN ml.status IN ('sent','delivered') THEN 1 ELSE 0 END), 0) as success,
+        COALESCE(SUM(CASE WHEN ml.status IN ('failed','bounced','spam') THEN 1 ELSE 0 END), 0) as failed
+       FROM mail_logs ml
+       LEFT JOIN users u ON u.id = ml.user_id
+       WHERE date(ml.created_at) >= date('now', ?)
+       GROUP BY ml.user_id
+       ORDER BY total DESC
+       LIMIT 8`
+    ).bind(startModifier).all<AnalyticsTopUserRow>(),
+    c.env.DB.prepare(
+      `SELECT ml.provider_id, COALESCE(p.name, '未配置通道') as provider_name, COALESCE(p.type, '') as provider_type,
+        COUNT(*) as total,
+        COALESCE(SUM(CASE WHEN ml.status IN ('sent','delivered') THEN 1 ELSE 0 END), 0) as success,
+        COALESCE(SUM(CASE WHEN ml.status IN ('failed','bounced','spam') THEN 1 ELSE 0 END), 0) as failed
+       FROM mail_logs ml
+       LEFT JOIN providers p ON p.id = ml.provider_id
+       WHERE date(ml.created_at) >= date('now', ?)
+       GROUP BY ml.provider_id
+       ORDER BY total DESC
+       LIMIT 8`
+    ).bind(startModifier).all<AnalyticsTopProviderRow>(),
+    c.env.DB.prepare(
+      `SELECT ml.account_id, COALESCE(a.name, '未配置账号') as account_name, COALESCE(a.email, '') as account_email,
+        COUNT(*) as total,
+        COALESCE(SUM(CASE WHEN ml.status IN ('sent','delivered') THEN 1 ELSE 0 END), 0) as success,
+        COALESCE(SUM(CASE WHEN ml.status IN ('failed','bounced','spam') THEN 1 ELSE 0 END), 0) as failed
+       FROM mail_logs ml
+       LEFT JOIN accounts a ON a.id = ml.account_id
+       WHERE date(ml.created_at) >= date('now', ?)
+       GROUP BY ml.account_id
+       ORDER BY total DESC
+       LIMIT 8`
+    ).bind(startModifier).all<AnalyticsTopAccountRow>(),
+    c.env.DB.prepare(
+      `SELECT ml.id, ml.created_at, ml.status, ml.to_email, ml.subject, ml.error_message,
+        u.email as user_email, p.name as provider_name, a.email as account_email
+       FROM mail_logs ml
+       LEFT JOIN users u ON u.id = ml.user_id
+       LEFT JOIN providers p ON p.id = ml.provider_id
+       LEFT JOIN accounts a ON a.id = ml.account_id
+       WHERE date(ml.created_at) >= date('now', ?)
+         AND ml.status IN ('failed','bounced','spam')
+       ORDER BY ml.created_at DESC
+       LIMIT 8`
+    ).bind(startModifier).all<AnalyticsErrorRow>(),
+  ]);
+
+  const summary = normalizeAnalyticsSummary(summaryRow, days);
+  const queue = countsToRecord(queueRows.results);
+
+  const data = {
+    range: {
+      days,
+      start_date: rangeRow?.start_date || '',
+      end_date: rangeRow?.end_date || '',
+    },
+    summary: {
+      ...summary,
+      queue_queued: queue.queued || 0,
+      queue_processing: queue.processing || 0,
+      queue_failed: queue.failed || 0,
+    },
+    daily: dailyRows.results.map((row) => ({
+      date: row.date,
+      total: toCount(row.total),
+      success: toCount(row.success),
+      failed: toCount(row.failed),
+      pending: toCount(row.pending),
+    })),
+    status_breakdown: statusRows.results.map((row) => ({
+      status: row.status,
+      count: toCount(row.c),
+    })),
+    category_breakdown: categoryRows.results.map((row) => ({
+      category: row.category,
+      total: toCount(row.total),
+      success: toCount(row.success),
+      failed: toCount(row.failed),
+      success_rate: successRate(toCount(row.success), toCount(row.failed)),
+    })),
+    top_users: topUserRows.results.map((row) => ({
+      user_id: row.user_id,
+      name: row.user_name,
+      email: row.user_email,
+      total: toCount(row.total),
+      success: toCount(row.success),
+      failed: toCount(row.failed),
+      success_rate: successRate(toCount(row.success), toCount(row.failed)),
+    })),
+    top_providers: topProviderRows.results.map((row) => ({
+      provider_id: row.provider_id,
+      name: row.provider_name,
+      type: row.provider_type,
+      total: toCount(row.total),
+      success: toCount(row.success),
+      failed: toCount(row.failed),
+      success_rate: successRate(toCount(row.success), toCount(row.failed)),
+    })),
+    top_accounts: topAccountRows.results.map((row) => ({
+      account_id: row.account_id,
+      name: row.account_name,
+      email: row.account_email,
+      total: toCount(row.total),
+      success: toCount(row.success),
+      failed: toCount(row.failed),
+      success_rate: successRate(toCount(row.success), toCount(row.failed)),
+    })),
+    recent_errors: errorRows.results,
+  };
+  _analyticsCache.set(days, { t: Date.now(), data });
+  return c.json({ success: true, data });
+});
+
 // POST /v1/admin/accounts/:id/test - 发送测试邮件验证账号配置
 adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
   const db = getDB(c.env.DB);
@@ -501,7 +725,7 @@ adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
     '<p style="margin: 0; font-size: 14px; color: #059669;">如果你收到了这封邮件，说明发件账号 <strong>' + escapeHtml(account.name) + '</strong> 配置正确，可以正常使用。</p>' +
   '</div>' +
 '</div>',
-  });
+  }, c.env);
 
   await db.createMailLog({
     id: uuidv7(),
@@ -519,6 +743,7 @@ adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
     retry_count: 0,
   });
 
+  invalidateAdminCache();
   if (result.success) {
     return c.json({ success: true, message: '测试邮件发送成功', messageId: result.messageId });
   }
@@ -529,34 +754,35 @@ adminRouter.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
 
 // GET /v1/admin/stats - 全局统计
 adminRouter.get('/stats', superAdminMiddleware(), async (c) => {
-  const [userCount, providerCount, accountCount, templateCount, mailCount] = await Promise.all([
+  const cached = _statsCache.entry;
+  if (cached && Date.now() - cached.t < STATS_CACHE_TTL) {
+    return c.json({ success: true, data: cached.data });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const [userCount, providerCount, accountCount, templateCount, mailCount, todayMails] = await Promise.all([
     c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE status != 'deleted'").first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM providers').first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM accounts').first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM templates').first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM mail_logs').first<{ c: number }>(),
+    c.env.DB.prepare("SELECT status, COUNT(*) as c FROM mail_logs WHERE date(created_at) = ? GROUP BY status").bind(today).all<{ status: string; c: number }>(),
   ]);
-
-  const today = new Date().toISOString().split('T')[0];
-  const todayMails = await c.env.DB.prepare(
-    "SELECT status, COUNT(*) as c FROM mail_logs WHERE date(created_at) = ? GROUP BY status"
-  ).bind(today).all<{ status: string; c: number }>();
 
   const todayStats: Record<string, number> = {};
   for (const row of todayMails.results) { todayStats[row.status] = row.c; }
 
-  return c.json({
-    success: true,
-    data: {
-      users: userCount?.c || 0,
-      providers: providerCount?.c || 0,
-      accounts: accountCount?.c || 0,
-      templates: templateCount?.c || 0,
-      total_mails: mailCount?.c || 0,
-      today_sent: todayStats.sent || 0,
-      today_failed: todayStats.failed || 0,
-    },
-  });
+  const data = {
+    users: userCount?.c || 0,
+    providers: providerCount?.c || 0,
+    accounts: accountCount?.c || 0,
+    templates: templateCount?.c || 0,
+    total_mails: mailCount?.c || 0,
+    today_sent: todayStats.sent || 0,
+    today_failed: todayStats.failed || 0,
+  };
+  _statsCache.entry = { t: Date.now(), data };
+  return c.json({ success: true, data });
 });
 
 // ========== 系统设置 ==========
@@ -671,6 +897,120 @@ adminRouter.put('/settings', superAdminMiddleware(), async (c) => {
   return c.json({ success: true, message: '设置已保存', data: { updated: updates.length } });
 });
 
+type AnalyticsRangeRow = { start_date: string; end_date: string };
+type CountByNameRow = { status: string; c: number | string | null };
+type AnalyticsSummaryRow = {
+  total: number | string | null;
+  active_users: number | string | null;
+  sent: number | string | null;
+  delivered: number | string | null;
+  pending: number | string | null;
+  failed: number | string | null;
+  bounced: number | string | null;
+  spam: number | string | null;
+};
+type AnalyticsDailyRow = {
+  date: string;
+  total: number | string | null;
+  success: number | string | null;
+  failed: number | string | null;
+  pending: number | string | null;
+};
+type AnalyticsCategoryRow = {
+  category: string;
+  total: number | string | null;
+  success: number | string | null;
+  failed: number | string | null;
+};
+type AnalyticsTopUserRow = {
+  user_id: string | null;
+  user_name: string;
+  user_email: string;
+  total: number | string | null;
+  success: number | string | null;
+  failed: number | string | null;
+};
+type AnalyticsTopProviderRow = {
+  provider_id: string | null;
+  provider_name: string;
+  provider_type: string;
+  total: number | string | null;
+  success: number | string | null;
+  failed: number | string | null;
+};
+type AnalyticsTopAccountRow = {
+  account_id: string | null;
+  account_name: string;
+  account_email: string;
+  total: number | string | null;
+  success: number | string | null;
+  failed: number | string | null;
+};
+type AnalyticsErrorRow = {
+  id: string;
+  created_at: string;
+  status: string;
+  to_email: string;
+  subject: string;
+  error_message: string | null;
+  user_email: string | null;
+  provider_name: string | null;
+  account_email: string | null;
+};
+
+function parseAnalyticsDays(raw: string | undefined): number {
+  const parsed = parseInt(raw || '30', 10);
+  if (Number.isNaN(parsed)) return 30;
+  return Math.min(Math.max(parsed, 1), 365);
+}
+
+function toCount(value: number | string | null | undefined): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseInt(value, 10) || 0;
+  return 0;
+}
+
+function roundOne(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function successRate(success: number, failed: number): number {
+  const finished = success + failed;
+  return finished > 0 ? roundOne((success / finished) * 100) : 0;
+}
+
+function normalizeAnalyticsSummary(row: AnalyticsSummaryRow | null, days: number) {
+  const sent = toCount(row?.sent);
+  const delivered = toCount(row?.delivered);
+  const failed = toCount(row?.failed);
+  const bounced = toCount(row?.bounced);
+  const spam = toCount(row?.spam);
+  const total = toCount(row?.total);
+  const success = sent + delivered;
+  const failure = failed + bounced + spam;
+
+  return {
+    total,
+    active_users: toCount(row?.active_users),
+    sent,
+    delivered,
+    pending: toCount(row?.pending),
+    failed,
+    bounced,
+    spam,
+    success,
+    failure,
+    success_rate: successRate(success, failure),
+    avg_per_day: days > 0 ? roundOne(total / days) : 0,
+  };
+}
+
+function countsToRecord(rows: CountByNameRow[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const row of rows) counts[row.status] = toCount(row.c);
+  return counts;
+}
+
 // 设置 key -> category 映射（与 migration 009 / SETTING_DEFAULTS 对齐）
 function categoryOf(key: string): string {
   if (['platform_name', 'admin_contact_email', 'announcement'].includes(key)) return 'platform';
@@ -703,6 +1043,52 @@ function isValidEmail(email: string): boolean {
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function parseProviderConfig(config: ProviderConfig | string): Record<string, unknown> {
+  return typeof config === 'string'
+    ? JSON.parse(config) as Record<string, unknown>
+    : { ...(config as unknown as Record<string, unknown>) };
+}
+
+function sanitizeProviderForAdmin<T extends { config: ProviderConfig | string }>(provider: T): T {
+  const config = parseProviderConfig(provider.config);
+  for (const key of SENSITIVE_CONFIG_KEYS) {
+    if (config[key]) config[key] = SENSITIVE_VALUE_MASK;
+  }
+  return { ...provider, config: config as unknown as T['config'] };
+}
+
+function mergeProviderConfigForUpdate(
+  existing: EmailProvider,
+  nextType: ProviderType,
+  nextConfig: ProviderConfig
+): ProviderConfig {
+  const incoming = { ...(nextConfig as unknown as Record<string, unknown>) };
+  if (nextType !== existing.type) return incoming as unknown as ProviderConfig;
+
+  const current = parseProviderConfig(existing.config);
+  for (const key of SENSITIVE_CONFIG_KEYS) {
+    const value = incoming[key];
+    if (value === undefined || value === '' || value === SENSITIVE_VALUE_MASK) {
+      if (current[key] !== undefined) incoming[key] = current[key];
+    }
+  }
+  return incoming as unknown as ProviderConfig;
+}
+
+async function protectProviderConfig(config: ProviderConfig, env: Env): Promise<ProviderConfig> {
+  const protectedConfig = { ...(config as unknown as Record<string, unknown>) };
+  for (const key of SENSITIVE_CONFIG_KEYS) {
+    const value = protectedConfig[key];
+    if (typeof value !== 'string' || !value) continue;
+    if (value === SENSITIVE_VALUE_MASK || value.startsWith(ENCRYPTED_VALUE_PREFIX)) continue;
+    if (!env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is required to store provider credentials');
+    }
+    protectedConfig[key] = `${ENCRYPTED_VALUE_PREFIX}${await encryptApiKey(value, env.JWT_SECRET)}`;
+  }
+  return protectedConfig as unknown as ProviderConfig;
 }
 
 export default adminRouter;

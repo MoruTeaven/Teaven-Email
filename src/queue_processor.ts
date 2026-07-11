@@ -52,6 +52,16 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
       continue;
     }
 
+    if (provider.enabled !== 1) {
+      try {
+        await recordQueueFailure(env, db, item, 'Provider is disabled', undefined, true);
+      } catch (err) {
+        console.error(`[queue] Failed to record disabled-provider queue item ${item.id}:`, err);
+      }
+      failed++;
+      continue;
+    }
+
     let result: Awaited<ReturnType<typeof sendWithRetry>>;
     try {
       // 解析 Provider 配置
@@ -66,10 +76,18 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
 
       if (item.account_id) {
         const account = await db.getAccountById(item.account_id);
-        if (account) {
-          fromEmail = account.email;
-          fromName = account.display_name || undefined;
+        if (!account) {
+          await recordQueueFailure(env, db, item, 'Account not found', undefined, true);
+          failed++;
+          continue;
         }
+        if (account.enabled !== 1) {
+          await recordQueueFailure(env, db, item, 'Account is disabled', undefined, true);
+          failed++;
+          continue;
+        }
+        fromEmail = account.email;
+        fromName = account.display_name || undefined;
       }
 
       // 发送邮件
@@ -80,7 +98,7 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
         subject: item.subject,
         html: item.html,
         text: item.text_content || undefined,
-      });
+      }, env, 1);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[queue] Failed to process queue item ${item.id}:`, err);

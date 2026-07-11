@@ -2,12 +2,15 @@
 // 用于创建第一个管理员用户和 API Key
 import { Hono } from 'hono';
 import { getDB } from '../db';
-import { generateApiKey, encryptApiKey } from '../auth';
+import { generateApiKey, encryptApiKey, hashPassword, verifyPassword } from '../auth';
 import { uuidv7 } from '../uuid';
 import { getIntSetting } from '../settings';
 import type { Permission } from '../types';
 
 const setupRouter = new Hono<{ Bindings: Env }>();
+const LOGIN_RATE_LIMIT_WINDOW = 15 * 60;
+const MAX_LOGIN_ATTEMPTS = 5;
+const DEFAULT_SESSION_SECONDS = 24 * 60 * 60;
 
 // GET /v1/setup/status - 检查是否需要初始化
 setupRouter.get('/status', async (c) => {
@@ -57,12 +60,7 @@ setupRouter.post('/init', async (c) => {
     return c.json({ success: false, error: 'Password must be at least 6 characters' }, 400);
   }
 
-  // 简单密码哈希 (在 Workers 中可用 Web Crypto)
-  const encoder = new TextEncoder();
-  const passwordData = encoder.encode(body.password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', passwordData);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const passwordHash = await hashPassword(body.password);
 
   // 创建用户
   const userId = uuidv7();
@@ -96,7 +94,7 @@ setupRouter.post('/init', async (c) => {
     last_used_at: null,
   });
 
-  return c.json({
+  const response = c.json({
     success: true,
     data: {
       user: {
@@ -114,6 +112,8 @@ setupRouter.post('/init', async (c) => {
       },
     },
   }, 201);
+  response.headers.append('Set-Cookie', buildAuthCookie(raw, DEFAULT_SESSION_SECONDS, isRequestSecure(c.req)));
+  return response;
 });
 
 // POST /v1/setup/login - 账号密码登录，返回 API Key
@@ -131,43 +131,55 @@ setupRouter.post('/login', async (c) => {
     return c.json({ success: false, error: 'email and password are required' }, 400);
   }
 
-  // 查找用户
-  const user = await db.getUserByEmail(body.email);
-  if (!user) {
-    return c.json({ success: false, error: 'Invalid email or password' }, 401);
+  const rateLimitKey = buildLoginRateLimitKey(c, body.email);
+  const rateLimited = await isLoginRateLimited(c.env.KV, rateLimitKey);
+  if (rateLimited) {
+    return c.json({ success: false, error: 'Too many login attempts. Please try again later.' }, 429);
   }
 
-  if (user.status !== 'active') {
-    return c.json({ success: false, error: 'Account is disabled' }, 403);
+  try {
+    // 查找用户
+    const user = await db.getUserByEmail(body.email);
+    if (!user) {
+      await recordLoginFailure(c.env.KV, rateLimitKey);
+      return c.json({ success: false, error: 'Invalid email or password' }, 401);
+    }
+
+    if (user.status !== 'active') {
+      return c.json({ success: false, error: 'Account is disabled' }, 403);
+    }
+
+    const passwordResult = await verifyPassword(body.password, user.password_hash);
+    if (!passwordResult.valid) {
+      await recordLoginFailure(c.env.KV, rateLimitKey);
+      return c.json({ success: false, error: 'Invalid email or password' }, 401);
+    }
+    await clearLoginFailures(c.env.KV, rateLimitKey);
+    if (passwordResult.needsRehash) {
+      await db.updateUserPasswordHash(user.id, await hashPassword(body.password));
+    }
+
+    // 获取用户的 API Keys（可能为空或全部禁用，前端会自动调用 /key-from-password 创建新 Key）
+    const apiKeys = await db.getApiKeysByUser(user.id);
+
+    return c.json({
+      success: true,
+      data: {
+        user: { id: user.id, name: user.name, email: user.email },
+        api_keys: apiKeys.map(k => ({
+          id: k.id,
+          name: k.name,
+          prefix: k.api_key_prefix,
+          permissions: safeParsePermissions(k.permissions),
+          enabled: k.enabled,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('[setup/login] Error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json({ success: false, error: 'Login failed', message }, 500);
   }
-
-  // 验证密码
-  const encoder = new TextEncoder();
-  const passwordData = encoder.encode(body.password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', passwordData);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  if (passwordHash !== user.password_hash) {
-    return c.json({ success: false, error: 'Invalid email or password' }, 401);
-  }
-
-  // 获取用户的 API Keys（可能为空或全部禁用，前端会自动调用 /key-from-password 创建新 Key）
-  const apiKeys = await db.getApiKeysByUser(user.id);
-
-  return c.json({
-    success: true,
-    data: {
-      user: { id: user.id, name: user.name, email: user.email },
-      api_keys: apiKeys.map(k => ({
-        id: k.id,
-        name: k.name,
-        prefix: k.api_key_prefix,
-        permissions: typeof k.permissions === 'string' ? JSON.parse(k.permissions) : k.permissions,
-        enabled: k.enabled,
-      })),
-    },
-  });
 });
 
 // POST /v1/setup/key-from-password - 登录后获取新的 API Key
@@ -183,71 +195,94 @@ setupRouter.post('/key-from-password', async (c) => {
     return c.json({ success: false, error: 'email and password are required' }, 400);
   }
 
-  const db = getDB(c.env.DB);
-  const user = await db.getUserByEmail(body.email);
-  if (!user || user.status !== 'active') {
-    return c.json({ success: false, error: 'Invalid email or password' }, 401);
+  const rateLimitKey = buildLoginRateLimitKey(c, body.email);
+  const rateLimited = await isLoginRateLimited(c.env.KV, rateLimitKey);
+  if (rateLimited) {
+    return c.json({ success: false, error: 'Too many login attempts. Please try again later.' }, 429);
   }
 
-  // 验证密码
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(body.password));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    const db = getDB(c.env.DB);
+    const user = await db.getUserByEmail(body.email);
+    if (!user || user.status !== 'active') {
+      await recordLoginFailure(c.env.KV, rateLimitKey);
+      return c.json({ success: false, error: 'Invalid email or password' }, 401);
+    }
 
-  if (passwordHash !== user.password_hash) {
-    return c.json({ success: false, error: 'Invalid email or password' }, 401);
-  }
+    const passwordResult = await verifyPassword(body.password, user.password_hash);
+    if (!passwordResult.valid) {
+      await recordLoginFailure(c.env.KV, rateLimitKey);
+      return c.json({ success: false, error: 'Invalid email or password' }, 401);
+    }
+    await clearLoginFailures(c.env.KV, rateLimitKey);
+    if (passwordResult.needsRehash) {
+      await db.updateUserPasswordHash(user.id, await hashPassword(body.password));
+    }
 
-  // 生成新的 API Key（自动创建，有效期由系统设置 auto_api_key_ttl_hours 控制，默认 24 小时）
-  const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
-  const { raw, hash, prefix } = await generateApiKey();
-  const apiKeyId = uuidv7();
-  const secret = c.env.JWT_SECRET || '';
-  const ttlHours = await getIntSetting(c.env.DB, 'auto_api_key_ttl_hours', 1, 24);
+    // 生成新的 API Key（自动创建，有效期由系统设置 auto_api_key_ttl_hours 控制，默认 24 小时）
+    const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
+    const { raw, hash, prefix } = await generateApiKey();
+    const apiKeyId = uuidv7();
+    const secret = c.env.JWT_SECRET || '';
+    const ttlHours = await getIntSetting(c.env.DB, 'auto_api_key_ttl_hours', 1, 24);
 
-  await db.createApiKey({
-    id: apiKeyId,
-    user_id: user.id,
-    name: body.name || 'Login Key',
-    api_key_hash: hash,
-    api_key_prefix: prefix,
-    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
-    permissions: allPermissions,
-    enabled: 1,
-    auto_created: 1,
-    expires_at: new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString(),
-    last_used_at: null,
-  });
+    await db.createApiKey({
+      id: apiKeyId,
+      user_id: user.id,
+      name: body.name || 'Login Key',
+      api_key_hash: hash,
+      api_key_prefix: prefix,
+      api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
+      permissions: allPermissions,
+      enabled: 1,
+      auto_created: 1,
+      expires_at: new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString(),
+      last_used_at: null,
+    });
 
-  return c.json({
-    success: true,
-    data: {
-      api_key: {
-        id: apiKeyId,
-        name: body.name || 'Login Key',
-        key: raw,
-        prefix,
-        permissions: allPermissions,
-        message: '⚠️ Store this key securely!',
+    const response = c.json({
+      success: true,
+      data: {
+        api_key: {
+          id: apiKeyId,
+          name: body.name || 'Login Key',
+          key: raw,
+          prefix,
+          permissions: allPermissions,
+          message: '⚠️ Store this key securely!',
+        },
       },
-    },
-  }, 201);
+    }, 201);
+    response.headers.append('Set-Cookie', buildAuthCookie(raw, ttlHours * 60 * 60, isRequestSecure(c.req)));
+    return response;
+  } catch (err) {
+    console.error('[setup/key-from-password] Error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json({ success: false, error: 'Failed to create API key', message }, 500);
+  }
+});
+
+// POST /v1/setup/logout - 清除浏览器 HttpOnly 会话 Cookie
+setupRouter.post('/logout', async (c) => {
+  const response = c.json({ success: true });
+  response.headers.append('Set-Cookie', clearAuthCookie(isRequestSecure(c.req)));
+  return response;
 });
 
 // 确保数据库表存在（首次部署时自动建表）
 async function ensureTables(db: D1Database): Promise<void> {
   const tables = [
     `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','deleted')), is_super_admin INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS api_keys (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, api_key_hash TEXT NOT NULL, api_key_prefix TEXT NOT NULL, permissions TEXT NOT NULL DEFAULT '["SEND_MAIL"]', enabled INTEGER NOT NULL DEFAULT 1, last_used_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS api_keys (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, api_key_hash TEXT NOT NULL, api_key_prefix TEXT NOT NULL, permissions TEXT NOT NULL DEFAULT '["SEND_MAIL"]', enabled INTEGER NOT NULL DEFAULT 1, auto_created INTEGER NOT NULL DEFAULT 0, expires_at TEXT, api_key_encrypted TEXT, last_used_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS providers (id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL CHECK(type IN ('smtp','api','cloudflare_email')), config TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, provider_id TEXT NOT NULL REFERENCES providers(id), name TEXT NOT NULL, email TEXT NOT NULL, display_name TEXT, config TEXT, daily_limit INTEGER DEFAULT 1000, sent_today INTEGER DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, provider_id TEXT NOT NULL REFERENCES providers(id), name TEXT NOT NULL, email TEXT NOT NULL, display_name TEXT, config TEXT, daily_limit INTEGER DEFAULT 1000, sent_today INTEGER DEFAULT 0, categories TEXT DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS templates (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), template_code TEXT NOT NULL, name TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'SYSTEM' CHECK(category IN ('VERIFY','NOTIFY','MARKETING','SYSTEM')), version INTEGER NOT NULL DEFAULT 1, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, variables TEXT DEFAULT '[]', enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS template_versions (id TEXT PRIMARY KEY, template_id TEXT NOT NULL REFERENCES templates(id), version INTEGER NOT NULL, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, variables TEXT DEFAULT '[]', changelog TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS category_routes (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), category TEXT NOT NULL, provider_id TEXT NOT NULL REFERENCES providers(id), account_id TEXT, priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS mail_logs (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), api_key_id TEXT, template_id TEXT, provider_id TEXT, account_id TEXT, category TEXT, to_email TEXT NOT NULL, subject TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','sent','delivered','failed','bounced','spam')), provider_response TEXT, error_message TEXT, retry_count INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS mail_queue (id TEXT PRIMARY KEY, mail_log_id TEXT NOT NULL REFERENCES mail_logs(id), user_id TEXT NOT NULL REFERENCES users(id), provider_id TEXT NOT NULL, account_id TEXT, to_email TEXT NOT NULL, subject TEXT NOT NULL, html TEXT NOT NULL, text_content TEXT, category TEXT, priority INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','processing','completed','failed')), scheduled_at TEXT, next_retry_at TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS daily_stats (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), date TEXT NOT NULL, total_sent INTEGER DEFAULT 0, total_delivered INTEGER DEFAULT 0, total_failed INTEGER DEFAULT 0, total_bounced INTEGER DEFAULT 0, total_spam INTEGER DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS daily_send_usage (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), date TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS webhooks (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, url TEXT NOT NULL, events TEXT NOT NULL DEFAULT '["sent","failed","bounced"]', secret TEXT, enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS verification_codes (id TEXT PRIMARY KEY, email TEXT NOT NULL, code TEXT NOT NULL, scene_type TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT 'general', description TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now')), updated_by TEXT)`,
@@ -255,6 +290,8 @@ async function ensureTables(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(api_key_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_mail_queue_status ON mail_queue(status)`,
     `CREATE INDEX IF NOT EXISTS idx_daily_stats_user_date ON daily_stats(user_id, date)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stats_unique ON daily_stats(user_id, date)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_send_usage_user_date ON daily_send_usage(user_id, date)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_codes_email_scene ON verification_codes(email, scene_type)`,
     `CREATE INDEX IF NOT EXISTS idx_verification_codes_user_email_scene ON verification_codes(user_id, email, scene_type)`,
     `CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category)`,
@@ -269,6 +306,7 @@ async function ensureTables(db: D1Database): Promise<void> {
     `ALTER TABLE api_keys ADD COLUMN auto_created INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE api_keys ADD COLUMN expires_at TEXT`,
     `ALTER TABLE api_keys ADD COLUMN api_key_encrypted TEXT`,
+    `ALTER TABLE accounts ADD COLUMN categories TEXT DEFAULT ''`,
   ];
   for (const sql of alterStatements) {
     try { await db.prepare(sql).run(); } catch {}
@@ -296,8 +334,65 @@ async function ensureTables(db: D1Database): Promise<void> {
   }
 }
 
+function safeParsePermissions(permissions: unknown): Permission[] {
+  if (Array.isArray(permissions)) return permissions as Permission[];
+  if (typeof permissions === 'string') {
+    try {
+      const parsed = JSON.parse(permissions);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function buildLoginRateLimitKey(c: { req: { header(name: string): string | undefined } }, email: string): string {
+  const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown';
+  return `login:${encodeURIComponent(email.toLowerCase())}:${encodeURIComponent(ip)}`;
+}
+
+async function isLoginRateLimited(kv: KVNamespace, key: string): Promise<boolean> {
+  try {
+    const value = await kv.get(key);
+    return (value ? parseInt(value, 10) : 0) >= MAX_LOGIN_ATTEMPTS;
+  } catch {
+    return false;
+  }
+}
+
+async function recordLoginFailure(kv: KVNamespace, key: string): Promise<void> {
+  try {
+    const value = await kv.get(key);
+    const count = (value ? parseInt(value, 10) : 0) + 1;
+    await kv.put(key, String(count), { expirationTtl: LOGIN_RATE_LIMIT_WINDOW });
+  } catch {}
+}
+
+async function clearLoginFailures(kv: KVNamespace, key: string): Promise<void> {
+  try { await kv.delete(key); } catch {}
+}
+
+// 判断原始请求是否走 HTTPS（Cloudflare 通过 x-forwarded-proto / cf-visitor 暴露）
+function isRequestSecure(req: { header: (n: string) => string | undefined }): boolean {
+  const xfp = req.header('x-forwarded-proto');
+  if (xfp) return xfp === 'https';
+  const cf = req.header('cf-visitor');
+  return !!cf && cf.includes('"https"');
+}
+
+function buildAuthCookie(token: string, maxAgeSeconds: number, secure: boolean): string {
+  const secureFlag = secure ? '; Secure' : '';
+  return `teaven_auth=${encodeURIComponent(token)}; Max-Age=${maxAgeSeconds}; Path=/; HttpOnly${secureFlag}; SameSite=Strict`;
+}
+
+function clearAuthCookie(secure: boolean): string {
+  const secureFlag = secure ? '; Secure' : '';
+  return `teaven_auth=; Max-Age=0; Path=/; HttpOnly${secureFlag}; SameSite=Strict`;
 }
 
 export default setupRouter;

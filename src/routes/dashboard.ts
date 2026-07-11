@@ -64,4 +64,39 @@ dashboardRouter.get('/overview', authMiddleware(), async (c) => {
   });
 });
 
+// GET /v1/dashboard/profile - 当前用户资料
+dashboardRouter.get('/profile', authMiddleware(), async (c) => {
+  const auth = getAuth(c);
+  const db = getDB(c.env.DB);
+  const user = await db.getUserById(auth.userId);
+  if (!user) return c.json({ success: false, error: 'User not found' }, 404);
+  return c.json({
+    success: true,
+    data: { id: user.id, name: user.name, email: user.email, is_super_admin: user.is_super_admin, created_at: user.created_at },
+  });
+});
+
+// PUT /v1/dashboard/profile - 修改自己的昵称
+dashboardRouter.put('/profile', authMiddleware(), async (c) => {
+  const auth = getAuth(c);
+  let body: { name?: string };
+  try { body = await c.req.json(); } catch { return c.json({ success: false, error: 'Invalid JSON' }, 400); }
+
+  if (body.name === undefined) {
+    return c.json({ success: false, error: 'name 字段必填' }, 400);
+  }
+  const name = body.name.trim();
+  if (!name) {
+    return c.json({ success: false, error: '昵称不能为空' }, 400);
+  }
+  if (name.length > 50) {
+    return c.json({ success: false, error: '昵称长度不能超过 50 个字符' }, 400);
+  }
+
+  await c.env.DB.prepare('UPDATE users SET name = ?, updated_at = datetime(\'now\') WHERE id = ?')
+    .bind(name, auth.userId).run();
+
+  return c.json({ success: true, data: { name } });
+});
+
 export default dashboardRouter;

@@ -24,7 +24,7 @@
 │  ├─ Template Engine         模板渲染            │
 │  ├─ Mailer (3 channels)    邮件发送引擎           │
 │  │   ├─ SMTP                                    │
-│  │   ├─ Cloudflare Email                        │
+│  │   ├─ Cloudflare Email Sending                │
 │  │   └─ Third-party API                         │
 │  ├─ Queue Processor        异步队列处理           │
 │  └─ Category Router        分类路由调度           │
@@ -39,7 +39,7 @@
 ## 权限模型
 
 - **超级管理员**（后台 `/admin`）：管理全局发送通道和发件账号，管理所有用户
-- **普通用户**（后台 `/dashboard`）：管理自己的模板、API Key、分类路由，使用管理员配置的全局发送通道和账号发送邮件
+- **普通用户**（后台 `/dashboard`）：查看全局发送通道，管理自己的模板和 API Key，使用管理员配置的全局发送通道和账号发送邮件
 - **发送通道和发件账号均为全局资源**，仅超级管理员可创建/修改/删除，所有用户共享使用
 
 ## 技术栈
@@ -70,11 +70,11 @@ npm run db:migrate
 npm run deploy
 ```
 
-`JWT_SECRET` 用于加密可找回的 API Key 原文，`IMPERSONATION_SECRET` 用于签名超级管理员模拟登录令牌。`IMPERSONATION_SECRET` 未配置时会回退使用 `JWT_SECRET`，但生产环境建议单独配置。
+`JWT_SECRET` 用于加密可找回的 API Key 原文、Provider 凭据和登录会话 Cookie；配置 SMTP/API 发送通道前必须设置。`IMPERSONATION_SECRET` 用于签名超级管理员模拟登录令牌。`IMPERSONATION_SECRET` 未配置时会回退使用 `JWT_SECRET`，但生产环境建议单独配置。
 
 部署后访问 `/dashboard`，页面会自动引导创建管理员账户。
 
-> **注意**：如果未提前运行迁移脚本，首次注册时系统会自动建表；升级已有部署时仍需运行 `npm run db:migrate`，以应用 `migrations/` 下的后续 D1 migrations。
+> **注意**：升级已有部署时必须运行 `npm run db:migrate`，以应用 `migrations/` 下的后续 D1 migrations。迁移 010 新增 `daily_send_usage`，用于原子执行每用户每日发信上限。
 
 ## API 文档
 
@@ -178,9 +178,7 @@ GET    /v1/templates/:code/versions # 版本历史
 
 ```http
 GET    /v1/providers              # 查看全局发送通道列表
-GET    /v1/providers/routes       # 分类路由列表
-POST   /v1/providers/routes       # 创建分类路由
-DELETE /v1/providers/routes/:id   # 删除分类路由
+# 分类路由已合并到发件账号 categories 字段，仅超管在账号中维护
 ```
 
 ### 超级管理员（/v1/admin/*）
@@ -222,6 +220,8 @@ DELETE /v1/api-keys/:id          # 删除 API Key
 PUT    /v1/api-keys/:id/toggle   # 启用/禁用
 ```
 
+通过已有 API Key 创建新 Key 时，新 Key 的权限不能超过当前 Key 已拥有的权限，防止低权限 Key 自我提权。账号密码登录会创建 `auto_created=1` 的短期 Key，并通过 HttpOnly Cookie 供 Dashboard/Admin 使用；前端不再把登录 Key 持久化到 `localStorage`。
+
 ### 日志 & 统计
 
 ```http
@@ -234,6 +234,8 @@ GET    /v1/dashboard/overview    # 仪表盘概览
 ## 发送通道
 
 ### 1. SMTP
+
+通过 Cloudflare Workers TCP sockets 直连 SMTP 服务，配置中的 `host`、`port`、`username`、`password` 和 `encryption` 会用于实际投递。
 
 ```json
 {
@@ -248,16 +250,24 @@ GET    /v1/dashboard/overview    # 仪表盘概览
 }
 ```
 
-### 2. Cloudflare Email
+### 2. Cloudflare Email Sending
 
-利用 Cloudflare Email Routing 发送邮件。
+通过 Cloudflare Email Sending 的 Workers `send_email` binding 发送邮件。需要先为 Worker 配置绑定，并确保发件域名已在 Cloudflare Email Sending 开通。
+
+```jsonc
+// wrangler.jsonc
+{
+  "send_email": [
+    { "name": "EMAIL" }
+  ]
+}
+```
 
 ```json
 {
   "type": "cloudflare_email",
   "config": {
-    "domain": "example.com",
-    "dkim_selector": "mailchannels"
+    "domain": "example.com"
   }
 }
 ```
@@ -316,7 +326,7 @@ src/
 ### 超级管理员后台 `/admin`
 - 全局统计概览
 - 用户管理（创建/禁用/模拟登录）
-- **发送通道管理**（SMTP/API/Cloudflare Email 的创建/删除/启停）
+- **发送通道管理**（SMTP/API/Cloudflare Email Sending 的创建/删除/启停）
 - **发件账号管理**（全局账号的创建/删除/启停）
 
 ## 队列处理
@@ -328,7 +338,7 @@ src/
 crons = ["*/30 * * * *"]
 ```
 
-也可以手动触发：
+也可以手动触发（仅支持 POST）：
 
 ```http
 POST /__internal/process-queue

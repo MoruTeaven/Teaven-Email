@@ -62,6 +62,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 .sidebar-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
 .sidebar-section-title{padding:14px 16px 6px;font-size:.6rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--radius-md);color:var(--text-secondary);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s;border:none;background:transparent;width:100%;text-align:left;position:relative}
+a.nav-item{text-decoration:none}
 .nav-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted)}
 .nav-item:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 .nav-item:hover .nav-icon{color:var(--text-secondary)}
@@ -96,6 +97,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 .main{flex:1;margin-left:260px;transition:margin-left .3s}
 .main.expanded{margin-left:72px}
 .main-inner{padding:28px;max-width:1400px}
+.page-section{display:none}
+.page-section.active{display:block;animation:fadeIn .12s ease-out}
 .page-header{margin-bottom:28px}
 .page-title{font-size:1.6rem;font-weight:700;color:var(--text-primary)}
 .page-subtitle{font-size:.72rem;color:var(--text-muted);margin-top:2px;font-family:var(--font-mono);letter-spacing:.04em}
@@ -362,37 +365,37 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       </div>
       <nav class="sidebar-nav">
         <div class="sidebar-section-title">概览</div>
-        <button class="nav-item active" data-page="dashboard">
+        <a href="#dashboard" class="nav-item active" data-page="dashboard">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
           <span class="nav-text">仪表盘</span>
-        </button>
+        </a>
         <div class="sidebar-section-title">管理</div>
-        <button class="nav-item" data-page="users">
+        <a href="#users" class="nav-item" data-page="users">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span class="nav-text">用户管理</span>
-        </button>
-        <button class="nav-item" data-page="providers">
+        </a>
+        <a href="#providers" class="nav-item" data-page="providers">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.87 6.87a8 8 0 1 0 10.26 0"/><circle cx="12" cy="12" r="2"/></svg></span>
           <span class="nav-text">发送通道</span>
-        </button>
-        <button class="nav-item" data-page="accounts">
+        </a>
+        <a href="#accounts" class="nav-item" data-page="accounts">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
           <span class="nav-text">发件账号</span>
-        </button>
+        </a>
         <div class="sidebar-section-title">监控</div>
-        <button class="nav-item" data-page="logs">
+        <a href="#logs" class="nav-item" data-page="logs">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
           <span class="nav-text">发送日志</span>
-        </button>
-        <button class="nav-item" data-page="analytics">
+        </a>
+        <a href="#analytics" class="nav-item" data-page="analytics">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span>
           <span class="nav-text">数据分析</span>
-        </button>
+        </a>
         <div class="sidebar-section-title">系统</div>
-        <button class="nav-item" data-page="settings">
+        <a href="#settings" class="nav-item" data-page="settings">
           <span class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></span>
           <span class="nav-text">系统设置</span>
-        </button>
+        </a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-avatar">A</div>
@@ -435,7 +438,15 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         </div>
       </header>
 
-      <div class="main-inner" id="main-content"></div>
+      <div class="main-inner" id="main-content">
+        <section class="page-section active" id="page-dashboard" data-page="dashboard"></section>
+        <section class="page-section" id="page-users" data-page="users"></section>
+        <section class="page-section" id="page-providers" data-page="providers"></section>
+        <section class="page-section" id="page-accounts" data-page="accounts"></section>
+        <section class="page-section" id="page-logs" data-page="logs"></section>
+        <section class="page-section" id="page-analytics" data-page="analytics"></section>
+        <section class="page-section" id="page-settings" data-page="settings"></section>
+      </div>
     </div>
   </div>
   <div class="toast-container" id="toast-container"></div>
@@ -484,8 +495,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       document.getElementById('mainWrap').classList.add('expanded');
     }
     function refreshCurrentPage() {
-      var page = document.querySelector('.nav-item.active');
-      if (page && page.dataset.page) renderPage(page.dataset.page);
+      var section = (location.hash || '#dashboard').slice(1);
+      renderPage(section, true);
     }
 
     // ===== 自动刷新 =====
@@ -495,7 +506,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     var _arfEnabled = localStorage.getItem(ARF_KEY) !== '0'; // 默认开启
 
     // 仅这些页面有动态数据，值得自动刷新
-    var ARF_PAGES = { dashboard: 1, logs: 1, users: 1, providers: 1, accounts: 1 };
+    var ARF_PAGES = { dashboard: 1, logs: 1, users: 1, providers: 1, accounts: 1, analytics: 1 };
 
     function syncAutoRefreshUI() {
       var btn = document.getElementById('autoRefreshBtn');
@@ -527,43 +538,56 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       return true;
     }
 
-    function doAutoRefresh() {
+    var lastAutoRefreshAt = Date.now();
+
+    function refreshCurrentSection() {
+      var section = (location.hash || '#dashboard').slice(1);
+      if (!ARF_PAGES[section]) return;
       if (!_arfEnabled) return;
       if (!canAutoRefreshNow()) return;
-      var navEl = document.querySelector('.nav-item.active');
-      if (!navEl) return;
       try {
-        // 自动刷新要拿最新数据，强制跳过缓存
-        renderPage(navEl.dataset.page, true);
+        refreshPageInBackground(section);
       } catch (e) {
         console.warn('[autorefresh] render failed', e);
       }
     }
 
-    function restartAutoRefresh() {
-      if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
-      if (_arfEnabled) {
-        _arfTimer = setInterval(doAutoRefresh, ARF_INTERVAL);
-      }
+    function onPageVisible() {
+      if (document.visibilityState !== 'visible') return;
+      var now = Date.now();
+      if (now - lastAutoRefreshAt < 1000) return; // 1s debounce
+      lastAutoRefreshAt = now;
+      refreshCurrentSection();
     }
 
-    // 页面非可见时暂停，回来时立即刷新一次并重置计时
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) {
-        if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
-      } else {
-        doAutoRefresh();
-        restartAutoRefresh();
-      }
-    });
+    // Replace timer-based with visibility-based
+    document.removeEventListener('visibilitychange', onPageVisible); // prevent duplicates
+    window.removeEventListener('focus', onPageVisible);
+    document.addEventListener('visibilitychange', onPageVisible);
+    window.addEventListener('focus', onPageVisible);
+
+    // Visibility/focus based refresh only; avoids background polling while the user is away.
+    function restartAutoRefresh() {
+      if (_arfTimer) { clearInterval(_arfTimer); _arfTimer = null; }
+    }
 
     var API_BASE = '/v1';
-    var API_KEY = localStorage.getItem('teaven_admin_key') || '';
+    var legacyAdminKey = localStorage.getItem('teaven_admin_key') || '';
+    if (legacyAdminKey) {
+      sessionStorage.setItem('teaven_admin_key', legacyAdminKey);
+      localStorage.removeItem('teaven_admin_key');
+    }
+    var API_KEY = sessionStorage.getItem('teaven_admin_key') || '';
+    function hasAuth() {
+      return !!API_KEY || localStorage.getItem('teaven_has_session') === '1';
+    }
     var _accountsById = {};
     var _providersData = [];
+    var _usersData = [];
     var _adminLogPage = 0;
     var _adminLogLimit = 50;
     var _adminLogFilters = { status: '', category: '', q: '' };
+    var _analyticsDays = parseInt(localStorage.getItem('teaven_admin_analytics_days') || '30', 10) || 30;
 
     // 更新侧栏用户头像和昵称
     function updateSidebarUser() {
@@ -587,21 +611,22 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
 
     // 登出函数：清除 localStorage 并跳转到登录页
     function logout() {
+      sessionStorage.removeItem('teaven_admin_key');
       localStorage.removeItem('teaven_admin_key');
+      localStorage.removeItem('teaven_has_session');
       localStorage.removeItem('teaven_admin_name');
       localStorage.removeItem('teaven_admin_email');
-      location.reload();
+      fetch(API_BASE + '/setup/logout', { method: 'POST', credentials: 'same-origin' }).finally(function() { location.reload(); });
     }
 
     async function api(path, opts) {
       opts = opts || {};
+      var headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (API_KEY) headers.Authorization = 'Bearer ' + API_KEY;
       var res = await fetch(API_BASE + path, {
-        headers: {
-          'Authorization': 'Bearer ' + API_KEY,
-          'Content-Type': 'application/json',
-          ...opts.headers
-        },
-        ...opts
+        ...opts,
+        headers: headers,
+        credentials: 'same-origin'
       });
 
       var text = await res.text();
@@ -632,45 +657,109 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       return data;
     }
 
-    // ===== 数据缓存层（解决来回切换 tab 重复请求导致的卡顿）=====
-    // 内存缓存 + TTL，仅缓存 GET 请求。写操作（POST/PUT/DELETE）自动失效相关缓存。
+    // ===== 数据缓存层（两级 SWR：fresh -> stale+后台刷新 -> miss）=====
+    // 仅缓存 GET 请求。写操作（POST/PUT/DELETE）成功后自动失效相关缓存。
     var _apiCache = {};
-    var _API_CACHE_TTL = 30000; // 30 秒
-    // 路由 -> 需要失效的缓存 key 前缀列表（写操作触发）
+    var _pageRendered = {};
+    var _pageDirty = {};
+    var _preloadStarted = false;
+
+    // 路由 -> 所属页面 section
+    var _CACHE_SECTION_MAP = {
+      '/admin/stats': 'dashboard',
+      '/admin/tenants': 'users',
+      '/admin/providers': 'providers',
+      '/admin/accounts': 'accounts',
+      '/admin/logs': 'logs',
+      '/admin/analytics': 'analytics',
+      '/admin/settings': 'settings'
+    };
+    // 写操作路由 -> 需要失效的缓存前缀列表
     var _CACHE_INVALIDATE_MAP = {
-      '/admin/tenants': ['/admin/tenants', '/admin/stats'],
-      '/admin/providers': ['/admin/providers', '/admin/stats'],
-      '/admin/accounts': ['/admin/accounts', '/admin/stats'],
+      '/admin/tenants': ['/admin/tenants', '/admin/stats', '/admin/analytics'],
+      '/admin/providers': ['/admin/providers', '/admin/stats', '/admin/analytics'],
+      '/admin/accounts': ['/admin/accounts', '/admin/stats', '/admin/analytics'],
       '/admin/settings': ['/admin/settings']
     };
+    // 路由 -> 两级 TTL（毫秒）：fresh 内直接返回，stale 内返回旧数据+后台刷新
+    var _ROUTE_TTL = {
+      '/admin/stats':      { fresh: 15000, stale: 120000 },  // 统计：15s 鲜, 2s 旧
+      '/admin/analytics':  { fresh: 60000, stale: 300000 },  // 分析：60s 鲜, 5m 旧（10 查询很重）
+      '/admin/logs':       { fresh: 10000, stale: 60000 },   // 日志：10s 鲜, 1m 旧
+      '/admin/tenants':    { fresh: 30000, stale: 120000 },  // 用户：30s 鲜, 2m 旧
+      '/admin/providers':  { fresh: 30000, stale: 120000 },  // 通道：30s 鲜, 2m 旧
+      '/admin/accounts':   { fresh: 30000, stale: 120000 },  // 账号：30s 鲜, 2m 旧
+      '/admin/settings':   { fresh: 60000, stale: 300000 },  // 设置：60s 鲜, 5m 旧（很少变）
+    };
+    var _DEFAULT_TTL = { fresh: 30000, stale: 120000 };
 
-    function _cacheKey(path) {
-      // 去掉 query string 中的时间戳之类的不稳定参数由调用方保证；这里直接用 path
-      return path;
+    function _getRouteTTL(key) {
+      var matched = '';
+      Object.keys(_ROUTE_TTL).forEach(function(prefix) {
+        if (key.indexOf(prefix) === 0 && prefix.length > matched.length) matched = prefix;
+      });
+      return matched ? _ROUTE_TTL[matched] : _DEFAULT_TTL;
     }
 
-    async function apiCache(path, opts, ttl) {
+    function sectionForCacheKey(key) {
+      var matched = '';
+      Object.keys(_CACHE_SECTION_MAP).forEach(function(prefix) {
+        if (key.indexOf(prefix) === 0 && prefix.length > matched.length) matched = prefix;
+      });
+      return matched ? _CACHE_SECTION_MAP[matched] : '';
+    }
+
+    function markPagesDirtyForCache(prefix) {
+      Object.keys(_CACHE_SECTION_MAP).forEach(function(cachePrefix) {
+        if (!prefix || cachePrefix.indexOf(prefix) === 0 || prefix.indexOf(cachePrefix) === 0) {
+          _pageDirty[_CACHE_SECTION_MAP[cachePrefix]] = true;
+        }
+      });
+    }
+
+    // 后台 SWR 刷新（带 inflight 去重，避免并发重复请求）
+    function _revalidate(key, path, opts) {
+      var entry = _apiCache[key];
+      if (entry && entry.inflight) return; // 已有刷新在进行
+      var p = api(path, opts).then(function(data) {
+        _apiCache[key] = { t: Date.now(), data: data, inflight: null };
+        var section = sectionForCacheKey(key);
+        var currentSection = (location.hash || '#dashboard').slice(1);
+        if (section && section === currentSection) {
+          _pageDirty[section] = true;
+          renderPage(section);
+        }
+      }).catch(function() {
+        if (_apiCache[key]) _apiCache[key].inflight = null;
+      });
+      if (_apiCache[key]) _apiCache[key].inflight = p;
+    }
+
+    async function apiCache(path, opts) {
       opts = opts || {};
       var method = (opts.method || 'GET').toUpperCase();
-      // 非 GET 不走缓存
-      if (method !== 'GET') {
-        return api(path, opts);
-      }
-      var key = _cacheKey(path);
+      if (method !== 'GET') return api(path, opts);
+      var key = path;
       var now = Date.now();
       var entry = _apiCache[key];
-      if (entry && (now - entry.t) < (ttl || _API_CACHE_TTL)) {
+      var ttl = _getRouteTTL(key);
+      var age = entry ? now - entry.t : Infinity;
+
+      // Fresh：直接返回
+      if (entry && entry.data && age < ttl.fresh) {
         return entry.data;
       }
-      // 用 inflight 去重，避免短时间多次相同请求
-      if (entry && entry.inflight) {
-        return entry.inflight;
+      // Stale：返回旧数据，后台刷新
+      if (entry && entry.data && age < ttl.stale) {
+        _revalidate(key, path, opts);
+        return entry.data;
       }
+      // Miss：inflight 去重，否则发起新请求
+      if (entry && entry.inflight) return entry.inflight;
       var p = api(path, opts).then(function(data) {
         _apiCache[key] = { t: Date.now(), data: data, inflight: null };
         return data;
       }).catch(function(e) {
-        // 请求失败清除 inflight，保留旧缓存（如果有）
         if (_apiCache[key]) _apiCache[key].inflight = null;
         throw e;
       });
@@ -684,18 +773,18 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           delete _apiCache[k];
         }
       });
+      markPagesDirtyForCache(prefix);
     }
 
-    // 写操作后自动失效相关缓存
-    function apiMutate(path, opts) {
-      var method = (opts && opts.method || 'POST').toUpperCase();
-      // 找到对应的失效规则
+    // 写操作成功后才失效缓存（失败不失效，避免无谓刷新）
+    async function apiMutate(path, opts) {
+      var result = await api(path, opts);
       Object.keys(_CACHE_INVALIDATE_MAP).forEach(function(route) {
         if (path.indexOf(route) === 0) {
           _CACHE_INVALIDATE_MAP[route].forEach(function(p) { invalidateCache(p); });
         }
       });
-      return api(path, opts);
+      return result;
     }
 
     // ===== 骨架屏（切换瞬间立刻渲染页面骨架，避免白屏等待）=====
@@ -737,52 +826,155 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       };
       var el = document.createElement('div');
       el.className = 'toast toast-' + type;
-      el.innerHTML = (icons[type] || icons.info) + msg;
+      el.innerHTML = (icons[type] || icons.info);
+      var text = document.createElement('span');
+      text.textContent = msg || '';
+      el.appendChild(text);
       c.appendChild(el);
       setTimeout(function(){el.style.opacity='0';el.style.transform='translateX(100%)';el.style.transition='all .3s';setTimeout(function(){el.remove()},300)},3500);
     }
 
-    // 导航
-    document.querySelectorAll('.nav-item').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        renderPage(btn.dataset.page);
+    // ===== Hash 路由 (SPA Navigation) =====
+    var PAGE_TITLES = {dashboard:'仪表盘',users:'用户管理',providers:'发送通道',accounts:'发件账号',logs:'发送日志',analytics:'数据分析',settings:'系统设置'};
+    var PRELOAD_PAGES = ['dashboard', 'users', 'providers', 'accounts', 'settings'];
+    var DYNAMIC_PAGES = { dashboard: 1, logs: 1, analytics: 1 };
+
+    function normalizePage(page) {
+      return PAGE_TITLES[page] ? page : 'dashboard';
+    }
+
+    function pageSectionHtml() {
+      return Object.keys(PAGE_TITLES).map(function(page) {
+        return '<section class="page-section" id="page-' + page + '" data-page="' + page + '"></section>';
+      }).join('');
+    }
+
+    function ensurePageSections() {
+      var root = document.getElementById('main-content');
+      if (!root.querySelector('.page-section')) {
+        root.innerHTML = pageSectionHtml();
+      }
+      return root;
+    }
+
+    function getPageContainer(page) {
+      ensurePageSections();
+      return document.getElementById('page-' + page);
+    }
+
+    function setActivePageSection(page) {
+      ensurePageSections();
+      document.querySelectorAll('.page-section').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-page') === page);
       });
+    }
+
+    function cachePrefixesForPage(page) {
+      var prefixes = [];
+      Object.keys(_CACHE_SECTION_MAP).forEach(function(prefix) {
+        if (_CACHE_SECTION_MAP[prefix] === page) prefixes.push(prefix);
+      });
+      return prefixes;
+    }
+
+    function invalidatePageCache(page) {
+      cachePrefixesForPage(page).forEach(function(prefix) { invalidateCache(prefix); });
+    }
+
+    function setPageSkeleton(page, main) {
+      if (page === 'dashboard') main.innerHTML = skeleton({title:'全局总览',subtitle:'PLATFORM OVERVIEW',cards:4,lines:4});
+      else if (page === 'users') main.innerHTML = skeleton({title:'用户管理',subtitle:'USER MANAGEMENT',lines:5});
+      else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'PROVIDERS',lines:4});
+      else if (page === 'accounts') main.innerHTML = skeleton({title:'发件账号',subtitle:'SENDER ACCOUNTS MANAGEMENT',lines:5});
+      else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'GLOBAL MAIL DELIVERY LOGS',lines:8});
+      else if (page === 'analytics') main.innerHTML = skeleton({title:'数据分析',subtitle:'ANALYTICS',cards:4,lines:6});
+      else if (page === 'settings') main.innerHTML = skeleton({title:'系统设置',subtitle:'SYSTEM SETTINGS',lines:4});
+    }
+
+    function refreshPageInBackground(page) {
+      // 不失效缓存，让 apiCache 的两级 SWR 自行决定：fresh 直返，stale 后台刷新
+      _pageDirty[page] = true;
+      renderPage(page);
+    }
+
+    function preloadCorePages(activePage) {
+      if (_preloadStarted) return;
+      _preloadStarted = true;
+      PRELOAD_PAGES.forEach(function(page) {
+        if (page === activePage) return;
+        setTimeout(function() { renderPage(page); }, 0);
+      });
+    }
+
+    function showSection(section) {
+      section = normalizePage(section);
+      // Update hash without triggering event if needed
+      if (location.hash !== '#' + section) {
+        history.replaceState(null, '', '#' + section);
+      }
+      setActivePageSection(section);
+      // Switch active nav
+      document.querySelectorAll('.nav-item').forEach(function(el) {
+        el.classList.toggle('active', el.getAttribute('data-page') === section);
+      });
+      // Update breadcrumb
+      var bp = document.getElementById('breadcrumbPageAdm');
+      if (bp) bp.textContent = PAGE_TITLES[section] || section;
+      // Render page content
+      if (!_pageRendered[section] || _pageDirty[section]) {
+        renderPage(section);
+      } else {
+        // 已渲染页面：SWR 刷新（apiCache 自动决定 fresh 直返 / stale 后台刷新 / miss 拉取）
+        refreshPageInBackground(section);
+      }
+    }
+
+    // Nav click -> change hash
+    document.querySelector('.sidebar-nav').addEventListener('click', function(e) {
+      var link = e.target.closest('[data-page]');
+      if (!link) return;
+      e.preventDefault();
+      var page = link.getAttribute('data-page');
+      location.hash = '#' + page;
+    });
+
+    // Hash change -> show section
+    window.addEventListener('hashchange', function() {
+      showSection((location.hash || '#dashboard').slice(1));
     });
 
     function renderPage(page, forceFresh) {
+      page = normalizePage(page);
       var bp = document.getElementById('breadcrumbPageAdm');
       var names = {dashboard:'仪表盘',users:'用户管理',providers:'发送通道',accounts:'发件账号',logs:'发送日志',analytics:'数据分析',settings:'系统设置'};
       if (bp) bp.textContent = names[page] || page;
-      var main = document.getElementById('main-content');
-      // 自动刷新时不重新渲染骨架屏（避免闪烁），仅手动切换时显示骨架屏
-      if (!forceFresh) {
-        if (page === 'dashboard') main.innerHTML = skeleton({title:'全局总览',subtitle:'PLATFORM OVERVIEW',cards:4,lines:4});
-        else if (page === 'users') main.innerHTML = skeleton({title:'用户管理',subtitle:'USER MANAGEMENT',lines:5});
-        else if (page === 'providers') main.innerHTML = skeleton({title:'发送通道',subtitle:'PROVIDERS',lines:4});
-        else if (page === 'accounts') main.innerHTML = skeleton({title:'发件账号',subtitle:'SENDER ACCOUNTS MANAGEMENT',lines:5});
-        else if (page === 'logs') main.innerHTML = skeleton({title:'发送日志',subtitle:'GLOBAL MAIL DELIVERY LOGS',lines:8});
-        else if (page === 'settings') main.innerHTML = skeleton({title:'系统设置',subtitle:'SYSTEM SETTINGS',lines:4});
-      }
-      // 自动刷新强制失效该页相关缓存
+      var main = getPageContainer(page);
+      if (!forceFresh && _pageRendered[page] && !_pageDirty[page] && !DYNAMIC_PAGES[page]) return Promise.resolve();
+      // 首次进入显示骨架；已有内容的自动/后台刷新不闪屏。
+      if ((!_pageRendered[page] || !main.innerHTML) && !forceFresh) setPageSkeleton(page, main);
       if (forceFresh) {
-        if (page === 'dashboard') invalidateCache('/admin/stats');
-        else if (page === 'users') invalidateCache('/admin/tenants');
-        else if (page === 'providers') invalidateCache('/admin/providers');
-        else if (page === 'accounts') invalidateCache('/admin/accounts');
-        else if (page === 'logs') invalidateCache('/admin/logs');
-        else if (page === 'settings') invalidateCache('/admin/settings');
+        invalidatePageCache(page);
+        if (!_pageRendered[page] && !main.innerHTML) setPageSkeleton(page, main);
       }
+      var rendered;
       switch(page) {
-        case 'dashboard': renderOverview(main); break;
-        case 'users': renderUsers(main); break;
-        case 'providers': renderProviders(main); break;
-        case 'accounts': renderAllAccounts(main); break;
-        case 'logs': renderLogs(main); break;
-        case 'analytics': renderAnalytics(main); break;
-        case 'settings': renderSettings(main); break;
+        case 'dashboard': rendered = renderOverview(main); break;
+        case 'users': rendered = renderUsers(main); break;
+        case 'providers': rendered = renderProviders(main); break;
+        case 'accounts': rendered = renderAllAccounts(main); break;
+        case 'logs': rendered = renderLogs(main); break;
+        case 'analytics': rendered = renderAnalytics(main); break;
+        case 'settings': rendered = renderSettings(main); break;
       }
+      return Promise.resolve(rendered).then(function() {
+        _pageRendered[page] = true;
+        _pageDirty[page] = false;
+      }).catch(function(e) {
+        _pageDirty[page] = true;
+        if (!main.innerHTML) {
+          main.innerHTML = '<div style="max-width:480px;margin:100px auto;text-align:center"><div style="color:var(--danger);font-size:1.2rem;margin-bottom:16px">加载失败</div><div style="color:var(--text-muted);margin-bottom:24px">' + esc(e.message || String(e)) + '</div><button class="btn btn-primary" onclick="renderPage(\\'' + page + '\\', true)">重试</button></div>';
+        }
+      });
     }
 
     // 发送日志
@@ -880,6 +1072,19 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           if (e.key === 'Enter') applyAdminLogFilters();
         });
       }
+      prefetchLogPage(_adminLogPage - 1);
+      prefetchLogPage(_adminLogPage + 1);
+    }
+
+    // 预取相邻日志页（apiCache 自带 inflight 去重，无需额外缓存层）
+    function prefetchLogPage(page) {
+      if (page < 0) return;
+      var offset = page * _adminLogLimit;
+      var params = new URLSearchParams({ limit: String(_adminLogLimit), offset: String(offset) });
+      if (_adminLogFilters.status) params.set('status', _adminLogFilters.status);
+      if (_adminLogFilters.category) params.set('category', _adminLogFilters.category);
+      if (_adminLogFilters.q) params.set('q', _adminLogFilters.q);
+      apiCache('/admin/logs?' + params.toString()).catch(function() {});
     }
 
     function applyAdminLogFilters() {
@@ -889,12 +1094,14 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         q: document.getElementById('admin-log-q').value.trim()
       };
       _adminLogPage = 0;
+      invalidateCache('/admin/logs'); // 筛选条件变更，清空旧日志缓存
       renderPage('logs');
     }
 
     function resetAdminLogFilters() {
       _adminLogFilters = { status: '', category: '', q: '' };
       _adminLogPage = 0;
+      invalidateCache('/admin/logs');
       renderPage('logs');
     }
 
@@ -902,12 +1109,16 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       if (_adminLogPage > 0) {
         _adminLogPage--;
         renderPage('logs');
+        prefetchLogPage(_adminLogPage - 1);
+        prefetchLogPage(_adminLogPage + 1);
       }
     }
 
     function nextAdminLogPage() {
       _adminLogPage++;
       renderPage('logs');
+      prefetchLogPage(_adminLogPage - 1);
+      prefetchLogPage(_adminLogPage + 1);
     }
 
     function logStatusBadge(status) {
@@ -963,8 +1174,255 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         '<div style="font-size: .82rem; color: var(--text-primary); word-break: break-all;">' + valueHtml + '</div>' +
       '</div>';
     }
-    function renderAnalytics(main) {
-      main.innerHTML = '<div class=\"page-header\"><h1 class=\"page-title\">数据分析</h1><p class=\"page-subtitle\">ANALYTICS</p></div><div class=\"card\"><div class=\"empty-state\"><div class=\"empty-icon\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 3v18h18\"/><path d=\"m19 9-5 5-4-4-3 3\"/></svg></div><div class=\"empty-title\">功能开发中</div><div class=\"empty-desc\">数据分析功能即将上线，敬请期待。</div></div></div>';
+    async function renderAnalytics(main) {
+      var days = _analyticsDays;
+      var resp = await apiCache('/admin/analytics?days=' + days);
+      if (!resp.success) {
+        main.innerHTML = '<div style="max-width:480px;margin:100px auto;text-align:center"><div style="color:var(--danger);font-size:1.2rem;margin-bottom:16px">\u52a0\u8f7d\u5931\u8d25</div><div style="color:var(--text-muted);margin-bottom:24px">' + esc(resp.error || '') + '</div><button class="btn btn-primary" onclick="renderPage(\\'analytics\\')">\u91cd\u8bd5</button></div>';
+        return;
+      }
+      var d = resp.data;
+      var s = d.summary;
+      var r = d.range;
+      var daysOpts = [7, 30, 90, 365];
+
+      main.innerHTML = \`
+        <div class="page-header">
+          <h1 class="page-title">\u6570\u636e\u5206\u6790</h1>
+          <p class="page-subtitle">ANALYTICS</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left" style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:.82rem;color:var(--text-muted);font-weight:500">\u65f6\u95f4\u8303\u56f4\uff1a</span>
+            \${daysOpts.map(function(opt) {
+              return '<button class="btn ' + (opt === days ? 'btn-primary' : 'btn-secondary') + ' btn-sm" onclick="setAnalyticsDays(' + opt + ')">\u8fd1 ' + opt + ' \u5929</button>';
+            }).join('')}
+          </div>
+          <div class="toolbar-right">
+            <span style="font-size:.72rem;color:var(--text-muted);font-family:var(--font-mono)">\${esc(r.start_date)} ~ \${esc(r.end_date)}</span>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
+          <div class="stat-card">
+            <div class="stat-label">\u603b\u53d1\u9001</div>
+            <div class="stat-value orange">\${fmtNum(s.total)}</div>
+            <div class="stat-change">\u5c01\u90ae\u4ef6</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">\u6210\u529f\u7387</div>
+            <div class="stat-value green">\${s.success_rate}%</div>
+            <div class="stat-change">\${fmtNum(s.success)}/\${fmtNum(s.total - s.pending)} \u5df2\u5b8c\u6210</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">\u6d3b\u8dc3\u7528\u6237</div>
+            <div class="stat-value blue">\${fmtNum(s.active_users)}</div>
+            <div class="stat-change">\${fmtNum(r.days)}\u5929\u5185\u53d1\u4fe1\u7528\u6237</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">\u65e5\u5747\u53d1\u9001</div>
+            <div class="stat-value purple">\${fmtNum(s.avg_per_day)}</div>
+            <div class="stat-change">\u5c01/\u5929</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">\u5f85\u5904\u7406</div>
+            <div class="stat-value amber">\${fmtNum(s.queue_queued)}</div>
+            <div class="stat-change">\u961f\u5217\u4e2d \u00b7 \u5904\u7406\u4e2d: \${fmtNum(s.queue_processing)} \u00b7 \u5931\u8d25: \${fmtNum(s.queue_failed)}</div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:20px">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u6bcf\u65e5\u8d8b\u52bf</div>
+                <div class="card-subtitle">DAILY TREND</div>
+              </div>
+            </div>
+            <div class="card-body">
+              \${renderDailyChart(d.daily)}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u72b6\u6001\u5206\u5e03</div>
+                <div class="card-subtitle">STATUS BREAKDOWN</div>
+              </div>
+            </div>
+            <div class="card-body">
+              \${renderDonut(d.status_breakdown)}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:20px">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u5206\u7c7b\u7edf\u8ba1</div>
+                <div class="card-subtitle">CATEGORY BREAKDOWN</div>
+              </div>
+            </div>
+            <div class="card-body" style="padding:16px 20px">
+              \${renderRankTable(d.category_breakdown, 'category', '\u5206\u7c7b')}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u6700\u8fd1\u5931\u8d25</div>
+                <div class="card-subtitle">RECENT ERRORS</div>
+              </div>
+            </div>
+            <div class="card-body" style="padding:16px 20px">
+              \${d.recent_errors.length === 0 ? '<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:.82rem">\u6682\u65e0\u5931\u8d25\u8bb0\u5f55</div>' : renderErrorList(d.recent_errors)}
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-bottom:20px">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u7528\u6237\u6392\u884c</div>
+                <div class="card-subtitle">TOP USERS</div>
+              </div>
+            </div>
+            <div class="card-body" style="padding:16px 20px">
+              \${renderRankTable(d.top_users, 'name', '\u7528\u6237')}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u901a\u9053\u6392\u884c</div>
+                <div class="card-subtitle">TOP PROVIDERS</div>
+              </div>
+            </div>
+            <div class="card-body" style="padding:16px 20px">
+              \${renderRankTable(d.top_providers, 'name', '\u901a\u9053')}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">\u8d26\u53f7\u6392\u884c</div>
+                <div class="card-subtitle">TOP ACCOUNTS</div>
+              </div>
+            </div>
+            <div class="card-body" style="padding:16px 20px">
+              \${renderRankTable(d.top_accounts, 'name', '\u8d26\u53f7')}
+            </div>
+          </div>
+        </div>
+      \`;
+    }
+
+    function setAnalyticsDays(days) {
+      _analyticsDays = days;
+      localStorage.setItem('teaven_admin_analytics_days', String(days));
+      renderPage('analytics', true);
+    }
+
+    function fmtNum(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return String(n);
+    }
+
+    function renderDailyChart(daily) {
+      if (!daily || daily.length === 0) return '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.82rem">\u6682\u65e0\u6570\u636e</div>';
+      var maxTotal = 1;
+      daily.forEach(function(r) { if (r.total > maxTotal) maxTotal = r.total; });
+      var html = '<div class="simple-chart" style="height:160px">';
+      // \u663e\u793a\u4e2d\u95f4\u7684\u90e8\u5206\u8282\u70b9\uff0c\u9650\u5236\u6700\u591a 60 \u6746
+      var step = Math.max(1, Math.floor(daily.length / 55));
+      for (var i = 0; i < daily.length; i += step) {
+        var r = daily[i];
+        var pct = Math.max(3, (r.total / maxTotal) * 100);
+        var label = r.date ? r.date.substring(5) : '';
+        html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:10px">' +
+          '<div class="chart-value" style="position:static;transform:none;font-size:.58rem">' + r.total + '</div>' +
+          '<div class="chart-bar orange" style="height:' + pct.toFixed(0) + '%;width:100%"></div>' +
+          (daily.length <= 31 ? '<div class="chart-label" style="font-size:.55rem">' + esc(label) + '</div>' : '') +
+        '</div>';
+      }
+      html += '</div>';
+      html += '<div style="display:flex;gap:20px;justify-content:center;margin-top:8px;font-size:.7rem;color:var(--text-muted)">' +
+        '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--primary);vertical-align:middle;margin-right:4px"></span>\u6210\u529f: ' + fmtNum(daily.map(function(r){return r.success;}).reduce(function(a,b){return a+b;},0)) + '</span>' +
+        '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--danger);vertical-align:middle;margin-right:4px"></span>\u5931\u8d25: ' + fmtNum(daily.map(function(r){return r.failed;}).reduce(function(a,b){return a+b;},0)) + '</span>' +
+      '</div>';
+      return html;
+    }
+
+    function renderDonut(breakdown) {
+      if (!breakdown || breakdown.length === 0) return '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.82rem">\u6682\u65e0\u6570\u636e</div>';
+      var colors = { sent:'#f97316', delivered:'#059669', pending:'#d97706', failed:'#dc2626', bounced:'#7c3aed', spam:'#6b7280' };
+      var labels = { sent:'\u5df2\u53d1\u9001', delivered:'\u5df2\u9001\u8fbe', pending:'\u7b49\u5f85\u4e2d', failed:'\u5931\u8d25', bounced:'\u9000\u4fe1', spam:'\u5783\u573e\u90ae\u4ef6' };
+      var total = breakdown.reduce(function(acc, r){return acc + r.count;}, 0);
+      if (total === 0) return '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.82rem">\u6682\u65e0\u6570\u636e</div>';
+      var svgSize = 140;
+      var cx = svgSize / 2, cy = svgSize / 2, r2 = 56;
+      var circumference = 2 * Math.PI * r2;
+      var offset = 0;
+      var slices = '';
+      var legend = '<div class="donut-legend">';
+      breakdown.forEach(function(item) {
+        var pct = (item.count / total) * 100;
+        var len = (pct / 100) * circumference;
+        var color = colors[item.status] || '#9ca3af';
+        slices += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r2 + '" fill="none" stroke="' + color + '" stroke-width="20" stroke-dasharray="' + len + ' ' + (circumference - len) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" style="transition:all .3s"/>';
+        offset += len;
+        legend += '<div class="donut-legend-item"><span class="donut-legend-dot" style="background:' + color + '"></span>' + esc(labels[item.status] || item.status) + '<span class="donut-legend-value">' + fmtNum(item.count) + '</span></div>';
+      });
+      legend += '</div>';
+      return '<div class="donut-wrap"><div class="donut-svg"><svg width="' + svgSize + '" height="' + svgSize + '" viewBox="0 0 ' + svgSize + ' ' + svgSize + '">' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r2 + '" fill="none" stroke="var(--border)" stroke-width="20"/>' +
+        slices +
+        '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text-primary)">' + total + '</text>' +
+        '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="10" fill="var(--text-muted)">\u603b\u8ba1</text>' +
+      '</svg></div>' + legend + '</div>';
+    }
+
+    function renderRankTable(items, nameKey, nameLabel) {
+      if (!items || items.length === 0) return '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.82rem">\u6682\u65e0\u6570\u636e</div>';
+      var maxTotal = 1;
+      items.forEach(function(r) { if (r.total > maxTotal) maxTotal = r.total; });
+      var html = '';
+      items.forEach(function(r, idx) {
+        var pct = Math.max(5, (r.total / maxTotal) * 100);
+        html += '<div style="margin-bottom:12px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+            '<div style="font-size:.78rem;color:var(--text-primary);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' +
+              '<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:rgba(var(--primary-rgb),.12);color:var(--primary);text-align:center;line-height:18px;font-size:.65rem;font-weight:700;margin-right:6px">' + (idx + 1) + '</span>' +
+              esc(r[nameKey] || '-') +
+            '</div>' +
+            '<div style="font-size:.72rem;color:var(--text-muted);white-space:nowrap;margin-left:8px">' + fmtNum(r.total) + ' / ' + r.success_rate + '%</div>' +
+          '</div>' +
+          '<div style="height:4px;background:var(--bg-input);border-radius:4px;overflow:hidden">' +
+            '<div style="height:100%;width:' + pct.toFixed(0) + '%;background:linear-gradient(90deg,var(--primary),rgba(var(--primary-rgb),.4));border-radius:4px;transition:width .3s"></div>' +
+          '</div>' +
+        '</div>';
+      });
+      return html;
+    }
+
+    function renderErrorList(errors) {
+      var html = '';
+      errors.forEach(function(e) {
+        html += '<div style="padding:10px 12px;background:var(--bg-base);border:1px solid var(--border-light);border-radius:var(--radius-sm);margin-bottom:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+            '<div style="font-size:.78rem;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + esc(e.to_email || '') + '</div>' +
+            '<span class="badge badge-danger" style="font-size:.6rem;padding:1px 6px;margin-left:6px">' + esc(e.status || '') + '</span>' +
+          '</div>' +
+          '<div style="font-size:.7rem;color:var(--text-muted);margin-bottom:4px">' + esc(e.subject || '') + '</div>' +
+          '<div style="font-size:.68rem;color:var(--danger);font-family:var(--font-mono);word-break:break-all">' + esc(e.error_message || '') + '</div>' +
+          '<div style="font-size:.65rem;color:var(--text-muted);margin-top:4px">' + esc(formatLogTime(e.created_at)) + ' \u00b7 ' + esc(e.user_email || '-') + ' \u00b7 ' + esc(e.provider_name || '-') + ' \u00b7 ' + esc(e.account_email || '-') + '</div>' +
+        '</div>';
+      });
+      return html;
     }
     function renderSettings(main) {
       main.innerHTML = \`
@@ -1004,7 +1462,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         <div class="toolbar">
           <div class="toolbar-left"></div>
           <div class="toolbar-right">
-            <button class="btn btn-ghost" onclick="renderPage('settings')">重置</button>
+            <button class="btn btn-ghost" onclick="renderPage('settings', true)">重置</button>
             <button class="btn btn-primary" id="settings-save-btn" onclick="saveSettings()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               保存设置
@@ -1159,8 +1617,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         var resp = await apiMutate('/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
         if (resp.success) {
           toast('设置已保存');
-          invalidateCache('/admin/settings');
-          renderPage('settings', true);
+          renderPage('settings');
         } else {
           toast(resp.error || '保存失败', 'error');
         }
@@ -1274,6 +1731,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       } catch (e) {
         console.error('[renderUsers] Failed to load users:', e);
       }
+      _usersData = users;
 
       main.innerHTML = \`
         <div class="page-header">
@@ -1313,6 +1771,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
                   '</div>' +
                   '<div class="list-item-actions">' +
                     '<span class="badge ' + (t.status === 'active' ? 'badge-success' : 'badge-danger') + '">' + esc(t.status) + '</span>' +
+                    '<button class="btn btn-sm btn-ghost" data-tid="' + esc(t.id) + '" onclick="showEditUserModal(this.dataset.tid)">编辑</button>' +
                     '<button class="btn btn-sm btn-ghost" data-tid="' + esc(t.id) + '" data-tstatus="' + (t.status === 'active' ? 'disabled' : 'active') + '" onclick="toggleUser(this.dataset.tid, this.dataset.tstatus)">' + (t.status === 'active' ? '禁用' : '启用') + '</button>' +
                     '<button class="btn btn-sm btn-secondary" data-tid="' + esc(t.id) + '" onclick="impersonateUser(this.dataset.tid)">模拟登录</button>' +
                   '</div>' +
@@ -1328,6 +1787,57 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       await apiMutate('/admin/tenants/' + id, { method: 'PUT', body: JSON.stringify({ status: status }) });
       renderPage('users');
       toast('用户状态已更新');
+    }
+
+    // 编辑用户昵称
+    function showEditUserModal(id) {
+      var u = _usersData.find(function(x) { return x.id === id; });
+      if (!u) { toast('用户数据未找到', 'error'); return; }
+
+      var overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = '<div class="modal">' +
+        '<div class="modal-title">编辑用户</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">昵称</label>' +
+          '<input class="form-input" id="eu-name" maxlength="50" value="' + esc(u.name) + '" placeholder="如：张三">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">邮箱</label>' +
+          '<input class="form-input" value="' + esc(u.email) + '" disabled style="opacity: 0.6;">' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-ghost" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">取消</button>' +
+          '<button class="btn btn-primary" id="eu-save-btn">保存</button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+      overlay.querySelector('#eu-name').focus();
+      overlay.querySelector('#eu-name').select();
+
+      overlay.querySelector('#eu-save-btn').addEventListener('click', async function() {
+        var btn = this;
+        var name = overlay.querySelector('#eu-name').value.trim();
+        if (!name) { toast('昵称不能为空', 'error'); return; }
+        if (name === u.name) { overlay.remove(); return; }
+
+        btn.disabled = true;
+        try {
+          var resp = await apiMutate('/admin/tenants/' + id, { method: 'PUT', body: JSON.stringify({ name: name }) });
+          if (resp.success) {
+            overlay.remove();
+            renderPage('users');
+            toast('昵称已更新');
+          } else {
+            btn.disabled = false;
+            toast(resp.error || '更新失败', 'error');
+          }
+        } catch (e) {
+          btn.disabled = false;
+          toast('请求异常：' + e.message, 'error');
+        }
+      });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
 
     // 发送通道
@@ -1365,7 +1875,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             <div class="provider-grid">
               \${providers.map(function(p) {
                 var config = typeof p.config === 'string' ? JSON.parse(p.config) : p.config;
-                var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare: ' + (config.domain || ''));
+                var configInfo = p.type === 'smtp' ? 'SMTP: ' + config.host + ':' + config.port : (p.type === 'api' ? 'API: ' + (config.provider_name || 'Generic') : 'Cloudflare Email Sending: ' + (config.domain || ''));
                 return '<div class="provider-card">' +
                   '<div class="provider-header">' +
                     '<div class="provider-name">' + esc(p.name) + '</div>' +
@@ -1402,7 +1912,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(&#39;.modal-overlay&#39;))">' +
             '<option value="smtp">SMTP</option>' +
             '<option value="api">第三方 API</option>' +
-            '<option value="cloudflare_email">Cloudflare Email</option>' +
+            '<option value="cloudflare_email">Cloudflare Email Sending</option>' +
           '</select>' +
         '</div>' +
         '<div id="p-config-area"></div>' +
@@ -1447,7 +1957,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<select class="form-select" id="p-type" onchange="toggleProviderConfig(this.closest(&#39;.modal-overlay&#39;))">' +
             '<option value="smtp"' + (p.type === 'smtp' ? ' selected' : '') + '>SMTP</option>' +
             '<option value="api"' + (p.type === 'api' ? ' selected' : '') + '>第三方 API</option>' +
-            '<option value="cloudflare_email"' + (p.type === 'cloudflare_email' ? ' selected' : '') + '>Cloudflare Email</option>' +
+            '<option value="cloudflare_email"' + (p.type === 'cloudflare_email' ? ' selected' : '') + '>Cloudflare Email Sending</option>' +
           '</select>' +
         '</div>' +
         '<div id="p-config-area"></div>' +
@@ -1472,8 +1982,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div class="form-group" id="pc-accountid-group" style="display: ' + (config.provider_name === 'ahasend' ? 'block' : 'none') + ';"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" value="' + esc(config.account_id || '') + '" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key</label><input class="form-input" id="pc-apikey" type="password" placeholder="留空则不修改"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">已保存的 API Key 出于安全原因不显示，留空则保持原 Key 不变</div></div>';
       } else {
-        area.innerHTML = '<div class="form-group"><label class="form-label">域名 *</label><input class="form-input" id="pc-domain" value="' + esc(config.domain || '') + '" placeholder="example.com"></div>' +
-          '<div class="form-group"><label class="form-label">DKIM Selector</label><input class="form-input" id="pc-dkim" value="' + esc(config.dkim_selector || '') + '" placeholder="mailchannels"></div>';
+        area.innerHTML = '<div class="form-group"><label class="form-label">发送域名 *</label><input class="form-input" id="pc-domain" value="' + esc(config.domain || '') + '" placeholder="example.com"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">该域名必须已在 Cloudflare Email Sending 开通，并通过 wrangler 的 send_email binding 发送。</div></div>';
       }
 
       // 如果类型是 api 且是 ahasend，调整 URL/AccountID 显示
@@ -1531,8 +2040,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
           '<div class="form-group" id="pc-accountid-group" style="display: none;"><label class="form-label">Account ID *</label><input class="form-input" id="pc-accountid" placeholder="AhaSend Account ID"></div>' +
           '<div class="form-group"><label class="form-label">API Key *</label><input class="form-input" id="pc-apikey" type="password" placeholder="••••"></div>';
       } else {
-        area.innerHTML = '<div class="form-group"><label class="form-label">域名 *</label><input class="form-input" id="pc-domain" placeholder="example.com"></div>' +
-          '<div class="form-group"><label class="form-label">DKIM Selector</label><input class="form-input" id="pc-dkim" placeholder="mailchannels"></div>';
+        area.innerHTML = '<div class="form-group"><label class="form-label">发送域名 *</label><input class="form-input" id="pc-domain" placeholder="example.com"><div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">该域名必须已在 Cloudflare Email Sending 开通，并通过 wrangler 的 send_email binding 发送。</div></div>';
       }
     }
 
@@ -1577,9 +2085,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         return cfg;
       } else {
         var domain = overlay.querySelector('#pc-domain') ? overlay.querySelector('#pc-domain').value.trim() : '';
-        var dkim_selector = overlay.querySelector('#pc-dkim') ? overlay.querySelector('#pc-dkim').value.trim() : 'mailchannels';
         if (!domain) { toast('请填写域名', 'error'); return null; }
-        return { domain: domain, dkim_selector: dkim_selector };
+        return { domain: domain };
       }
     }
 
@@ -1659,7 +2166,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
 
-      api('/admin/providers').then(function(resp) {
+      apiCache('/admin/providers').then(function(resp) {
         var providers = resp.data || [];
         overlay.innerHTML = '<div class="modal">' +
           '<div class="modal-title">添加全局发件账号</div>' +
@@ -1752,7 +2259,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
 
-      api('/admin/providers').then(function(resp) {
+      apiCache('/admin/providers').then(function(resp) {
         var providers = resp.data || [];
         overlay.innerHTML = '<div class="modal" style="max-width: 500px;">' +
           '<div class="modal-title">编辑发件账号</div>' +
@@ -1946,8 +2453,6 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       var resp = await api('/admin/tenants/' + tid + '/impersonate', { method: 'POST' });
       if (!resp.success) { toast(resp.error, 'error'); return; }
 
-      var origKey = localStorage.getItem('teaven_admin_key') || '';
-
       var overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       overlay.innerHTML = '<div class="modal" style="border-color: var(--primary);">' +
@@ -1967,7 +2472,6 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
       document.body.appendChild(overlay);
 
       overlay.querySelector('#impersonate-switch-btn').addEventListener('click', function() {
-        localStorage.setItem('teaven_super_admin_key_backup', origKey);
         // 将被模拟用户的名称保存到 dashboard 的 localStorage，供侧栏显示
         localStorage.setItem('teaven_user_name', resp.data.user.name || '');
         localStorage.setItem('teaven_user_email', resp.data.user.email || '');
@@ -2080,7 +2584,12 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
             body: JSON.stringify({ email: email, password: password, name: 'Admin Login' })
           }).then(function(r2) { return r2.json(); }).then(function(resp2) {
             if (resp2.success) {
-              localStorage.setItem('teaven_admin_key', resp2.data.api_key.key);
+              // 将登录 Key 存入 sessionStorage，使后续请求带 Authorization 头，
+              // 避免在反代场景下因 Set-Cookie 未被正确转发而丢失会话
+              if (resp2.data && resp2.data.api_key && resp2.data.api_key.key) {
+                sessionStorage.setItem('teaven_admin_key', resp2.data.api_key.key);
+              }
+              localStorage.setItem('teaven_has_session', '1');
               location.reload();
             } else {
               toast('获取 API Key 失败: ' + (resp2.error || '未知错误'), 'error');
@@ -2103,7 +2612,8 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     function saveApiKey() {
       var key = document.getElementById('setup-key').value.trim();
       if (!key) { toast('请输入 API Key', 'error'); return; }
-      localStorage.setItem('teaven_admin_key', key);
+      sessionStorage.setItem('teaven_admin_key', key);
+      localStorage.removeItem('teaven_admin_key');
       location.reload();
     }
 
@@ -2145,7 +2655,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
         if (resp.success) {
           localStorage.setItem('teaven_admin_email', email);
           localStorage.setItem('teaven_admin_name', resp.data.user.name);
-          localStorage.setItem('teaven_admin_key', resp.data.api_key.key);
+          localStorage.setItem('teaven_has_session', '1');
           var main = document.getElementById('main-content');
           main.innerHTML = '<div class="card" style="max-width: 560px; margin: 80px auto; border-color: var(--success);">' +
             '<div style="text-align: center; margin-bottom: 32px;">' +
@@ -2153,7 +2663,7 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
               '<div style="font-size: 1.5rem; font-weight: 600;">初始化成功！</div>' +
             '</div>' +
             '<p style="color: var(--text-muted); margin-bottom: 8px;">账户: <strong>' + esc(resp.data.user.email) + '</strong></p>' +
-            '<p style="color: var(--text-muted); margin-bottom: 12px;">你的 API Key（<strong style="color: var(--danger);">已自动保存</strong>）：</p>' +
+            '<p style="color: var(--text-muted); margin-bottom: 12px;">你的 API Key（请保存；浏览器已通过 HttpOnly Cookie 登录）：</p>' +
             '<div class="code-block" style="margin-bottom: 24px;">' + esc(resp.data.api_key.key) + '</div>' +
             '<button class="btn btn-primary btn-lg" onclick="location.reload()" style="width: 100%;">进入后台</button>' +
           '</div>';
@@ -2164,7 +2674,12 @@ body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-pri
     }
 
     // 初始化
-    if (API_KEY) { updateSidebarUser(); renderPage('dashboard'); }
+    if (hasAuth()) {
+      updateSidebarUser();
+      var initialPage = normalizePage((location.hash || '#dashboard').slice(1));
+      showSection(initialPage);
+      preloadCorePages(initialPage);
+    }
     else { document.getElementById('main-content').innerHTML = setupPage(); }
     syncAutoRefreshUI();
     restartAutoRefresh();

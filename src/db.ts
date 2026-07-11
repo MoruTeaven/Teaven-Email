@@ -25,6 +25,12 @@ export function getDB(db: D1Database) {
       ).bind(user.id, user.name, user.email, user.password_hash, user.status, user.is_super_admin || 0).run();
     },
 
+    async updateUserPasswordHash(id: string, passwordHash: string): Promise<void> {
+      await db.prepare(
+        `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(passwordHash, id).run();
+    },
+
     async getUsersBySuperAdmin(): Promise<User[]> {
       const result = await db.prepare(
         'SELECT * FROM users WHERE status != ? ORDER BY created_at DESC'
@@ -200,7 +206,7 @@ export function getDB(db: D1Database) {
         `SELECT a.*,
            (SELECT COUNT(*) FROM mail_logs ml
             WHERE ml.account_id = a.id
-              AND ml.status IN ('sent','delivered')
+              AND ml.status IN ('pending','sent','delivered')
               AND date(ml.created_at) = date('now')) as sent_today
          FROM accounts a
          WHERE a.provider_id = ? AND a.enabled = 1
@@ -292,6 +298,10 @@ export function getDB(db: D1Database) {
     },
 
     async deleteTemplate(id: string, userId: string): Promise<void> {
+      // 先删除关联的版本记录，避免外键约束失败
+      await db.prepare(
+        'DELETE FROM template_versions WHERE template_id = ?'
+      ).bind(id).run();
       await db.prepare(
         'DELETE FROM templates WHERE id = ? AND user_id = ?'
       ).bind(id, userId).run();
@@ -324,13 +334,13 @@ export function getDB(db: D1Database) {
         `SELECT a.*,
            (SELECT COUNT(*) FROM mail_logs ml
             WHERE ml.account_id = a.id
-              AND ml.status IN ('sent','delivered')
+              AND ml.status IN ('pending','sent','delivered')
               AND date(ml.created_at) = date('now')) as sent_today
          FROM accounts a
          WHERE a.enabled = 1
            AND (SELECT COUNT(*) FROM mail_logs ml
                 WHERE ml.account_id = a.id
-                  AND ml.status IN ('sent','delivered')
+                   AND ml.status IN ('pending','sent','delivered')
                   AND date(ml.created_at) = date('now')) < a.daily_limit
            AND (',' || a.categories || ',') LIKE ?
          ORDER BY sent_today ASC`
@@ -348,6 +358,19 @@ export function getDB(db: D1Database) {
         log.account_id, log.category, log.to_email, log.subject, log.status,
         log.provider_response, log.error_message, log.retry_count
       ).run();
+    },
+
+    async reserveDailySendQuota(userId: string, date: string, limit: number): Promise<boolean> {
+      const result = await db.prepare(
+        `INSERT INTO daily_send_usage (id, user_id, date, count)
+         VALUES (?, ?, ?, 1)
+         ON CONFLICT(user_id, date) DO UPDATE SET
+           count = count + 1,
+           updated_at = datetime('now')
+         WHERE count < ?
+         RETURNING count`
+      ).bind(uuidv7(), userId, date, limit).all<{ count: number }>();
+      return result.results.length > 0;
     },
 
     async updateMailLogStatus(id: string, status: string, providerResponse?: string, errorMessage?: string): Promise<void> {

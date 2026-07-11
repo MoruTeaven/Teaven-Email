@@ -24,14 +24,12 @@ async function checkMaintenance(env: Env): Promise<Response | null> {
 }
 
 // 每用户每日发送上限检查（0 表示不限制）
-async function checkDailyLimit(env: Env, userId: string): Promise<Response | null> {
+async function reserveDailyQuota(env: Env, userId: string): Promise<Response | null> {
   const limit = await getIntSetting(env.DB, 'default_daily_limit_per_user', 0, 0);
   if (limit <= 0) return null;
   const today = new Date().toISOString().split('T')[0];
-  const row = await env.DB.prepare(
-    "SELECT COUNT(*) as c FROM mail_logs WHERE user_id = ? AND date(created_at) = ? AND status IN ('pending','sent','delivered')"
-  ).bind(userId, today).first<{ c: number }>();
-  if (row && row.c >= limit) {
+  const reserved = await getDB(env.DB).reserveDailySendQuota(userId, today, limit);
+  if (!reserved) {
     return new Response(JSON.stringify({
       success: false,
       error: `Daily sending limit reached (${limit})`,
@@ -48,23 +46,23 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   // 维护模式与每日上限检查
   const maintenanceResp = await checkMaintenance(c.env);
   if (maintenanceResp) return maintenanceResp;
-  const limitResp = await checkDailyLimit(c.env, auth.userId);
-  if (limitResp) return limitResp;
-
   let body: SendTemplateRequest;
   try {
     body = await c.req.json<SendTemplateRequest>();
-  } catch {
+  } catch (e) {
+    console.warn(JSON.stringify({ event: 'send-template.bad-json', userId: auth.userId, error: String(e) }));
     return c.json({ success: false, error: 'Invalid JSON body' }, 400);
   }
 
   // 验证必填字段
   if (!body.template || !body.to) {
+    console.warn(JSON.stringify({ event: 'send-template.missing-fields', userId: auth.userId, template: body.template, hasTo: !!body.to }));
     return c.json({ success: false, error: 'template and to are required' }, 400);
   }
 
   // 验证 email
   if (!isValidEmail(body.to)) {
+    console.warn(JSON.stringify({ event: 'send-template.invalid-email', userId: auth.userId, to: body.to }));
     return c.json({ success: false, error: 'Invalid email address' }, 400);
   }
 
@@ -82,6 +80,7 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
   // 验证变量
   const { valid, missing } = validateVariables(templateVars, body.variables || {});
   if (!valid) {
+    console.warn(JSON.stringify({ event: 'send-template.missing-variables', userId: auth.userId, template: body.template, provided: Object.keys(body.variables || {}), missing }));
     return c.json({
       success: false,
       error: `Missing variables: ${missing.join(', ')}`,
@@ -127,6 +126,9 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
       accountId = selected.id;
     }
   }
+
+  const limitResp = await reserveDailyQuota(c.env, auth.userId);
+  if (limitResp) return limitResp;
 
   // 查找发件账号
   let fromEmail = selected?.email || 'noreply@teaven.email';
@@ -195,9 +197,6 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   // 维护模式与每日上限检查
   const maintenanceResp = await checkMaintenance(c.env);
   if (maintenanceResp) return maintenanceResp;
-  const limitResp = await checkDailyLimit(c.env, auth.userId);
-  if (limitResp) return limitResp;
-
   let body: SendMailRequest;
   try {
     body = await c.req.json<SendMailRequest>();
@@ -240,6 +239,9 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
       accountId = selected.id;
     }
   }
+
+  const limitResp = await reserveDailyQuota(c.env, auth.userId);
+  if (limitResp) return limitResp;
 
   let fromEmail = selected?.email || 'noreply@teaven.email';
   let fromName: string | null = selected?.display_name || null;

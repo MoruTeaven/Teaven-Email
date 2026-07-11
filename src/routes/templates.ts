@@ -46,7 +46,6 @@ templateRouter.post('/', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
   const db = getDB(c.env.DB);
 
   let body: {
-    template_code: string;
     name: string;
     category?: string;
     subject: string;
@@ -59,30 +58,23 @@ templateRouter.post('/', authMiddleware(['MANAGE_TEMPLATE']), async (c) => {
     return c.json({ success: false, error: 'Invalid JSON body' }, 400);
   }
 
-  if (!body.template_code || !body.name || !body.subject || !body.html) {
+  if (!body.name || !body.subject || !body.html) {
     return c.json({
       success: false,
-      error: 'template_code, name, subject, and html are required',
+      error: 'name, subject, and html are required',
     }, 400);
-  }
-
-  // 检查 template_code 唯一性
-  const existing = await db.getTemplateByCode(auth.userId, body.template_code);
-  if (existing) {
-    return c.json({
-      success: false,
-      error: `Template code '${body.template_code}' already exists. Use a different code or create a new version.`,
-    }, 409);
   }
 
   // 提取变量
   const variables = extractVariables(body.html, body.subject);
 
   const templateId = uuidv7();
+  // 模板编号自动生成 UUIDv7，无需用户输入
+  const templateCode = uuidv7();
   const template: Omit<Template, 'created_at' | 'updated_at'> = {
     id: templateId,
     user_id: auth.userId,
-    template_code: body.template_code,
+    template_code: templateCode,
     name: body.name,
     category: (body.category as Template['category']) || 'SYSTEM',
     version: 1,
@@ -320,7 +312,7 @@ templateRouter.post('/:code/test-send', authMiddleware(['MANAGE_TEMPLATE', 'SEND
     subject,
     html,
     text: textContent,
-  });
+  }, c.env);
 
   // 记录到 mail_logs
   const mailLogId = uuidv7();

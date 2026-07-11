@@ -1,6 +1,6 @@
 // Teaven Email - API Key 管理路由
 import { Hono } from 'hono';
-import { authMiddleware, getAuth, generateApiKey, encryptApiKey, decryptApiKey, hashApiKey } from '../auth';
+import { authMiddleware, getAuth, generateApiKey, encryptApiKey, decryptApiKey, hashPassword, verifyPassword } from '../auth';
 import { getDB } from '../db';
 import { uuidv7 } from '../uuid';
 import type { Permission } from '../types';
@@ -53,11 +53,18 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
 
   // 验证权限
   const validPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
-  const permissions = body.permissions || ['SEND_MAIL'];
+  const permissions: Permission[] = body.permissions && body.permissions.length > 0 ? body.permissions : ['SEND_MAIL'];
   for (const p of permissions) {
     if (!validPermissions.includes(p)) {
       return c.json({ success: false, error: `Invalid permission: ${p}` }, 400);
     }
+  }
+
+  if (!auth.impersonated && !permissions.every(p => auth.permissions.includes(p))) {
+    return c.json({
+      success: false,
+      error: 'Cannot create an API key with permissions not held by the current key',
+    }, 403);
   }
 
   const { raw, hash, prefix } = await generateApiKey();
@@ -159,13 +166,12 @@ apiKeyRouter.post('/:id/reveal', authMiddleware(), async (c) => {
     return c.json({ success: false, error: 'User not found' }, 404);
   }
 
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(body.password));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  if (passwordHash !== user.password_hash) {
+  const passwordResult = await verifyPassword(body.password, user.password_hash);
+  if (!passwordResult.valid) {
     return c.json({ success: false, error: 'Invalid password' }, 401);
+  }
+  if (passwordResult.needsRehash) {
+    await db.updateUserPasswordHash(user.id, await hashPassword(body.password));
   }
 
   // 解密并返回

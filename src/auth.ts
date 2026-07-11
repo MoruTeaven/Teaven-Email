@@ -3,6 +3,11 @@ import { Context, Next } from 'hono';
 import { getDB } from './db';
 import type { AuthContext, Permission } from './types';
 
+const PASSWORD_HASH_ALGORITHM = 'pbkdf2_sha256';
+const PASSWORD_HASH_ITERATIONS = 100000;
+const PASSWORD_SALT_BYTES = 16;
+const PASSWORD_KEY_BYTES = 32;
+
 // 生成 API Key 哈希 (Web Crypto)
 export async function hashApiKey(apiKey: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -113,6 +118,80 @@ async function hmacVerify(data: string, signature: string, secret: string): Prom
   return crypto.subtle.verify('HMAC', key, sigBytes, stringToBytes(data));
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.slice(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function timingSafeEqualBytes(a: Uint8Array, b: Uint8Array): boolean {
+  let diff = a.length ^ b.length;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    diff |= (a[i] || 0) ^ (b[i] || 0);
+  }
+  return diff === 0;
+}
+
+async function legacySha256PasswordHash(password: string): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function derivePasswordHash(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password),
+    { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    keyMaterial,
+    PASSWORD_KEY_BYTES * 8
+  );
+  return new Uint8Array(bits);
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(PASSWORD_SALT_BYTES));
+  const hash = await derivePasswordHash(password, salt, PASSWORD_HASH_ITERATIONS);
+  return `${PASSWORD_HASH_ALGORITHM}$${PASSWORD_HASH_ITERATIONS}$${bytesToBase64(salt)}$${bytesToBase64(hash)}`;
+}
+
+export async function verifyPassword(password: string, storedHash: string): Promise<{ valid: boolean; needsRehash: boolean }> {
+  if (storedHash.startsWith(`${PASSWORD_HASH_ALGORITHM}$`)) {
+    try {
+      const [, iterationsRaw, saltRaw, hashRaw] = storedHash.split('$');
+      const iterations = parseInt(iterationsRaw, 10);
+      if (!iterations || !saltRaw || !hashRaw) return { valid: false, needsRehash: false };
+      const expected = base64ToBytes(hashRaw);
+      const actual = await derivePasswordHash(password, base64ToBytes(saltRaw), iterations);
+      const valid = timingSafeEqualBytes(actual, expected);
+      return {
+        valid,
+        needsRehash: valid && iterations < PASSWORD_HASH_ITERATIONS,
+      };
+    } catch {
+      return { valid: false, needsRehash: false };
+    }
+  }
+
+  const legacyHash = await legacySha256PasswordHash(password);
+  return {
+    valid: legacyHash === storedHash,
+    needsRehash: true,
+  };
+}
+
 export function getImpersonationSecret(env: { IMPERSONATION_SECRET?: string; JWT_SECRET?: string }): string {
   return env.IMPERSONATION_SECRET || env.JWT_SECRET || '';
 }
@@ -171,12 +250,26 @@ export function extractBearerToken(authHeader: string | undefined): string | nul
   return parts[1].trim();
 }
 
+export function extractAuthCookie(cookieHeader: string | undefined): string | null {
+  if (!cookieHeader) return null;
+  const cookies = cookieHeader.split(';');
+  for (const cookie of cookies) {
+    const idx = cookie.indexOf('=');
+    if (idx <= 0) continue;
+    const name = cookie.slice(0, idx).trim();
+    if (name !== 'teaven_auth') continue;
+    const value = cookie.slice(idx + 1).trim();
+    return value ? decodeURIComponent(value) : null;
+  }
+  return null;
+}
+
 // 认证中间件（支持 API Key 和模拟登录令牌）
 export function authMiddleware(requiredPermissions?: Permission[]) {
   return async (c: Context, next: Next) => {
     try {
       const authHeader = c.req.header('Authorization');
-      const token = extractBearerToken(authHeader);
+      const token = extractBearerToken(authHeader) || extractAuthCookie(c.req.header('Cookie'));
 
       if (!token) {
         return c.json({ success: false, error: 'Missing or invalid Authorization header' }, 401);
@@ -261,7 +354,7 @@ export function authMiddleware(requiredPermissions?: Permission[]) {
       await next();
     } catch (err) {
       console.error('[auth] authMiddleware error:', err);
-      return c.json({ success: false, error: 'Internal server error', message: err instanceof Error ? err.message : String(err) }, 500);
+      return c.json({ success: false, error: 'Internal server error' }, 500);
     }
   };
 }
@@ -271,7 +364,7 @@ export function superAdminMiddleware() {
   return async (c: Context, next: Next) => {
     try {
       const authHeader = c.req.header('Authorization');
-      const apiKey = extractApiKey(authHeader);
+      const apiKey = extractApiKey(authHeader) || extractAuthCookie(c.req.header('Cookie'));
 
       if (!apiKey) {
         return c.json({ success: false, error: 'Missing or invalid API key' }, 401);
@@ -308,7 +401,7 @@ export function superAdminMiddleware() {
       await next();
     } catch (err) {
       console.error('[auth] superAdminMiddleware error:', err);
-      return c.json({ success: false, error: 'Internal server error', message: err instanceof Error ? err.message : String(err) }, 500);
+      return c.json({ success: false, error: 'Internal server error' }, 500);
     }
   };
 }

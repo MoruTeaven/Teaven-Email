@@ -5,6 +5,7 @@ declare global {
   interface Env {
     DB: D1Database;
     KV: KVNamespace;
+    EMAIL: SendEmail;
     ENVIRONMENT: string;
     JWT_SECRET?: string;
     IMPERSONATION_SECRET?: string;
