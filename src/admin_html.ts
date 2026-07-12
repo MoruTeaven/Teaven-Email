@@ -136,7 +136,7 @@ a.nav-item{text-decoration:none}
 .card-footer{padding:20px 28px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:8px}
 
 /* Provider Grid & Cards */
-.provider-grid{display:grid;grid-template-columns:1fr;gap:16px}
+.provider-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
 .provider-card{padding:24px;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-base);transition:all .15s}
 .provider-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(var(--primary-rgb),.08)}
 .provider-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -342,7 +342,6 @@ a.nav-item{text-decoration:none}
 .sk::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skShimmer 1.2s infinite}
 [data-theme="dark"] .sk::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
 @keyframes skShimmer{100%{transform:translateX(100%)}}
-.list-item{padding:14px 16px}
   </style>
 </head>
 
@@ -1137,7 +1136,14 @@ a.nav-item{text-decoration:none}
 
     function formatLogTime(value) {
       if (!value) return '-';
-      return new Date(value).toLocaleString('zh-CN');
+      var d = new Date(value);
+      var Y = d.getFullYear();
+      var M = String(d.getMonth() + 1).padStart(2, '0');
+      var D = String(d.getDate()).padStart(2, '0');
+      var h = String(d.getHours()).padStart(2, '0');
+      var m = String(d.getMinutes()).padStart(2, '0');
+      var s = String(d.getSeconds()).padStart(2, '0');
+      return Y + '-' + M + '-' + D + ' ' + h + ':' + m + ':' + s;
     }
 
     async function showAdminLogDetail(id) {
@@ -1160,6 +1166,7 @@ a.nav-item{text-decoration:none}
           logDetailItem('重试次数', String(l.retry_count || 0)) +
         '</div>' +
         '<div class="form-group"><label class="form-label">主题</label><div class="code-block">' + esc(l.subject || '-') + '</div></div>' +
+        (l.request_params ? '<div class="form-group"><label class="form-label">传入参数</label><div class="code-block" style="font-size:.75rem;line-height:1.5;max-height:200px;overflow-y:auto;white-space:pre-wrap">' + esc(JSON.stringify(JSON.parse(l.request_params), null, 2)) + '</div></div>' : '') +
         (l.error_message ? '<div class="form-group"><label class="form-label">错误信息</label><div class="code-block" style="color: var(--danger);">' + esc(l.error_message) + '</div></div>' : '') +
         (l.provider_response ? '<div class="form-group"><label class="form-label">Provider 响应</label><div class="code-block">' + esc(l.provider_response) + '</div></div>' : '') +
         '<div class="modal-footer"><button class="btn btn-primary" onclick="this.closest(&#39;.modal-overlay&#39;).remove()">关闭</button></div>' +
@@ -1569,7 +1576,7 @@ a.nav-item{text-decoration:none}
           });
           html += '</div>'; // body
           if (latest) {
-            html += '<div class="settings-card-footer">最近更新：' + esc(latest) + '</div>';
+            html += '<div class="settings-card-footer">最近更新：' + esc(formatLogTime(latest)) + '</div>';
           }
           html += '</div>';
         });

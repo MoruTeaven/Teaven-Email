@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getImpersonationSecret, hashPassword } from '../../auth';
 import { getDB } from '../../db';
 import { uuidv7 } from '../../uuid';
-import { isValidEmail } from '../../utils';
+import { isValidEmail, convertDBTimestamp } from '../../utils';
 import { invalidateAdminCache } from './common';
 import type { Permission } from '../../types';
 
@@ -23,12 +23,20 @@ router.get('/tenants', superAdminMiddleware(), async (c) => {
 
   try {
     const rows = await c.env.DB.prepare(queryWithAutoCreated).all();
-    return c.json({ success: true, data: rows.results });
+    const data = rows.results.map((r: Record<string, unknown>) => {
+      if (r.created_at) r.created_at = convertDBTimestamp(r.created_at as string);
+      return r;
+    });
+    return c.json({ success: true, data });
   } catch (err) {
     if (err instanceof Error && (err.message.includes('auto_created') || err.message.includes('no such column'))) {
       console.warn('[admin] auto_created column missing, falling back to unfiltered query. Run migration 005.');
       const rows = await c.env.DB.prepare(queryFallback).all();
-      return c.json({ success: true, data: rows.results });
+      const data = rows.results.map((r: Record<string, unknown>) => {
+        if (r.created_at) r.created_at = convertDBTimestamp(r.created_at as string);
+        return r;
+      });
+      return c.json({ success: true, data });
     }
     throw err;
   }
@@ -38,6 +46,7 @@ router.get('/tenants/:id', superAdminMiddleware(), async (c) => {
   const id = c.req.param('id')!;
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
   if (!user) return c.json({ success: false, error: 'User not found' }, 404);
+  if (user.created_at) user.created_at = convertDBTimestamp(user.created_at as string);
   return c.json({ success: true, data: user });
 });
 

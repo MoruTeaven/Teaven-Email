@@ -1,13 +1,13 @@
 // Teaven Email - 模板引擎 (零依赖，兼容 Cloudflare Workers CSP)
 // 不使用任何依赖 new Function() 的库，纯字符串替换
 
-import { htmlToText } from './utils';
+import { htmlToText, toLocalISOString } from './utils';
 
 // 内置 helper 函数（与之前 Handlebars 注册的 helpers 行为一致）
 const builtinHelpers: Record<string, (...args: string[]) => string> = {
   uppercase: (str: string) => (typeof str === 'string' ? str.toUpperCase() : str),
   lowercase: (str: string) => (typeof str === 'string' ? str.toLowerCase() : str),
-  date: () => new Date().toISOString(),
+  date: () => toLocalISOString(),
   currentYear: () => new Date().getFullYear().toString(),
 };
 

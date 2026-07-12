@@ -135,6 +135,7 @@ export interface MailLog {
   provider_response: string | null;
   error_message: string | null;
   retry_count: number;
+  request_params: string | null;
   created_at: string;
 }
 

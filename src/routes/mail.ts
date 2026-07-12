@@ -7,7 +7,7 @@ import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
 import { uuidv7 } from '../uuid';
 import { isMaintenanceMode, getSetting, getIntSetting } from '../settings';
-import { isValidEmail, htmlToText } from '../utils';
+import { isValidEmail, htmlToText, getLocalDateString, convertDBTimestamp } from '../utils';
 import type { SendTemplateRequest, SendMailRequest, MailLog, MailQueueItem } from '../types';
 
 const mailRouter = new Hono<{ Bindings: Env }>();
@@ -28,7 +28,7 @@ async function checkMaintenance(env: Env): Promise<Response | null> {
 async function reserveDailyQuota(env: Env, userId: string): Promise<Response | null> {
   const limit = await getIntSetting(env.DB, 'default_daily_limit_per_user', 0, 0);
   if (limit <= 0) return null;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const reserved = await getDB(env.DB).reserveDailySendQuota(userId, today, limit);
   if (!reserved) {
     return new Response(JSON.stringify({
@@ -137,6 +137,7 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
 
   // 创建邮件日志
   const mailLogId = uuidv7();
+  const requestParams = JSON.stringify({ template: body.template, to: body.to, category: body.category, version: body.version, variables: body.variables });
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -151,6 +152,7 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
     provider_response: null,
     error_message: null,
     retry_count: 0,
+    request_params: requestParams,
   };
   await db.createMailLog(mailLog);
 
@@ -248,6 +250,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   let fromName: string | null = selected?.display_name || null;
 
   const mailLogId = uuidv7();
+  const requestParams = JSON.stringify({ to: body.to, subject: body.subject, category: body.category, html: body.html ? '***' : undefined, text: body.text ? '***' : undefined });
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -262,6 +265,7 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     provider_response: null,
     error_message: null,
     retry_count: 0,
+    request_params: requestParams,
   };
   await db.createMailLog(mailLog);
 
@@ -308,6 +312,7 @@ mailRouter.get('/logs', authMiddleware(['READ_LOG']), async (c) => {
   const offset = parseInt(c.req.query('offset') || '0');
 
   const logs = await db.getMailLogs(auth.userId, limit, offset);
+  logs.forEach(l => { l.created_at = convertDBTimestamp(l.created_at) as string; });
 
   return c.json({ success: true, data: logs });
 });
@@ -324,6 +329,8 @@ mailRouter.get('/logs/:id', authMiddleware(['READ_LOG']), async (c) => {
   if (!log) {
     return c.json({ success: false, error: 'Mail log not found' }, 404);
   }
+
+  log.created_at = convertDBTimestamp(log.created_at) as string;
 
   return c.json({ success: true, data: log });
 });

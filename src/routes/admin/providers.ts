@@ -225,7 +225,7 @@ router.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
     '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563; width: 100px;">账号名称</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + escapeHtml(account.name) + '</td></tr>' +
     '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发件邮箱</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + escapeHtml(account.email) + '</td></tr>' +
     '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发送通道</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + escapeHtml(provider.name) + ' (' + escapeHtml(provider.type) + ')</td></tr>' +
-    '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发送时间</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + new Date().toISOString() + '</td></tr>' +
+    '<tr><td style="padding: 10px 16px; background: #f9fafb; font-weight: 600; font-size: 13px; color: #4b5563;">发送时间</td><td style="padding: 10px 16px; font-size: 14px; color: #1f2937;">' + new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) + '</td></tr>' +
   '</table>' +
   '<div style="margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px;">' +
     '<p style="margin: 0; font-size: 14px; color: #059669;">如果你收到了这封邮件，说明发件账号 <strong>' + escapeHtml(account.name) + '</strong> 配置正确，可以正常使用。</p>' +

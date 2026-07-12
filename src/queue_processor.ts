@@ -7,6 +7,7 @@ import { getDB } from './db';
 import { sendWithRetry } from './mailer';
 import { getSetting } from './settings';
 import type { EmailProvider, MailQueueItem } from './types';
+import { getLocalDateString } from './utils';
 
 const QUEUE_BATCH_SIZE = 10;
 const PROCESSING_LEASE_SECONDS = 15 * 60;
@@ -119,7 +120,7 @@ export async function processQueue(env: Env): Promise<{ processed: number; faile
         await db.updateMailLogStatus(item.mail_log_id, 'sent', result.providerResponse);
 
         // 更新每日统计
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         await db.upsertDailyStats(item.user_id, today, 'sent');
 
         // 触发 Webhook
@@ -162,7 +163,7 @@ async function recordQueueFailure(
     await db.updateQueueItemStatus(item.id, 'failed', errorMessage);
     await db.updateMailLogStatus(item.mail_log_id, 'failed', providerResponse, errorMessage);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     await db.upsertDailyStats(item.user_id, today, 'failed');
 
     await triggerWebhooks(env, item.user_id, 'failed', item);

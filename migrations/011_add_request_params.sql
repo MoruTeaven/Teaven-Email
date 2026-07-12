@@ -1,0 +1,1 @@
+ALTER TABLE mail_logs ADD COLUMN request_params TEXT;

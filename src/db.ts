@@ -351,12 +351,12 @@ export function getDB(db: D1Database) {
     // ============ Mail Logs ============
     async createMailLog(log: Omit<MailLog, 'created_at'>): Promise<void> {
       await db.prepare(
-        `INSERT INTO mail_logs (id, user_id, api_key_id, template_id, provider_id, account_id, category, to_email, subject, status, provider_response, error_message, retry_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO mail_logs (id, user_id, api_key_id, template_id, provider_id, account_id, category, to_email, subject, status, provider_response, error_message, retry_count, request_params)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         log.id, log.user_id, log.api_key_id, log.template_id, log.provider_id,
         log.account_id, log.category, log.to_email, log.subject, log.status,
-        log.provider_response, log.error_message, log.retry_count
+        log.provider_response, log.error_message, log.retry_count, log.request_params
       ).run();
     },
 

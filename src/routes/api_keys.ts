@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { authMiddleware, getAuth, generateApiKey, encryptApiKey, decryptApiKey, hashPassword, verifyPassword } from '../auth';
 import { getDB } from '../db';
 import { uuidv7 } from '../uuid';
+import { convertDBTimestamp } from '../utils';
 import type { Permission } from '../types';
 
 const apiKeyRouter = new Hono<{ Bindings: Env }>();
@@ -25,8 +26,8 @@ apiKeyRouter.get('/', authMiddleware(), async (c) => {
     permissions: typeof k.permissions === 'string' ? JSON.parse(k.permissions) : k.permissions,
     enabled: k.enabled,
     encrypted: !!k.api_key_encrypted,
-    last_used_at: k.last_used_at,
-    created_at: k.created_at,
+    last_used_at: convertDBTimestamp(k.last_used_at),
+    created_at: convertDBTimestamp(k.created_at),
   }));
 
   return c.json({ success: true, data: safeKeys });

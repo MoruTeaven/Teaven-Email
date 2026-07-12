@@ -2,6 +2,8 @@
 import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
+import { getLocalDateString, convertDBTimestamp } from '../utils';
+import { extract } from './admin/common';
 import type { Template, EmailProvider, Account, ApiKey } from '../types';
 
 const dashboardRouter = new Hono<{ Bindings: Env }>();
@@ -41,7 +43,7 @@ dashboardRouter.get('/overview', authMiddleware(), async (c) => {
   interface DailyStatsRow { date: string; total_sent: number; total_delivered: number; total_failed: number; total_bounced: number; [key: string]: unknown; }
   const typedStats = stats as DailyStatsRow[];
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const todayRow = typedStats.find(s => s.date === today);
   const todayStats = {
     sent: todayRow?.total_sent ?? 0,
@@ -72,7 +74,7 @@ dashboardRouter.get('/profile', authMiddleware(), async (c) => {
   if (!user) return c.json({ success: false, error: 'User not found' }, 404);
   return c.json({
     success: true,
-    data: { id: user.id, name: user.name, email: user.email, is_super_admin: user.is_super_admin, created_at: user.created_at },
+    data: { id: user.id, name: user.name, email: user.email, is_super_admin: user.is_super_admin, created_at: convertDBTimestamp(user.created_at) },
   });
 });
 

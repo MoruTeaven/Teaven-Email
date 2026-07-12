@@ -15,8 +15,98 @@ import { getDB } from './db';
 import { superAdminMiddleware } from './auth';
 import { getDashboardHTML } from './dashboard_html';
 import { getAdminHTML } from './admin_html';
+import { isValidEmail, escapeHtml, htmlToText, toLocalISOString } from './utils';
 
 const app = new Hono<{ Bindings: Env }>();
+
+// 全局请求日志 — 记录所有请求（含失败的、未认证的），便于排查问题
+// 必须放在 CORS 等中间件之前，确保 OPTIONS 和认证失败的请求也被记录
+app.use('*', async (c, next) => {
+  const start = Date.now();
+  const requestId = crypto.randomUUID();
+
+  const method = c.req.method;
+  const path = c.req.path;
+  const queryString = c.req.url.includes('?') ? new URL(c.req.url).search.slice(1) : null;
+  const authHeader = c.req.header('Authorization');
+  const contentType = c.req.header('Content-Type');
+  const userAgent = c.req.header('User-Agent');
+  const cfIp = c.req.header('CF-Connecting-IP');
+
+  let authInfo: string;
+  if (authHeader) {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') {
+      const token = parts[1];
+      if (token.startsWith('sk_')) {
+        authInfo = `sk_${token.substring(3, 10)}...`;
+      } else if (token.startsWith('imp_')) {
+        authInfo = 'imp_***';
+      } else {
+        authInfo = 'bearer_***';
+      }
+    } else {
+      authInfo = 'invalid_format';
+    }
+  } else {
+    authInfo = 'none';
+  }
+
+  let bodySnapshot: string | null = null;
+  if (['POST', 'PUT', 'PATCH'].includes(method)) {
+    try {
+      const cloned = c.req.raw.clone();
+      const text = await cloned.text();
+      if (text) {
+        let masked = text;
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed === 'object') {
+            const sensitiveFields = ['password', 'api_key', 'secret', 'code', 'authorization', 'apiKey'];
+            for (const field of sensitiveFields) {
+              if (parsed[field] !== undefined) {
+                parsed[field] = '***';
+              }
+            }
+            masked = JSON.stringify(parsed);
+          }
+        } catch {
+          // non-JSON body, just truncate
+        }
+        bodySnapshot = masked.length > 500 ? `${masked.substring(0, 500)}...` : masked;
+      }
+    } catch {
+      // ignore body read errors
+    }
+  }
+
+  console.log(JSON.stringify({
+    event: 'request',
+    requestId,
+    method,
+    path,
+    query: queryString || null,
+    auth: authInfo,
+    contentType: contentType || null,
+    userAgent: userAgent || null,
+    ip: cfIp || null,
+    body: bodySnapshot,
+  }));
+
+  await next();
+
+  const duration = Date.now() - start;
+  const status = c.res.status;
+
+  console.log(JSON.stringify({
+    event: 'response',
+    requestId,
+    method,
+    path,
+    status,
+    duration,
+  }));
+});
 
 // CORS 配置
 app.use('*', cors({
@@ -38,7 +128,7 @@ app.get('/', (c) => {
     name: 'Teaven Email',
     version: '1.0.0',
     status: 'running',
-    timestamp: new Date().toISOString(),
+    timestamp: toLocalISOString(),
   });
 });
 

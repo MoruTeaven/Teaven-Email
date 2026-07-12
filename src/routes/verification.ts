@@ -9,7 +9,7 @@ import { sendWithRetry, selectAccount } from '../mailer';
 import { processQueue } from '../queue_processor';
 import { uuidv7 } from '../uuid';
 import { isMaintenanceMode, getSetting, getIntSetting } from '../settings';
-import { isValidEmail, htmlToText } from '../utils';
+import { isValidEmail, htmlToText, getLocalDateString } from '../utils';
 import type { SendCodeRequest, VerifyCodeRequest, MailLog, MailQueueItem, VerificationCode } from '../types';
 
 const verificationRouter = new Hono<{ Bindings: Env }>();
@@ -327,7 +327,7 @@ function generateNumericCode(length: number): string {
 async function reserveDailyQuota(env: Env, userId: string): Promise<Response | null> {
   const limit = await getIntSetting(env.DB, 'default_daily_limit_per_user', 0, 0);
   if (limit <= 0) return null;
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const reserved = await getDB(env.DB).reserveDailySendQuota(userId, today, limit);
   if (!reserved) {
     return new Response(JSON.stringify({

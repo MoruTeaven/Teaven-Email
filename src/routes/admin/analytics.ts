@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { superAdminMiddleware } from '../../auth';
-import { _statsCache, _analyticsCache, STATS_CACHE_TTL, ANALYTICS_CACHE_TTL } from './common';
+import { _statsCache, _analyticsCache, STATS_CACHE_TTL, ANALYTICS_CACHE_TTL, getIntSetting, extract } from './common';
+import { getLocalDateString, convertDBTimestamp } from '../../utils';
 import type { MailStatus } from '../../types';
 
 const router = new Hono<{ Bindings: Env }>();
@@ -125,7 +126,7 @@ router.get('/stats', superAdminMiddleware(), async (c) => {
     return c.json({ success: true, data: cached.data });
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const [userCount, providerCount, accountCount, templateCount, mailCount, todayMails] = await Promise.all([
     c.env.DB.prepare("SELECT COUNT(*) as c FROM users WHERE status != 'deleted'").first<{ c: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as c FROM providers').first<{ c: number }>(),
@@ -408,9 +409,14 @@ router.get('/logs', superAdminMiddleware(), async (c) => {
     countPromise,
   ]);
 
+  const resultRows = rows.results;
+  for (const row of resultRows) {
+    if (row.created_at) row.created_at = convertDBTimestamp(row.created_at as string) as string;
+  }
+
   return c.json({
     success: true,
-    data: rows.results,
+    data: resultRows,
     meta: { total: countRow?.total || 0, limit, offset },
   });
 });
@@ -433,6 +439,7 @@ router.get('/logs/:id', superAdminMiddleware(), async (c) => {
   ).bind(id).first();
 
   if (!row) return c.json({ success: false, error: 'Mail log not found' }, 404);
+  if (row.created_at) row.created_at = convertDBTimestamp(row.created_at as string) as string;
   return c.json({ success: true, data: row });
 });
 
