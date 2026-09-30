@@ -346,3 +346,23 @@ Authorization: Bearer sk_super_admin_api_key
 ```
 
 该内部端点仅接受超级管理员 API Key；Cron Trigger 和发信请求中的后台触发不经过公开 HTTP 端点。队列处理会原子领取 `queued` 记录，并为 `processing` 记录设置 15 分钟租约，超时后自动回到 `queued` 防止卡死。
+
+## 运行时密钥（fail-fast，必读）
+
+本服务需要**两把相互独立**的密钥，且不允许任何默认值：
+
+| 密钥 | 用途 | 要求 |
+|---|---|---|
+| `JWT_SECRET` | API Key 与服务商凭据的 AES-256-GCM 加密 | ≥32 字节随机串，禁止占位值 |
+| `IMPERSONATION_SECRET` | 管理员模拟登录令牌 `imp_` 的 HMAC-SHA256 签名 | ≥32 字节随机串，**不得与 `JWT_SECRET` 相同或为其前缀** |
+
+```bash
+node -p "require('crypto').randomBytes(48).toString('base64url')"   # 执行两次，得到两个不同值
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put IMPERSONATION_SECRET
+npx wrangler deploy
+```
+
+缺失、过弱、或两把密钥复用时：HTTP 入口返回 `503`，Cron / 队列处理直接抛错失败（绝不静默用空串加密或签发）。
+校验逻辑集中在 `src/secrets.ts`；新增代码取密钥一律用 `getJwtSecret(env)` / `getImpersonationSecret(env)`，
+不要写 `env.JWT_SECRET || ''`。背景与审计细节见 `docs/security-H3-fail-fast.md`。

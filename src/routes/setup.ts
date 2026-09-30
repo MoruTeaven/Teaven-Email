@@ -3,6 +3,7 @@
 import { Hono } from 'hono';
 import { getDB } from '../db';
 import { generateApiKey, encryptApiKey, hashPassword, verifyPassword } from '../auth';
+import { getJwtSecret } from '../secrets';
 import { uuidv7 } from '../uuid';
 import { getIntSetting } from '../settings';
 import { isValidEmail } from '../utils';
@@ -79,7 +80,8 @@ setupRouter.post('/init', async (c) => {
   const apiKeyId = uuidv7();
 
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
-  const secret = c.env.JWT_SECRET || '';
+  // [H-3] 缺失即抛错：注册首位超管时若没有 JWT_SECRET，宁可失败也不要写下无法解密的记录
+  const secret = getJwtSecret(c.env);
 
   await db.createApiKey({
     id: apiKeyId,
@@ -87,7 +89,8 @@ setupRouter.post('/init', async (c) => {
     name: 'Admin Key',
     api_key_hash: hash,
     api_key_prefix: prefix,
-    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
+    // [H-3] 去掉静默降级三元，加密失败即请求失败
+    api_key_encrypted: await encryptApiKey(raw, secret),
     permissions: allPermissions,
     enabled: 1,
     auto_created: 0,
@@ -224,7 +227,8 @@ setupRouter.post('/key-from-password', async (c) => {
     const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
     const { raw, hash, prefix } = await generateApiKey();
     const apiKeyId = uuidv7();
-    const secret = c.env.JWT_SECRET || '';
+    // [H-3] 登录自动建 Key 也必须有真实密钥：空串派生的 AES 密钥可被离线复现
+    const secret = getJwtSecret(c.env);
     const ttlHours = await getIntSetting(c.env.DB, 'auto_api_key_ttl_hours', 1, 24);
 
     await db.createApiKey({
@@ -233,7 +237,8 @@ setupRouter.post('/key-from-password', async (c) => {
       name: body.name || 'Login Key',
       api_key_hash: hash,
       api_key_prefix: prefix,
-      api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
+      // [H-3] 去掉静默降级三元
+      api_key_encrypted: await encryptApiKey(raw, secret),
       permissions: allPermissions,
       enabled: 1,
       auto_created: 1,

@@ -6,6 +6,7 @@
 import { getDB } from './db';
 import { sendWithRetry } from './mailer';
 import { getSetting } from './settings';
+import { assertRuntimeSecrets, resolveWebhookSigningSecret } from './secrets';
 import type { EmailProvider, MailQueueItem } from './types';
 import { getLocalDateString } from './utils';
 
@@ -14,6 +15,8 @@ const PROCESSING_LEASE_SECONDS = 15 * 60;
 type QueueDB = ReturnType<typeof getDB>;
 
 export async function processQueue(env: Env): Promise<{ processed: number; failed: number }> {
+  // [H-3] 队列处理会解密服务商凭据（JWT_SECRET）并投递 webhook，属于密钥消费入口：缺失即抛错。
+  assertRuntimeSecrets(env);
   const db = getDB(env.DB);
   let processed = 0;
   let failed = 0;
@@ -204,28 +207,32 @@ async function triggerWebhooks(
         timestamp: new Date().toISOString(),
       });
 
-      const encoder = new TextEncoder();
-      const keyData = encoder.encode(wh.secret || '');
-      const bodyData = encoder.encode(body);
-      const cryptoKey = await crypto.subtle.importKey(
-        'raw', keyData, { name: 'HMAC', hash: 'SHA-256' },
-        false, ['sign']
-      );
-      const signature = await crypto.subtle.sign('HMAC', cryptoKey, bodyData);
-      const signatureHex = Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0')).join('');
+      // [H-3] 空密钥会被 WebCrypto 以 DataError 拒绝，旧写法 `wh.secret || ''` 会让整条投递
+      // 静默失败（catch 里什么都不做）。现在：未配置 secret 就显式跳过签名头，并留下可排查的日志。
+      const signingSecret = resolveWebhookSigningSecret(wh.secret);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Webhook-Event': event,
+      };
 
-      await fetch(wh.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Webhook-Event': event,
-          'X-Webhook-Signature': `sha256=${signatureHex}`,
-        },
-        body,
-      });
-    } catch {
-      // Webhook 失败不影响主流程
+      if (signingSecret !== null) {
+        const encoder = new TextEncoder();
+        const cryptoKey = await crypto.subtle.importKey(
+          'raw', encoder.encode(signingSecret), { name: 'HMAC', hash: 'SHA-256' },
+          false, ['sign']
+        );
+        const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(body));
+        const signatureHex = Array.from(new Uint8Array(signature))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        headers['X-Webhook-Signature'] = `sha256=${signatureHex}`;
+      } else {
+        console.warn(`[webhook] webhook ${wh.id} has no signing secret configured; delivering without X-Webhook-Signature`);
+      }
+
+      await fetch(wh.url, { method: 'POST', headers, body });
+    } catch (err) {
+      // [H-3] 投递失败仍不阻塞主流程，但必须可见：空 catch {} 会掩盖签名/网络/密钥配置错误。
+      console.error(`[webhook] delivery failed for webhook ${wh.id} (event=${event}, queue_id=${item.id}):`, err);
     }
   }
 }

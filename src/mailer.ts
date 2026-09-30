@@ -3,6 +3,7 @@ import { connect } from 'cloudflare:sockets';
 import type { EmailProvider, SmtpConfig, ApiProviderConfig, CloudflareEmailConfig, ProviderConfig } from './types';
 import { uuidv7 } from './uuid';
 import { decryptApiKey } from './auth';
+import { requireSecret } from './secrets';
 import { htmlToText } from './utils';
 
 export interface SendResult {
@@ -381,10 +382,9 @@ async function decryptProviderConfig(config: ProviderConfig, env?: Env): Promise
   for (const key of SENSITIVE_CONFIG_KEYS) {
     const value = decrypted[key];
     if (typeof value !== 'string' || !value.startsWith(ENCRYPTED_VALUE_PREFIX)) continue;
-    if (!env?.JWT_SECRET) {
-      throw new Error('JWT_SECRET is required to decrypt provider credentials');
-    }
-    decrypted[key] = await decryptApiKey(value.substring(ENCRYPTED_VALUE_PREFIX.length), env.JWT_SECRET);
+    // [H-3] requireSecret：缺失/过弱抛 SecretConfigError（消息不含密钥内容），发信前即失败
+    const secret = requireSecret('JWT_SECRET', env?.JWT_SECRET);
+    decrypted[key] = await decryptApiKey(value.substring(ENCRYPTED_VALUE_PREFIX.length), secret);
   }
   return decrypted as unknown as ProviderConfig;
 }

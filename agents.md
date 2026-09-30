@@ -14,6 +14,14 @@
 - 优先使用 `wrangler` CLI 进行所有 Workers 相关的开发、调试和部署操作。
 - 涉及数据库变更时，通过 D1 migrations 进行，不要直接操作生产数据库。
 
+## 密钥取值（fail-fast，硬性规范）
+
+- `JWT_SECRET`（加密：API Key、服务商凭据）与 `IMPERSONATION_SECRET`（签名：模拟登录令牌）是**两把独立密钥**，各自 ≥32 字节随机值，禁止相等或互为前缀，禁止任何内置默认值。
+- 所有取值必须经过 `src/secrets.ts`：`getJwtSecret(env)` / `getImpersonationSecret(env)` / `requireSecret(name, value)`；缺失或过弱会抛 `SecretConfigError`（消息不含密钥内容）。**严禁**再写 `env.JWT_SECRET || ''`、`secret ? await encryptApiKey(...) : null` 这类兜底或静默降级写法。
+- 新增任何运行时入口（fetch / scheduled / queue，以及未来的 DO、R2 触发器）首行调用 `assertRuntimeSecrets(env)`：HTTP 入口用 try/catch 返回 503，非 HTTP 入口**不要捕获**，让漏配在 Workers 日志里显式失败。
+- Webhook 的 `secret` 属于用户可选配置：未配置时显式跳过 `X-Webhook-Signature` 并 `console.warn`，禁止用空串去做 HMAC（WebCrypto 会抛 DataError，空 catch 会让投递静默失败）。
+- 上线顺序：先 `npx wrangler secret put` 两把密钥，再 `wrangler deploy`。审计背景见 `docs/security-H3-fail-fast.md`。
+
 ## 权限与资源归属
 
 - **发送通道和发件账号为全局资源**，不由任何用户私有。仅超级管理员（`/v1/admin/*`）可创建、修改、删除。

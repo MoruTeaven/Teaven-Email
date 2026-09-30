@@ -1,6 +1,7 @@
 // Teaven Email - API Key 管理路由
 import { Hono } from 'hono';
 import { authMiddleware, getAuth, generateApiKey, encryptApiKey, decryptApiKey, hashPassword, verifyPassword } from '../auth';
+import { getJwtSecret } from '../secrets';
 import { getDB } from '../db';
 import { uuidv7 } from '../uuid';
 import { convertDBTimestamp } from '../utils';
@@ -69,7 +70,8 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
   }
 
   const { raw, hash, prefix } = await generateApiKey();
-  const secret = c.env.JWT_SECRET || '';
+  // [H-3] 缺失即抛错，不再回退空串（空串会派生出可预测的 AES 密钥）
+  const secret = getJwtSecret(c.env);
 
   const apiKey = {
     id: uuidv7(),
@@ -77,7 +79,8 @@ apiKeyRouter.post('/', authMiddleware(), async (c) => {
     name: body.name,
     api_key_hash: hash,
     api_key_prefix: prefix,
-    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
+    // [H-3] 删除 `secret ? ... : null` 静默降级：要么加密入库，要么整个请求失败。
+    api_key_encrypted: await encryptApiKey(raw, secret),
     permissions,
     enabled: 1,
     auto_created: 0,
@@ -175,11 +178,8 @@ apiKeyRouter.post('/:id/reveal', authMiddleware(), async (c) => {
     await db.updateUserPasswordHash(user.id, await hashPassword(body.password));
   }
 
-  // 解密并返回
-  const secret = c.env.JWT_SECRET || '';
-  if (!secret) {
-    return c.json({ success: false, error: 'Encryption not configured' }, 500);
-  }
+  // 解密并返回：[H-3] getJwtSecret 缺失即抛错，原 `Encryption not configured` 伪分支删除
+  const secret = getJwtSecret(c.env);
 
   try {
     const rawKey = await decryptApiKey(apiKeyRecord.api_key_encrypted, secret);
