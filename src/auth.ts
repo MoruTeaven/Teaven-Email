@@ -2,6 +2,10 @@
 import { Context, Next } from 'hono';
 import { getDB } from './db';
 import type { AuthContext, Permission } from './types';
+import { getImpersonationSecret } from './secrets';
+
+// [H-3] 密钥取值一律走 src/secrets.ts。此处仅做再导出，保持既有 `from '../auth'` 调用点兼容。
+export { getImpersonationSecret };
 
 const PASSWORD_HASH_ALGORITHM = 'pbkdf2_sha256';
 const PASSWORD_HASH_ITERATIONS = 100000;
@@ -192,9 +196,11 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   };
 }
 
-export function getImpersonationSecret(env: { IMPERSONATION_SECRET?: string; JWT_SECRET?: string }): string {
-  return env.IMPERSONATION_SECRET || env.JWT_SECRET || '';
-}
+// [H-3] 缺陷修复：原来的回落链 IMPERSONATION_SECRET || JWT_SECRET || '' 有两重问题：
+//   1) 缺失时返回空串 —— 空串 HMAC 密钥依然能签出"合法"令牌（见 docs/security-H3-fail-fast.md 实验），
+//      一旦调用方去掉 `if (!secret)` 判断就等于任何人可自签管理员模拟登录令牌；
+//   2) 回落到 JWT_SECRET 让"签名密钥"与"加密密钥"共用一把，JWT_SECRET 泄露即可伪造任意用户会话，反之亦然。
+// 现由 src/secrets.ts 的 getImpersonationSecret() 取代：缺失/过弱/与 JWT_SECRET 复用 → 抛 SecretConfigError。
 
 // 生成模拟登录令牌（24小时有效）
 export async function generateImpersonationToken(
@@ -280,10 +286,9 @@ export function authMiddleware(requiredPermissions?: Permission[]) {
 
       // ===== 路径 1: 模拟登录令牌 (imp_ 前缀) =====
       if (token.startsWith('imp_')) {
+        // [H-3] getImpersonationSecret 现在缺失即抛错（由外层 catch 记录并拒绝），不会再返回空串，
+        // 因此原先的 `if (!secret)` 伪保护已删除。
         const secret = getImpersonationSecret(c.env);
-        if (!secret) {
-          return c.json({ success: false, error: 'Impersonation not configured. Set IMPERSONATION_SECRET or JWT_SECRET.' }, 500);
-        }
 
         const result = await verifyImpersonationToken(token, secret);
         if (!result) {

@@ -13,6 +13,7 @@ import verificationRouter from './routes/verification';
 import { processQueue } from './queue_processor';
 import { getDB } from './db';
 import { superAdminMiddleware } from './auth';
+import { assertRuntimeSecrets, describeSecretError } from './secrets';
 import { getDashboardHTML } from './dashboard_html';
 import { getAdminHTML } from './admin_html';
 import { isValidEmail, escapeHtml, htmlToText, toLocalISOString } from './utils';
@@ -169,10 +170,25 @@ app.post('/__internal/process-queue', superAdminMiddleware(), async (c) => {
 // 导出 scheduled handler 用于 Cron Triggers
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // [H-3] fail-fast：JWT_SECRET / IMPERSONATION_SECRET 缺失、过弱、或两把密钥复用 →
+    // 直接拒绝所有请求，不进入任何业务路由。Workers 没有可阻断的模块级 env 校验点，
+    // 入口首行校验是最接近"拒绝启动"的位置；明细只写日志，不回显给客户端。
+    try {
+      assertRuntimeSecrets(env);
+    } catch (err) {
+      console.error('[fatal] runtime secrets invalid:', describeSecretError(err));
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server is not configured correctly (runtime secrets missing or invalid)' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
     return app.fetch(request, env, ctx);
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    // [H-3] 定时任务入口同样 fail-fast。这里**故意不加 try/catch**：漏配时 cron 必须显式失败，
+    // 在 Workers 日志里可见，而不是静默地用空密钥去加密凭据 / 签发模拟登录令牌。
+    assertRuntimeSecrets(env);
     switch (event.cron) {
       case '* * * * *':
         ctx.waitUntil(processQueue(env));

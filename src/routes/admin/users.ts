@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { superAdminMiddleware, generateApiKey, generateImpersonationToken, encryptApiKey, getImpersonationSecret, hashPassword } from '../../auth';
+import { getJwtSecret } from '../../secrets';
 import { getDB } from '../../db';
 import { uuidv7 } from '../../uuid';
 import { isValidEmail, convertDBTimestamp } from '../../utils';
@@ -114,7 +115,8 @@ router.post('/tenants', superAdminMiddleware(), async (c) => {
   const allPermissions: Permission[] = ['SEND_MAIL', 'MANAGE_TEMPLATE', 'READ_LOG', 'MANAGE_PROVIDER', 'VERIFY_CODE'];
   const { raw, hash, prefix } = await generateApiKey();
   const apiKeyId = uuidv7();
-  const secret = c.env.JWT_SECRET || '';
+  // [H-3] 缺失即抛错，不回退空串
+  const secret = getJwtSecret(c.env);
 
   await db.createApiKey({
     id: apiKeyId,
@@ -122,7 +124,8 @@ router.post('/tenants', superAdminMiddleware(), async (c) => {
     name: 'Default Key',
     api_key_hash: hash,
     api_key_prefix: prefix,
-    api_key_encrypted: secret ? await encryptApiKey(raw, secret) : null,
+    // [H-3] 不再静默写成 NULL：要么加密入库，要么请求失败
+    api_key_encrypted: await encryptApiKey(raw, secret),
     permissions: allPermissions,
     enabled: 1,
     auto_created: 0,
@@ -153,10 +156,9 @@ router.post('/tenants/:id/impersonate', superAdminMiddleware(), async (c) => {
       return c.json({ success: false, error: 'User is not active' }, 400);
     }
 
+    // [H-3] getImpersonationSecret 缺失/与 JWT_SECRET 复用即抛错，由下方 catch 记录并拒绝签发；
+    // 空串签出的令牌可被任何人伪造，因此这里的伪保护已删除。
     const secret = getImpersonationSecret(c.env);
-    if (!secret) {
-      return c.json({ success: false, error: 'Impersonation not configured. Set IMPERSONATION_SECRET or JWT_SECRET.' }, 500);
-    }
 
     const token = await generateImpersonationToken(user.id, secret);
 

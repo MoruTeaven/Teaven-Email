@@ -1,5 +1,6 @@
 import type { EmailProvider, ProviderConfig, ProviderType } from '../../types';
 import { encryptApiKey } from '../../auth';
+import { getJwtSecret } from '../../secrets';
 
 interface CacheEntry<T> { t: number; data: T; }
 const _statsCache: { entry: CacheEntry<unknown> | null } = { entry: null };
@@ -54,10 +55,9 @@ async function protectProviderConfig(config: ProviderConfig, env: Env): Promise<
     const value = protectedConfig[key];
     if (typeof value !== 'string' || !value) continue;
     if (value === SENSITIVE_VALUE_MASK || value.startsWith(ENCRYPTED_VALUE_PREFIX)) continue;
-    if (!env.JWT_SECRET) {
-      throw new Error('JWT_SECRET is required to store provider credentials');
-    }
-    protectedConfig[key] = `${ENCRYPTED_VALUE_PREFIX}${await encryptApiKey(value, env.JWT_SECRET)}`;
+    // [H-3] getJwtSecret：缺失/过弱抛 SecretConfigError，绝不用空串加密服务商凭据
+    const secret = getJwtSecret(env);
+    protectedConfig[key] = `${ENCRYPTED_VALUE_PREFIX}${await encryptApiKey(value, secret)}`;
   }
   return protectedConfig as unknown as ProviderConfig;
 }
