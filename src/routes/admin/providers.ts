@@ -247,6 +247,7 @@ router.post('/accounts/:id/test', superAdminMiddleware(), async (c) => {
     provider_response: result.providerResponse || null,
     error_message: result.error || null,
     retry_count: 0,
+    request_params: null,
   });
 
   invalidateAdminCache();

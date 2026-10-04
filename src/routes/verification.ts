@@ -156,6 +156,7 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     provider_response: null,
     error_message: null,
     retry_count: 0,
+    request_params: null,
   };
   await db.createMailLog(mailLog);
 

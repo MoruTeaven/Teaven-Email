@@ -331,6 +331,7 @@ templateRouter.post('/:code/test-send', authMiddleware(['MANAGE_TEMPLATE', 'SEND
     provider_response: result.providerResponse || null,
     error_message: result.error || null,
     retry_count: 0,
+    request_params: null,
   };
   await db.createMailLog(mailLog);
 
