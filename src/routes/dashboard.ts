@@ -3,7 +3,6 @@ import { Hono } from 'hono';
 import { authMiddleware, getAuth } from '../auth';
 import { getDB } from '../db';
 import { getLocalDateString, convertDBTimestamp } from '../utils';
-import { extract } from './admin/common';
 import type { Template, EmailProvider, Account, ApiKey } from '../types';
 
 const dashboardRouter = new Hono<{ Bindings: Env }>();

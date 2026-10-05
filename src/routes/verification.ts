@@ -156,6 +156,8 @@ verificationRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
     provider_response: null,
     error_message: null,
     retry_count: 0,
+    // [tsc 门禁] 不落库请求参数：mail_logs.request_params 可能含模板变量（验证码/PII），见 [H-2] 脱敏约定
+    request_params: null,
   };
   await db.createMailLog(mailLog);
 

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { superAdminMiddleware } from '../../auth';
-import { _statsCache, _analyticsCache, STATS_CACHE_TTL, ANALYTICS_CACHE_TTL, getIntSetting, extract } from './common';
+import { _statsCache, _analyticsCache, STATS_CACHE_TTL, ANALYTICS_CACHE_TTL } from './common';
 import { getLocalDateString, convertDBTimestamp } from '../../utils';
 import type { MailStatus } from '../../types';
 
