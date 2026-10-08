@@ -388,6 +388,19 @@ export function getDB(db: D1Database) {
       return result.results;
     },
 
+    // [H-2] 保留期清理：先删子表 mail_queue（mail_log_id 外键指向 mail_logs），再删超期主表行。
+    // ponytail: 保留期由调用方传入（当前固定 30 天）；需要按分类/租户差异化时再从 system_settings 读。
+    async cleanupOldMailLogs(retentionDays: number): Promise<number> {
+      const cutoff = `-${retentionDays} days`;
+      await db.prepare(
+        `DELETE FROM mail_queue WHERE mail_log_id IN (SELECT id FROM mail_logs WHERE created_at < datetime('now', ?))`
+      ).bind(cutoff).run();
+      const logs = await db.prepare(
+        `DELETE FROM mail_logs WHERE created_at < datetime('now', ?)`
+      ).bind(cutoff).run();
+      return logs.meta?.changes ?? 0;
+    },
+
     // ============ Mail Queue ============
     async createQueueItem(item: Omit<MailQueueItem, 'created_at'>): Promise<void> {
       await db.prepare(

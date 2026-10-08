@@ -137,7 +137,10 @@ mailRouter.post('/send-template', authMiddleware(['SEND_MAIL']), async (c) => {
 
   // 创建邮件日志
   const mailLogId = uuidv7();
-  const requestParams = JSON.stringify({ template: body.template, to: body.to, category: body.category, version: body.version, variables: body.variables });
+  // [H-2] request_params 只落白名单元数据：变量值可能含验证码/PII（VERIFY 模板），只记键名；
+  // to/subject 已有独立列，不再重复落库。键名截断防止超长键撑大日志表。
+  const variableKeys = Object.keys(body.variables || {}).slice(0, 50).map(k => k.slice(0, 64));
+  const requestParams = JSON.stringify({ template: body.template, category: body.category ?? null, version: body.version ?? null, variable_keys: variableKeys });
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,
@@ -250,7 +253,8 @@ mailRouter.post('/send', authMiddleware(['SEND_MAIL']), async (c) => {
   let fromName: string | null = selected?.display_name || null;
 
   const mailLogId = uuidv7();
-  const requestParams = JSON.stringify({ to: body.to, subject: body.subject, category: body.category, html: body.html ? '***' : undefined, text: body.text ? '***' : undefined });
+  // [H-2] 正文/主题不进 request_params：html、text 只记有无（to/subject 已有独立列）
+  const requestParams = JSON.stringify({ category: body.category ?? null, has_html: !!body.html, has_text: !!body.text });
   const mailLog: Omit<MailLog, 'created_at'> = {
     id: mailLogId,
     user_id: auth.userId,

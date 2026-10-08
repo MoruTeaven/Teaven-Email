@@ -37,6 +37,7 @@
 - **用户管理**：超级管理员通过 `PUT /v1/admin/tenants/:id` 可更新用户的昵称（`name`，非空、≤50 字符）、状态（`status`）、超管标记（`is_super_admin`）。后台用户列表提供"编辑"按钮修改昵称，邮箱不可改（展示为只读）。
 - **队列处理**：`/__internal/process-queue` 手动 HTTP 触发仅支持 `POST`，必须通过超级管理员 API Key/Cookie 鉴权；正常自动处理使用 Cloudflare Cron Trigger 和发信请求的 `waitUntil(processQueue)`。队列表领取必须使用原子 claim，`processing` 状态下 `next_retry_at` 表示处理租约过期时间，超时后回到 `queued` 防止卡死。队列层统一控制重试次数，发送层单次尝试，避免双层重试叠加。
 - **每日发信配额**：每用户每日发信上限通过 `daily_send_usage`（migration 010）原子预约，不能回退到 `mail_logs` 先查后写。验证码发信也必须计入该配额。
+- **邮件日志脱敏与保留期（H-2）**：`mail_logs.request_params` 只允许写白名单元数据（模板码/分类/版本/变量键名，**正文与变量值一律不入库**）；存量由 migration 012 清空；cron 每小时整点删除超过 30 天的 `mail_logs` 及其 `mail_queue` 子行（先删子表）。读取端 `getMailLogs` 必须保持 `user_id` 过滤。详见 `docs/security-H2-mail-logs.md`。
 - **验证码租户隔离**：验证码记录、查询、旧码失效和 KV 限流必须按 `user_id + email + scene_type` 隔离，避免不同用户使用相同邮箱和场景时互相影响。
 - **系统设置**：全局 key-value 配置存储在 `system_settings` 表（migration 009），仅超级管理员通过 `GET/PUT /v1/admin/settings` 读写。访问层在 `src/settings.ts`（`loadSettings` / `getSetting` / `getIntSetting` / `isMaintenanceMode`），数据库故障时自动降级到 `SETTING_DEFAULTS`，不阻塞业务。已接入实际行为的设置项：
   - `maintenance_mode` / `maintenance_message`：维护模式开启后，`/v1/mail/send`、`/v1/mail/send-template`、`/v1/verification/send` 返回 503（管理员后台 `/v1/admin/*` 不受影响）。

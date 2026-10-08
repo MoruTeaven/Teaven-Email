@@ -194,6 +194,9 @@ export default {
         ctx.waitUntil(processQueue(env));
         ctx.waitUntil(cleanupExpiredKeys(env));
         ctx.waitUntil(cleanupExpiredCodes(env));
+        // [H-2] mail_logs/mail_queue 保留期清理：cron 每分钟触发，只在整点执行一次，
+        // 避免每分钟对同一批已删空区间重复写 DELETE。
+        if (new Date().getUTCMinutes() === 0) ctx.waitUntil(cleanupOldMailLogs(env));
         break;
     }
   },
@@ -208,6 +211,21 @@ async function cleanupExpiredKeys(env: Env): Promise<void> {
     }
   } catch (err) {
     console.error('Failed to cleanup expired keys:', err);
+  }
+}
+
+// [H-2] 邮件日志保留期（天）。ponytail: 固定 30 天；要按分类/租户差异化时改从 system_settings 读。
+const MAIL_LOG_RETENTION_DAYS = 30;
+
+async function cleanupOldMailLogs(env: Env): Promise<void> {
+  try {
+    const db = getDB(env.DB);
+    const count = await db.cleanupOldMailLogs(MAIL_LOG_RETENTION_DAYS);
+    if (count > 0) {
+      console.log(`Cleaned up ${count} mail logs older than ${MAIL_LOG_RETENTION_DAYS} days`);
+    }
+  } catch (err) {
+    console.error('Failed to cleanup old mail logs:', err);
   }
 }
 
